@@ -1,0 +1,7 @@
+# Extra packages to re-run the training notebook
+-r requirements.txt
+xgboost>=2.1
+matplotlib>=3.8
+seaborn>=0.13
+jupyter
+pytest>=8.0
