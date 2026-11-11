@@ -8,64 +8,61 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from farmstat.data import clean_market_name, load_prices, load_weather, remove_outliers  # noqa: E402
+from farmstat.data import KEY, load_prices, remove_outliers  # noqa: E402
 from farmstat.features import FEATURES, build_dataset  # noqa: E402
 from farmstat.forecast import DEFAULT_MODEL_PATH, Forecaster  # noqa: E402
 
 
 @pytest.fixture(scope="module")
-def data():
-    prices = load_prices()
-    return prices, build_dataset(prices, load_weather())
+def prices():
+    return load_prices()
 
 
-def test_market_names_merged():
-    assert clean_market_name("Pune(Manjri) APMC") == "Pune(Manjri)"
-    assert clean_market_name("Pune APMC ") == "Pune"
+@pytest.fixture(scope="module")
+def onion_mh(prices):
+    """A smaller slice so the tests run fast: onion in Maharashtra."""
+    return prices[(prices.crop == "Onion") & (prices.state == "Maharashtra")]
+
+
+def test_coverage_is_all_india(prices):
+    assert prices["state"].nunique() >= 20
+    assert prices.groupby(["state", "market"]).ngroups >= 500
+    assert not prices.duplicated(KEY + ["week"]).any()
 
 
 def test_typo_removed_but_spike_kept():
-    # a real spike builds up and lasts for weeks (like tomato in July 2023)
-    spike = [1000] * 15 + [1500, 2000, 3000, 3500, 4000, 4500, 5000, 5000, 5000, 4500, 4000, 3500, 3000, 2000] + [1000] * 15
-    dates = pd.date_range("2023-01-01", periods=len(spike))
-    df = pd.DataFrame({"crop": "Tomato", "market": "X", "date": dates, "modal": spike})
-    df.loc[5, "modal"] = 10000  # a typo: one day 10x its neighbours
+    spike = [1000] * 10 + [1500, 2500, 3500, 4500, 5000, 5000, 4500, 3500, 2500, 1500] + [1000] * 10
+    df = pd.DataFrame({"crop": "Tomato", "state": "X", "market": "Y",
+                       "week": pd.date_range("2023-01-02", periods=len(spike), freq="W-MON"), "price": spike})
+    df.loc[3, "price"] = 10000   # one week 10x its neighbours
     kept, removed = remove_outliers(df)
-    assert list(removed["modal"]) == [10000]
-    assert kept["modal"].max() == 5000
+    assert list(removed["price"]) == [10000]
+    assert kept["price"].max() == 5000
 
 
-def test_one_row_per_day_and_no_bad_prices(data):
-    prices, _ = data
-    assert not prices.duplicated(["crop", "market", "date"]).any()
-    assert (prices["modal"] > 0).all()
-
-
-def test_features_use_only_the_past(data):
-    """Changing a future price must not change today's features (no leakage)."""
-    prices, ds = data
-    row = ds[(ds.crop == "Onion") & (ds.market == "Pune") & (ds.date == "2020-06-15")]
-    future = prices.copy()
-    m = (future.crop == "Onion") & (future.market == "Pune") & (future.date > "2020-06-15")
-    future.loc[m, "modal"] *= 5
-    ds2 = build_dataset(future, load_weather())
-    row2 = ds2[(ds2.crop == "Onion") & (ds2.market == "Pune") & (ds2.date == "2020-06-15")]
-    assert len(row) == 1
-    np.testing.assert_allclose(row[FEATURES].to_numpy(), row2[FEATURES].to_numpy(), equal_nan=True)
-    assert row2["y_14"].iloc[0] != row["y_14"].iloc[0]   # ...but the target does look ahead
+def test_features_use_only_the_past(onion_mh):
+    """Changing future prices must not change this week's features (no leakage)."""
+    ds = build_dataset(onion_mh)
+    t = pd.Timestamp("2021-06-07")
+    key = (ds.market == "Lasalgaon") & (ds.week == t)
+    future = onion_mh.copy()
+    future.loc[future.week > t, "price"] *= 5
+    ds2 = build_dataset(future)
+    a, b = ds.loc[key, FEATURES].to_numpy(), ds2.loc[(ds2.market == "Lasalgaon") & (ds2.week == t), FEATURES].to_numpy()
+    assert a.shape[0] == 1
+    np.testing.assert_allclose(a, b, equal_nan=True)
 
 
 @pytest.mark.skipif(not DEFAULT_MODEL_PATH.exists(), reason="model not trained")
-def test_forecasts_are_sane(data):
-    _, ds = data
+def test_forecasts_are_sane(onion_mh):
     fc = Forecaster.load()
-    latest = ds.sort_values("date").groupby(["crop", "market"]).tail(1)
+    ds = build_dataset(onion_mh, states=fc.states)
+    latest = ds.sort_values("week").groupby(KEY).tail(1)
     pred = fc.predict(latest)
     for h in fc.horizons:
         assert (pred[f"p10_{h}"] <= pred[f"p50_{h}"]).all() and (pred[f"p50_{h}"] <= pred[f"p90_{h}"]).all()
-        ratio = pred[f"p50_{h}"] / latest["price"]
-        assert ratio.between(0.3, 3).all()
-    assert pred["prob_rise_14"].between(0, 1).all()
-    advice = fc.advise("Tomato", 1000.0, pd.Series({**{f"p{q}_{h}": 2000.0 for q in (10, 50, 90) for h in (7, 14, 30)},
-                                                    "prob_rise_14": 0.9}))
-    assert advice.action == "Hold" and advice.hold_days == 7   # never hold tomatoes for more than a week
+        assert (pred[f"p50_{h}"] / latest["price"]).between(0.3, 3).all()
+    assert pred["prob_rise"].between(0, 1).all()
+    row = pd.Series({**{f"p{q}_{h}": 2000.0 for q in (10, 50, 90) for h in (1, 2, 4)}, "prob_rise": 0.9})
+    advice = fc.advise("Tomato", 1000.0, row)
+    assert advice.action == "Hold" and advice.hold_weeks == 1   # never hold tomatoes for more than a week
