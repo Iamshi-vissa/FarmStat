@@ -1,17 +1,29 @@
 """
 Prepares everything the web app shows: the latest forecast for every mandi, price history,
-cashew and sugarcane data, and the test results. Built once at start-up and cached to disk.
+cashew and sugarcane data, and the test results.
+
+Everything that needs the trained models (the forecasts, advice, cashew forecasts and test results) is
+computed once and saved as a snapshot, so the web app itself runs without scikit-learn:
+
+  1. models/web_snapshot.json.gz   committed with the repo (used on Vercel, where the disk is read-only)
+  2. .cache/ or the temp folder     written on first start if the committed snapshot doesn't match
+                                    the current data and models (this step needs scikit-learn)
+
+After retraining or updating the data, rebuild the committed snapshot:  python scripts/build_snapshot.py
 """
 
 from __future__ import annotations
 
+import gzip
 import hashlib
-import pickle
+import io
+import json
+import os
 import sys
+import tempfile
 from functools import lru_cache
 from pathlib import Path
 
-import joblib
 import numpy as np
 import pandas as pd
 
@@ -19,24 +31,100 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from farmstat.data import CROPS, DATA_FILE, KEY, load_prices  # noqa: E402
-from farmstat.features import build_dataset  # noqa: E402
-from farmstat.forecast import DEFAULT_MODEL_PATH, MAX_HOLD_WEEKS, Forecaster  # noqa: E402
-from farmstat.monthly import (M_HORIZONS, MONTHLY_FILE, MonthlyForecaster, build_monthly,  # noqa: E402
-                              load_monthly, product_label)
+from farmstat.forecast import DEFAULT_MODEL_PATH, MAX_HOLD_WEEKS  # noqa: E402
+from farmstat.monthly import M_HORIZONS, MONTHLY_FILE, build_monthly, load_monthly, product_label  # noqa: E402
 
-CACHE_DIR = ROOT / ".cache"
 CASHEW_MODEL = ROOT / "models" / "cashew_model.joblib"
+SNAPSHOT = ROOT / "models" / "web_snapshot.json.gz"
+SNAPSHOT_VERSION = "2"   # bump when the snapshot's contents change shape
 ACTIVE_WEEKS = 8
 FRP = [("2019-20", "2019-10-01", 275), ("2020-21", "2020-10-01", 285), ("2021-22", "2021-10-01", 290),
        ("2022-23", "2022-10-01", 305), ("2023-24", "2023-10-01", 315), ("2024-25", "2024-10-01", 340),
        ("2025-26", "2025-10-01", 355), ("2026-27", "2026-10-01", 365)]
 
 
-def _fingerprint() -> str:
-    h = hashlib.md5()
-    for p in [DATA_FILE, DEFAULT_MODEL_PATH, Path(__file__)]:
-        h.update(f"{p}:{p.stat().st_mtime_ns}:{p.stat().st_size}".encode())
+def fingerprint() -> str:
+    """Content hash of the data and models the snapshot was built from."""
+    h = hashlib.md5(SNAPSHOT_VERSION.encode())
+    for p in [DATA_FILE, MONTHLY_FILE, DEFAULT_MODEL_PATH, CASHEW_MODEL]:
+        h.update(p.read_bytes())
     return h.hexdigest()[:12]
+
+
+def _cache_files() -> list[Path]:
+    """Where a rebuilt snapshot may be written: the project folder, else the temp folder."""
+    tmp = Path(os.environ.get("FARMSTAT_CACHE", Path(tempfile.gettempdir()) / "farmstat"))
+    return [ROOT / ".cache" / SNAPSHOT.name, tmp / SNAPSHOT.name]
+
+
+def read_snapshot(path: Path, fp: str) -> dict | None:
+    """The snapshot at `path`, or None if it's missing or was built from other data/models."""
+    if not path.exists():
+        return None
+    with gzip.open(path, "rt", encoding="utf-8") as f:
+        snap = json.load(f)
+    if snap.get("fingerprint") != fp:
+        return None
+    snap["latest"] = pd.read_csv(io.StringIO(snap["latest"]), parse_dates=["week"])
+    return snap
+
+
+def write_snapshot(snap: dict, path: Path) -> None:
+    out = dict(snap, latest=snap["latest"].to_csv(index=False))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with gzip.open(path, "wt", encoding="utf-8", compresslevel=9) as f:
+        json.dump(out, f, separators=(",", ":"))
+
+
+def build_snapshot(prices: pd.DataFrame, fp: str) -> dict:
+    """Run the trained models over the latest data. Needs scikit-learn (see requirements-full.txt)."""
+    try:
+        import joblib
+        import sklearn  # noqa: F401
+    except ImportError as e:
+        raise RuntimeError("The saved forecasts don't match the current data or models, and rebuilding them "
+                           "needs scikit-learn: pip install -r requirements-full.txt") from e
+    from farmstat.features import build_dataset
+    from farmstat.forecast import Forecaster
+    from farmstat.monthly import MonthlyForecaster
+
+    model = Forecaster.load()
+    ds = build_dataset(prices, states=model.states)
+    latest = ds.sort_values("week").groupby(KEY).tail(1)
+    latest = latest[latest["week"] >= latest.groupby("crop")["week"].transform("max")
+                    - pd.Timedelta(weeks=ACTIVE_WEEKS)]
+    latest = latest.join(model.predict(latest)).reset_index(drop=True)
+    adv = [model.advise(r["crop"], r["price"], r) for _, r in latest.iterrows()]
+    latest["advice"] = [a.action for a in adv]
+    latest["hold_weeks"] = [a.hold_weeks for a in adv]
+    latest["advice_headline"] = [a.headline for a in adv]
+    latest["advice_detail"] = [a.detail for a in adv]
+    keep = ["week", "crop", "state", "district", "market", "price", "arrivals", "new_mandi", "naive",
+            "prob_rise", "advice", "hold_weeks", "advice_headline", "advice_detail"]
+    keep += [f"p{q}_{h}" for h in model.horizons for q in (10, 50, 90)]
+    snap = dict(fingerprint=fp, version=model.version, horizons=list(model.horizons),
+                metrics=json.loads(json.dumps(model.metrics, default=_clean)),
+                cashew=_cashew(MonthlyForecaster(joblib.load(CASHEW_MODEL))), latest=latest[keep])
+    return snap
+
+
+def _cashew(fc) -> dict:
+    df = load_monthly("Cashew")
+    last = build_monthly(df).sort_values("month").groupby("state").tail(1)
+    last = last.join(fc.predict(last))
+    states = []
+    for _, r in last.iterrows():
+        hist = df[df["state"] == r["state"]].sort_values("month")
+        fcast = [dict(month=_clean(r["month"]), p10=_clean(r["price"]), p50=_clean(r["price"]), p90=_clean(r["price"]), h=0)]
+        for h in M_HORIZONS:
+            fcast.append(dict(month=_clean(r["month"] + pd.DateOffset(months=h)), h=h, p10=_clean(r[f"p10_{h}"]),
+                              p50=_clean(r[f"p50_{h}"]), p90=_clean(r[f"p90_{h}"])))
+        states.append(dict(state=r["state"], product=product_label("Cashew", hist["price"].median()),
+                           month=_clean(r["month"]), price=_clean(r["price"]),
+                           history=records(hist[["month", "price"]]), forecast=fcast))
+    season = [dict(month=pd.Timestamp(2000, int(m), 1).strftime("%b"), pct=_clean(v))
+              for m, v in sorted(fc.bundle["season"].items())]
+    return json.loads(json.dumps(dict(states=states, season=season, metrics=fc.metrics), default=_clean))
 
 
 def _clean(v):
@@ -49,6 +137,8 @@ def _clean(v):
         return bool(v)
     if isinstance(v, pd.Timestamp):
         return v.strftime("%Y-%m-%d")
+    if isinstance(v, np.ndarray):
+        return [_clean(x) for x in v.tolist()]
     return v
 
 
@@ -58,30 +148,20 @@ def records(df: pd.DataFrame) -> list[dict]:
 
 class FarmData:
     def __init__(self):
-        self.model = Forecaster.load()
         self.prices = load_prices()
-        cache = CACHE_DIR / f"latest_{_fingerprint()}.pkl"
-        if cache.exists():
-            self.latest = pickle.loads(cache.read_bytes())
-        else:
-            ds = build_dataset(self.prices, states=self.model.states)
-            latest = ds.sort_values("week").groupby(KEY).tail(1)
-            latest = latest[latest["week"] >= latest.groupby("crop")["week"].transform("max")
-                            - pd.Timedelta(weeks=ACTIVE_WEEKS)]
-            latest = latest.join(self.model.predict(latest)).reset_index(drop=True)
-            adv = [self.model.advise(r["crop"], r["price"], r) for _, r in latest.iterrows()]
-            latest["advice"] = [a.action for a in adv]
-            latest["hold_weeks"] = [a.hold_weeks for a in adv]
-            latest["advice_headline"] = [a.headline for a in adv]
-            latest["advice_detail"] = [a.detail for a in adv]
-            keep = ["week", "crop", "state", "district", "market", "price", "arrivals", "new_mandi", "naive",
-                    "prob_rise", "advice", "hold_weeks", "advice_headline", "advice_detail"]
-            keep += [f"p{q}_{h}" for h in self.model.horizons for q in (10, 50, 90)]
-            self.latest = latest[keep]
-            CACHE_DIR.mkdir(exist_ok=True)
-            for old in CACHE_DIR.glob("latest_*.pkl"):
-                old.unlink()
-            cache.write_bytes(pickle.dumps(self.latest))
+        fp = fingerprint()
+        snap = next((s for p in [SNAPSHOT, *_cache_files()] if (s := read_snapshot(p, fp)) is not None), None)
+        if snap is None:
+            snap = build_snapshot(self.prices, fp)
+            for p in _cache_files():
+                try:
+                    write_snapshot(snap, p)
+                    break
+                except OSError:          # read-only folder: try the next one
+                    continue
+        self.latest = snap["latest"]
+        self.horizons, self.version, self.metrics = snap["horizons"], snap["version"], snap["metrics"]
+        self._cashew = snap["cashew"]
         # last 12 weekly prices per series, for the sparklines in the mandi list
         recent = self.prices[self.prices["week"] >= self.prices["week"].max() - pd.Timedelta(weeks=40)]
         self.spark = {k: g.sort_values("week")["price"].tail(12).round(0).tolist() for k, g in recent.groupby(KEY)}
@@ -100,8 +180,8 @@ class FarmData:
         crops.append(dict(id="Cashew", kind="monthly"))
         crops.append(dict(id="Sugarcane", kind="info"))
         return dict(crops=crops, n_mandis=int(pd.DataFrame({"s": lt["state"], "b": base}).drop_duplicates().shape[0]),
-                    n_states=int(lt["state"].nunique()), horizons=self.model.horizons,
-                    max_hold_weeks=MAX_HOLD_WEEKS, version=self.model.version)
+                    n_states=int(lt["state"].nunique()), horizons=self.horizons,
+                    max_hold_weeks=MAX_HOLD_WEEKS, version=self.version)
 
     def mandis(self, crop: str, state: str) -> list[dict]:
         sub = self.latest[(self.latest["crop"] == crop) & (self.latest["state"] == state)].copy()
@@ -121,7 +201,7 @@ class FarmData:
         hist = self.prices[(self.prices["crop"] == crop) & (self.prices["state"] == state) & (self.prices["market"] == market)]
         hist = hist[hist["week"] >= r["week"] - pd.Timedelta(weeks=weeks)].sort_values("week")
         fc = [dict(week=_clean(r["week"]), p10=_clean(r["price"]), p50=_clean(r["price"]), p90=_clean(r["price"]), h=0)]
-        for h in self.model.horizons:
+        for h in self.horizons:
             fc.append(dict(week=_clean(r["week"] + pd.Timedelta(weeks=h)), h=h,
                            p10=_clean(r[f"p10_{h}"]), p50=_clean(r[f"p50_{h}"]), p90=_clean(r[f"p90_{h}"])))
         return dict(latest={k: _clean(v) for k, v in r.items()},
@@ -138,24 +218,8 @@ class FarmData:
                     top=records(top[["state", "district", "market", "week", "price", "advice"]]))
 
     # ── cashew ──────────────────────────────────────────────────────────────
-    @lru_cache(maxsize=1)
     def cashew(self) -> dict:
-        fc = MonthlyForecaster(joblib.load(CASHEW_MODEL))
-        df = load_monthly("Cashew")
-        last = build_monthly(df).sort_values("month").groupby("state").tail(1)
-        last = last.join(fc.predict(last))
-        states = []
-        for _, r in last.iterrows():
-            hist = df[df["state"] == r["state"]].sort_values("month")
-            fcast = [dict(month=_clean(r["month"]), p10=_clean(r["price"]), p50=_clean(r["price"]), p90=_clean(r["price"]), h=0)]
-            for h in M_HORIZONS:
-                fcast.append(dict(month=_clean(r["month"] + pd.DateOffset(months=h)), h=h, p10=_clean(r[f"p10_{h}"]),
-                                  p50=_clean(r[f"p50_{h}"]), p90=_clean(r[f"p90_{h}"])))
-            states.append(dict(state=r["state"], product=product_label("Cashew", hist["price"].median()),
-                               month=_clean(r["month"]), price=_clean(r["price"]),
-                               history=records(hist[["month", "price"]]), forecast=fcast))
-        season = [dict(month=pd.Timestamp(2000, int(m), 1).strftime("%b"), pct=v) for m, v in sorted(fc.bundle["season"].items())]
-        return dict(states=states, season=season, metrics=fc.metrics)
+        return self._cashew
 
     # ── sugarcane ───────────────────────────────────────────────────────────
     @lru_cache(maxsize=1)
@@ -167,4 +231,4 @@ class FarmData:
                     chhattisgarh=records(s[["month", "price"]]))
 
     def accuracy(self) -> dict:
-        return self.model.metrics
+        return self.metrics

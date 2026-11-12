@@ -1,9 +1,7 @@
-# App + model (the saved model must be loaded with the same scikit-learn version)
-scikit-learn==1.9.1
+# Web app + API. This is what Vercel installs, so keep it lean (bundle limit).
+# No scikit-learn needed: the app reads the forecasts saved in models/web_snapshot.json.gz.
+fastapi>=0.110
+uvicorn>=0.29
 pandas>=2.2
 numpy>=1.26
 joblib>=1.4
-streamlit>=1.50
-fastapi>=0.110
-uvicorn>=0.29
-plotly>=5.20

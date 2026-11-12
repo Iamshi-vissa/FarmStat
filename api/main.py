@@ -4,6 +4,8 @@ FarmStat web API + web app.
 Run:   python -m uvicorn api.main:app --port 8000
 Open:  http://localhost:8000        (serves the built React app from web/dist)
 Docs:  http://localhost:8000/docs   (interactive API documentation)
+
+On Vercel the root index.py imports this app.
 """
 
 from __future__ import annotations
@@ -25,7 +27,7 @@ STATE: dict = {}
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    STATE["data"] = FarmData()   # first start ~1 minute, then cached on disk
+    data()   # load at start-up so the first request is quick
     yield
 
 
@@ -35,6 +37,9 @@ app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http
 
 
 def data() -> FarmData:
+    # loaded on first use too, for hosts that skip start-up events
+    if "data" not in STATE:
+        STATE["data"] = FarmData()
     return STATE["data"]
 
 

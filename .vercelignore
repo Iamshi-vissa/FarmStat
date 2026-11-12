@@ -1,0 +1,19 @@
+# Not needed by the deployed web app + API (keeps the Vercel bundle small)
+notebooks/
+docs/
+figures/
+tests/
+scripts/
+web/src/
+web/node_modules/
+web/package.json
+web/package-lock.json
+web/vite.config.js
+web/index.html
+streamlit_app.py
+.streamlit/
+.cache/
+.venv/
+requirements-full.txt
+requirements-train.txt
+README.md

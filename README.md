@@ -118,7 +118,7 @@ FastAPI service that serves the models.
   <img src="docs/web-cashew.png" width="420" alt="Cashew in Karnataka">
 </p>
 
-The original Streamlit app (`app.py`) still works as a simpler alternative.
+The original Streamlit app (`streamlit_app.py`) still works as a simpler alternative.
 
 ## HOW THE MODEL WAS BUILT
 
@@ -155,14 +155,15 @@ flowchart LR
     V --> R[Rise classifier]
     Q --> M[farmstat_model.joblib]
     R --> M
-    M --> A[Streamlit app]
+    M --> S[Forecast snapshot<br/>web_snapshot.json.gz]
+    S --> A[Web app + API]
 ```
 
 ## ARCHITECTURE
 
 ```mermaid
 flowchart TB
-    U[Farmer picks crop, state, mandi] --> APP[Streamlit app]
+    U[Farmer picks crop, state, mandi] --> APP[Web app]
     APP --> D[Load weekly prices for all mandis]
     D --> FE[Build inputs for the latest week]
     FE --> MOD[Saved models]
@@ -196,6 +197,7 @@ flowchart TB
 | API | FastAPI, Uvicorn |
 | Web app | React 19, Vite, Recharts, React Bits (SplitFlapText, Topography, RubberSegment, SpotlightCard, CountUp), IBM Plex Sans |
 | Simple app | Streamlit, Plotly |
+| Hosting | Vercel (FastAPI, Python 3.12) |
 | Tests | pytest |
 
 ## GETTING STARTED
@@ -207,15 +209,19 @@ git clone https://github.com/Iamshi-vissa/FarmStat.git
 cd FarmStat
 python -m venv .venv
 source .venv/bin/activate            # Windows PowerShell: .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -r requirements-full.txt
 python -m uvicorn api.main:app --port 8000
 ```
 
 Open <http://localhost:8000>. The data, the trained models and the built web app are included, so Node.js isn't
-needed. The **first start takes about a minute** while forecasts are prepared for every mandi; after that they're
-cached and it starts in seconds. API documentation is at <http://localhost:8000/docs>.
+needed. API documentation is at <http://localhost:8000/docs>.
 
-To use the simpler Streamlit app instead: `streamlit run app.py`, then open <http://localhost:8501>.
+The web app reads the latest forecasts from `models/web_snapshot.json.gz`, so it starts in a few seconds and only
+needs the packages in `requirements.txt` (no scikit-learn). `requirements-full.txt` adds scikit-learn, Streamlit and
+pytest for everything else. If the data or models change, the app rebuilds the snapshot on its first start (about a
+minute, needs scikit-learn).
+
+To use the simpler Streamlit app instead: `streamlit run streamlit_app.py`, then open <http://localhost:8501>.
 
 On Windows with more than one Python installed, use `py -3.12 -m venv .venv` to be sure you get the right one.
 
@@ -235,6 +241,7 @@ npm run build        # writes web/dist, which the API serves
 ```bash
 pip install -r requirements-train.txt
 jupyter notebook notebooks/FarmStat_Training.ipynb    # Run All, about 30 minutes
+python scripts/build_snapshot.py                       # refresh the forecasts the web app shows
 ```
 
 ### RUN THE TESTS
@@ -248,21 +255,29 @@ The tests check all-India coverage, that typos are removed while real spikes are
 
 ### UPDATE THE DATA
 
-`scripts/prepare_data.py` rebuilds both data files from the three source extracts (see [Data](#data)).
+`scripts/prepare_data.py` rebuilds both data files from the three source extracts (see [Data](#data)). Then run
+`python scripts/build_snapshot.py` and commit the new `models/web_snapshot.json.gz`.
 
 ### DEPLOY
 
-Push the repo to GitHub, then create an app on [Streamlit Community Cloud](https://streamlit.io/cloud) pointing at
-`app.py`. It's free.
+The repo deploys to [Vercel](https://vercel.com) as it is: import it from GitHub and keep the defaults. Vercel
+detects FastAPI, installs `requirements.txt` and runs `index.py`, which serves both the API and the built web app.
+
+- The bundle is about 125 MB, well under Vercel's limit, because the deployed app reads the saved forecast snapshot
+  and doesn't install scikit-learn. Keep `requirements.txt` lean; add local-only packages to `requirements-full.txt`.
+- `.vercelignore` leaves the notebooks, docs, tests and web source out of the upload.
+- After retraining or updating the data, run `python scripts/build_snapshot.py` and commit the new snapshot,
+  otherwise the deployed app can't build forecasts (Vercel's disk is read-only and it has no scikit-learn).
 
 ## PROJECT STRUCTURE
 
 ```
+index.py                            entry point for Vercel (imports api.main:app)
 api/main.py                         FastAPI app: JSON endpoints + serves the web app
-api/service.py                      prepares forecasts, history and comparisons (cached in .cache/)
+api/service.py                      reads the forecast snapshot, price history and comparisons
 web/src/                            React app (components/reactbits = React Bits components)
 web/dist/                           built web app
-app.py                              Streamlit app (simpler alternative)
+streamlit_app.py                    Streamlit app (simpler alternative)
 src/farmstat/data.py                load and clean the weekly prices
 src/farmstat/features.py            38 leakage-free inputs and the 1/2/4-week targets
 src/farmstat/forecast.py            loads the models, forecasts, shrinkage, sell/hold advice
@@ -270,11 +285,14 @@ src/farmstat/monthly.py             cashew / sugarcane monthly state data, featu
 models/farmstat_model.joblib        trained weekly models (+ arecanut ranges)
 models/cashew_model.joblib          cashew monthly model and calibrated ranges
 models/metrics.json                 test results
+models/web_snapshot.json.gz         latest forecasts, advice and test results the web app shows
 notebooks/FarmStat_Training.ipynb   full training and validation (with outputs)
 figures/                            charts from the notebook
 data/mandi_weekly.csv.gz            635,658 weekly reports: onion, tomato, potato, arecanut
 data/state_monthly.csv.gz           monthly state prices: cashew, sugarcane
 scripts/prepare_data.py             builds the data file from the source panel
+scripts/build_snapshot.py           runs the models and saves models/web_snapshot.json.gz
+vercel.json, .vercelignore          Vercel deployment settings
 tests/                              pytest tests
 ```
 

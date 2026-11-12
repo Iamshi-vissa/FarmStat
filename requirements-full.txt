@@ -1,0 +1,6 @@
+# Everything for running locally: the web app, the Streamlit app, rebuilding the snapshot and the tests.
+-r requirements.txt
+scikit-learn==1.9.1   # the saved models must be loaded with this exact version
+streamlit>=1.50
+plotly>=5.20
+pytest>=8.0
