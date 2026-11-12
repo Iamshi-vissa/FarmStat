@@ -6,6 +6,10 @@ Models (trained in notebooks/FarmStat_Training.ipynb):
     10th, 50th and 90th percentile of the price change -> a likely range, not just one number
   * a classifier that gives the probability the price rises by 5% or more in 2 weeks
 
+Crops where no model beat "no change" in testing (arecanut) are listed in bundle["naive_crops"]:
+for them the forecast is today's price, with a range taken from how much prices really moved
+over the same number of weeks in the past.
+
 Shrinkage: markets are noisy, so the predicted change is multiplied by a factor below 1
 (pulled towards "no change"). Mandis with less than 3 years of history get a stronger pull,
 because their forecasts were less reliable in testing. Both factors were tuned on 2019-2022.
@@ -25,9 +29,10 @@ from .data import ROOT
 DEFAULT_MODEL_PATH = ROOT / "models" / "farmstat_model.joblib"
 
 # Tomatoes spoil within days, so we never advise holding them longer than a week.
-MAX_HOLD_WEEKS = {"Tomato": 1, "Onion": 4, "Potato": 4}
+MAX_HOLD_WEEKS = {"Tomato": 1, "Onion": 4, "Potato": 4, "Arecanut": 4}
 # Rough cost of holding stock (weight loss, storage, spoilage) per 4 weeks, as a share of value.
-HOLDING_COST_4W = {"Tomato": 0.15, "Onion": 0.04, "Potato": 0.03}
+# Dried arecanut keeps for months, so its cost is low (mostly interest and storage).
+HOLDING_COST_4W = {"Tomato": 0.15, "Onion": 0.04, "Potato": 0.03, "Arecanut": 0.01}
 YOUNG_WEEKS = 156   # under 3 years of history = "new mandi"
 
 
@@ -48,6 +53,7 @@ class Forecaster:
         self.shrink = bundle["shrink"]            # {"established": s1, "young": s2}
         self.metrics = bundle.get("metrics", {})
         self.version = bundle.get("version", "unknown")
+        self.naive_crops = bundle.get("naive_crops", {})   # {crop: {"range": {h: (q10, q90)}, "prob_rise": p}}
 
     @classmethod
     def load(cls, path: str | Path = DEFAULT_MODEL_PATH) -> "Forecaster":
@@ -71,10 +77,25 @@ class Forecaster:
             out[f"p10_{h}"], out[f"p50_{h}"], out[f"p90_{h}"] = price * np.exp(lo), price * np.exp(mid), price * np.exp(hi)
         out["prob_rise"] = self.bundle["rise_classifier"].predict_proba(X)[:, 1]
         out["new_mandi"] = rows["history_weeks"].to_numpy() < YOUNG_WEEKS
+        out["naive"] = False
+        for crop, info in self.naive_crops.items():
+            m = (rows["crop"] == crop).to_numpy()
+            if not m.any():
+                continue
+            for h in self.horizons:
+                q10, q90 = info["range"][h]
+                out.loc[m, f"p50_{h}"] = price[m]
+                out.loc[m, f"p10_{h}"], out.loc[m, f"p90_{h}"] = price[m] * np.exp(q10), price[m] * np.exp(q90)
+            out.loc[m, "prob_rise"] = info["prob_rise"]
+            out.loc[m, "naive"] = True
         return out
 
     def advise(self, crop: str, price: float, forecast: pd.Series) -> Advice:
         """Turn a forecast into simple advice for a farmer holding this crop today."""
+        if crop in self.naive_crops:
+            return Advice("Your call", 0, f"No forecast edge for {crop.lower()}",
+                          "In testing, no model predicted these prices better than 'no change', so FarmStat shows "
+                          "today's price with the usual range of movement. Compare mandis and the seasonal pattern instead.")
         best_h, best_gain = 0, 0.0
         for h in self.horizons:
             if h > MAX_HOLD_WEEKS.get(crop, 4):

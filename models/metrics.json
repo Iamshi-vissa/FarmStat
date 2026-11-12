@@ -45,6 +45,37 @@
     "Tomato": 43.562794669605864,
     "Potato": 11.28600652814248
   },
+  "arecanut": {
+    "skill_vs_naive": {
+      "1w / Main model (all crops)": -0.01673606748216061,
+      "1w / Arecanut-only model": -0.0055471901013741665,
+      "1w / Naive (no change)": 0.0,
+      "2w / Main model (all crops)": -0.055378112495708454,
+      "2w / Arecanut-only model": -0.04907254575721831,
+      "2w / Naive (no change)": 0.0,
+      "4w / Main model (all crops)": -0.10589681485150826,
+      "4w / Arecanut-only model": -0.11427636981072475,
+      "4w / Naive (no change)": 0.0
+    },
+    "range_coverage": {
+      "1": 0.771842528903849,
+      "2": 0.7847932414406403,
+      "4": 0.7931451004076703
+    }
+  },
+  "cashew": {
+    "chosen_model": "Gradient Boosting",
+    "test_MAPE": {
+      "1": 0.1370325519813778,
+      "2": 0.22295828480791366,
+      "3": 0.25022708880565186
+    },
+    "range_coverage": {
+      "1": 0.711340206185567,
+      "2": 0.6593406593406593,
+      "3": 0.5952380952380952
+    }
+  },
   "shrink": {
     "established": 0.8,
     "young": 0.8

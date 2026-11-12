@@ -1,6 +1,6 @@
 # FARMSTAT
 
-Forecasts onion, tomato and potato prices in 870+ mandis across 24 Indian states, 1, 2 and 4 weeks ahead, and tells the farmer whether to sell now or hold.
+Forecasts onion, tomato and potato prices in mandis across 24 Indian states, 1, 2 and 4 weeks ahead, tells the farmer whether to sell now or hold, and also covers arecanut, cashew and sugarcane.
 
 <p align="center">
   <img src="docs/screenshot-forecast.png" width="420" alt="FarmStat forecast for onion at Lasalgaon">
@@ -26,6 +26,18 @@ weekly reports from about 980 mandis in 24 states. For each crop and mandi it gi
 - the **chance of a 5%+ price rise** in the next two weeks
 - simple **sell now / hold** advice that accounts for storage losses
 - a **comparison of mandis in the same state and across India**
+
+| Crop | Coverage | What FarmStat shows |
+|---|---|---|
+| Onion, tomato, potato | ~980 mandis, 24 states, weekly, 2003–2026 | Forecast 1/2/4 weeks ahead + range, rise chance, sell / hold advice |
+| Arecanut | 47 mandi-variety series in Karnataka and Kerala (Sirsi, Shimoga, Yellapur, Kasargod…), weekly, 2021–2026 | Today's price with the usual range of movement (no model beat "no change"), variety-wise mandi comparison |
+| Cashew | 5 states, monthly state average, 2019–2026 | Rough-guide forecast 1/2/3 months ahead + calibrated range, seasonal pattern, state comparison |
+| Sugarcane | Mostly sold to mills at the government FRP | FRP information (₹365/quintal for 2026–27) and the mandi price history |
+
+<p align="center">
+  <img src="docs/screenshot-arecanut.png" width="420" alt="FarmStat arecanut at Sirsi (Rashi)">
+  <img src="docs/screenshot-cashew.png" width="420" alt="FarmStat cashew in Karnataka">
+</p>
 
 ## RESULTS
 
@@ -55,6 +67,16 @@ data only, exactly as it would be in use, and these years were never used to mak
 year from 2023 to 2026 for the 2-week forecast. The one segment where it doesn't, onion in recently added mandis, is shown openly, and the app
 warns users there.
 
+### ARECANUT, CASHEW AND SUGARCANE
+
+| Crop | Test | Result |
+|---|---|---|
+| Arecanut | Main model, arecanut-only model and "no change", 2023–2026, retrained yearly | Neither model beat "no change" at any horizon (0.6–11% worse); weekly arecanut prices move only about 2% and behave like a random walk. Shown as today's price with the usual range, which held the real price **77–79%** of the time |
+| Cashew | Naive, Ridge and gradient boosting on monthly state data, chosen on 2022–23, tested on 2024–26 | Gradient boosting chosen (11.5% vs 11.7% average error on validation). On the test it **roughly ties with "no change"**: 13.7% vs 13.7% at 1 month, 22.3% vs 22.0% at 2, 25.0% vs 26.4% at 3. Shown as a rough guide |
+| Sugarcane | — | Not forecast: mills pay the government FRP, and the mandi data is too thin |
+
+Finding out *when a model doesn't help*, and saying so, is part of the result.
+
 ![Model comparison](figures/model_comparison.png)
 
 ![Case studies](figures/case_studies.png)
@@ -70,6 +92,9 @@ warns users there.
 - Compare tab with every mandi in the chosen state, the median price in each state, and the highest-paying mandis in India
 - Warning on mandis with less than 3 years of history
 - Accuracy tab with the test results, so users can see how far to trust the forecasts
+- **Arecanut:** every mandi and variety (Rashi, Chali, Bette…), compared only with the same variety
+- **Cashew page:** monthly state price, rough-guide forecast with range, seasonal pattern, all-state comparison
+- **Sugarcane page:** current FRP with the recovery premium rules, and the price history
 
 ## HOW THE MODEL WAS BUILT
 
@@ -89,6 +114,9 @@ Everything is in [`notebooks/FarmStat_Training.ipynb`](notebooks/FarmStat_Traini
 | Shrinkage | Forecasts pulled towards "no change" by a factor tuned on 2019–2022 | Regularisation |
 | Ranges | Quantile gradient boosting (10th / 50th / 90th percentile) with coverage check | Uncertainty |
 | Evaluation | MAE, MAPE, skill vs naive, direction accuracy; by crop, mandi type, year and state; two case studies (Kolar tomato 2023, Lasalgaon onion export ban); farmer back-test; permutation importance | Metrics |
+| Arecanut | Main model vs arecanut-only model vs naive with yearly retraining; empirical range from past moves with coverage check | Model selection, honest negatives |
+| Cashew | Naive vs Ridge vs gradient boosting on monthly state data, monthly retraining, split-conformal ranges | Small-data modelling, conformal prediction |
+| Sugarcane | FRP vs mandi price chart | Domain knowledge |
 
 **Final model:** Histogram Gradient Boosting with quantile loss (3 horizons × 3 quantiles), plus a gradient-boosting
 classifier for price rises, re-trained on all data up to July 2026.
@@ -163,7 +191,7 @@ On Windows with more than one Python installed, use `py -3.12 -m venv .venv` to 
 
 ```bash
 pip install -r requirements-train.txt
-jupyter notebook notebooks/FarmStat_Training.ipynb    # Run All, about 25 minutes
+jupyter notebook notebooks/FarmStat_Training.ipynb    # Run All, about 30 minutes
 ```
 
 ### RUN THE TESTS
@@ -177,7 +205,7 @@ The tests check all-India coverage, that typos are removed while real spikes are
 
 ### UPDATE THE DATA
 
-`scripts/prepare_data.py` rebuilds `data/mandi_weekly.csv.gz` from the source weekly panel (see [Data](#data)).
+`scripts/prepare_data.py` rebuilds both data files from the three source extracts (see [Data](#data)).
 
 ### DEPLOY
 
@@ -191,11 +219,14 @@ app.py                              Streamlit app
 src/farmstat/data.py                load and clean the weekly prices
 src/farmstat/features.py            38 leakage-free inputs and the 1/2/4-week targets
 src/farmstat/forecast.py            loads the models, forecasts, shrinkage, sell/hold advice
-models/farmstat_model.joblib        trained models
+src/farmstat/monthly.py             cashew / sugarcane monthly state data, features, forecaster
+models/farmstat_model.joblib        trained weekly models (+ arecanut ranges)
+models/cashew_model.joblib          cashew monthly model and calibrated ranges
 models/metrics.json                 test results
 notebooks/FarmStat_Training.ipynb   full training and validation (with outputs)
 figures/                            charts from the notebook
-data/mandi_weekly.csv.gz            625,157 weekly reports, 24 states, ~980 mandis
+data/mandi_weekly.csv.gz            635,658 weekly reports: onion, tomato, potato, arecanut
+data/state_monthly.csv.gz           monthly state prices: cashew, sugarcane
 scripts/prepare_data.py             builds the data file from the source panel
 tests/                              pytest tests
 ```
@@ -204,10 +235,13 @@ tests/                              pytest tests
 
 | Data | Source | Coverage |
 |---|---|---|
-| Weekly modal price (arrival-weighted) and arrivals | [Agmarknet](https://agmarknet.gov.in), Directorate of Marketing & Inspection, Government of India (Open Government Data License – India) | Onion, tomato, potato · 24 states · ~980 mandis · Jan 2003 – Jul 2026 |
+| Weekly modal price (arrival-weighted) and arrivals | [Agmarknet](https://agmarknet.gov.in), via the [TOP Digital Twin](https://github.com/masroor01/TOP-Digital-Twin) weekly panel | Onion, tomato, potato · 24 states · ~980 mandis · Jan 2003 – Jul 2026 · real (non-imputed) weeks only |
+| Daily arecanut prices by mandi and variety | Agmarknet, via [Malabar Mandi Prices](https://github.com/achuthpv/malabar-mandi-prices) | Karnataka and Kerala · Jul 2021 – Jul 2026, aggregated to weekly |
+| Monthly state weighted-average price and arrivals | Agmarknet, via [India Mandi Arrivals](https://github.com/herrrickshaw/india-mandi-arrivals) | Cashew and sugarcane · Jan 2019 – Oct 2026 |
+| Sugarcane FRP | Cabinet Committee on Economic Affairs decisions | 2019–20 to 2026–27 seasons |
 
-The weekly panel was compiled from Agmarknet by the [TOP Digital Twin](https://github.com/masroor01/TOP-Digital-Twin)
-project. FarmStat keeps only real (non-imputed) weekly reports.
+All price data is from Agmarknet, Directorate of Marketing & Inspection, Government of India, used under the
+Open Government Data License – India.
 
 ## STATUS AND LIMITATIONS
 
@@ -221,6 +255,11 @@ project. FarmStat keeps only real (non-imputed) weekly reports.
   conformal calibration is the next fix.
 - **Potato covers only 72 mandis, in West Bengal and Uttarakhand** — the source panel only includes potato for these two states.
 - **Weather is not used.** Rainfall data for every mandi's district would be a natural next input.
+- **Arecanut has no forecast,** only today's price with the usual range: with five years of data no model beat
+  "no change". Arrival quantities aren't in the arecanut source and could help.
+- **Cashew is monthly and state-level only,** with five usable states. Its forecast only ties with "no change", and
+  Maharashtra reports processed kernels, not raw nuts.
+- **Sugarcane is information only,** because most of it is sold to mills at the government FRP.
 
 ## LICENSE
 

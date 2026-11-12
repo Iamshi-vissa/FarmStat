@@ -1,9 +1,10 @@
 """
 Load and clean the all-India mandi price data.
 
-Source: Agmarknet (Government of India) wholesale prices for onion, tomato and potato,
-aggregated to one row per mandi per week: arrival-weighted modal price (Rs per quintal)
-and total arrivals (tonnes). 24 states, ~980 mandis, 2003-2026.
+Source: Agmarknet (Government of India) wholesale prices, one row per mandi per week:
+modal price (Rs per quintal), arrivals (tonnes) and trading days.
+  * onion, tomato, potato: 24 states, ~980 mandis, 2003-2026 (arrival-weighted weekly price)
+  * arecanut: Karnataka and Kerala, one series per mandi and variety, 2021-2026 (no arrivals)
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 DATA_FILE = ROOT / "data" / "mandi_weekly.csv.gz"
 
-CROPS = ["Onion", "Tomato", "Potato"]
+CROPS = ["Onion", "Tomato", "Potato", "Arecanut"]
 KEY = ["crop", "state", "market"]
 
 MIN_WEEKS = 52          # a crop-mandi series needs at least a year of reported weeks
