@@ -1,0 +1,46 @@
+# Every Monday morning: retrain the weekly models on all data (history + live weeks) and keep the new model
+# only if it beats the current one on weeks neither has seen. Results are logged to Supabase (model_runs) when the
+# optional SUPABASE_SERVICE_KEY secret is set, and always to the job log.
+name: Weekly retrain
+
+on:
+  schedule:
+    - cron: "30 21 * * 0"          # Monday 03:00 IST
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Retrain even without enough unseen weeks"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency: farmstat-data
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      SUPABASE_URL: https://irwjvkbgtkyjuwtgkngt.supabase.co
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: pip install -r requirements.txt scikit-learn==1.9.1
+      - name: Retrain (champion / challenger)
+        run: python scripts/retrain.py ${{ inputs.force && '--force' || '' }}
+      - name: Commit the model if it changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add models/farmstat_model.joblib models/metrics.json models/web_snapshot.json.gz
+          if git diff --cached --quiet; then echo "Model unchanged"; exit 0; fi
+          git commit -m "Weekly retrain $(date -u +%Y-%m-%d)"
+          git pull --rebase origin main
+          git push origin HEAD:main

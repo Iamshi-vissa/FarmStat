@@ -30,14 +30,15 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from farmstat.data import CROPS, DATA_FILE, KEY, load_prices  # noqa: E402
+from farmstat.data import CROPS, DATA_FILE, KEY, LIVE_FILE, load_prices  # noqa: E402
 from farmstat.forecast import DEFAULT_MODEL_PATH, MAX_HOLD_WEEKS  # noqa: E402
 from farmstat.monthly import M_HORIZONS, MONTHLY_FILE, build_monthly, load_monthly, product_label  # noqa: E402
 
 CASHEW_MODEL = ROOT / "models" / "cashew_model.joblib"
 SNAPSHOT = ROOT / "models" / "web_snapshot.json.gz"
-SNAPSHOT_VERSION = "2"   # bump when the snapshot's contents change shape
+SNAPSHOT_VERSION = "3"   # bump when the snapshot's contents change shape
 ACTIVE_WEEKS = 8
+WARMUP_WEEKS = 4        # a live series needs this many reported weeks in the last 13 before the model forecasts it
 FRP = [("2019-20", "2019-10-01", 275), ("2020-21", "2020-10-01", 285), ("2021-22", "2021-10-01", 290),
        ("2022-23", "2022-10-01", 305), ("2023-24", "2023-10-01", 315), ("2024-25", "2024-10-01", 340),
        ("2025-26", "2025-10-01", 355), ("2026-27", "2026-10-01", 365)]
@@ -46,8 +47,9 @@ FRP = [("2019-20", "2019-10-01", 275), ("2020-21", "2020-10-01", 285), ("2021-22
 def fingerprint() -> str:
     """Content hash of the data and models the snapshot was built from."""
     h = hashlib.md5(SNAPSHOT_VERSION.encode())
-    for p in [DATA_FILE, MONTHLY_FILE, DEFAULT_MODEL_PATH, CASHEW_MODEL]:
-        h.update(p.read_bytes())
+    for p in [DATA_FILE, LIVE_FILE, MONTHLY_FILE, DEFAULT_MODEL_PATH, CASHEW_MODEL]:
+        if p.exists():
+            h.update(p.read_bytes())
     return h.hexdigest()[:12]
 
 
@@ -91,21 +93,54 @@ def build_snapshot(prices: pd.DataFrame, fp: str) -> dict:
     model = Forecaster.load()
     ds = build_dataset(prices, states=model.states)
     latest = ds.sort_values("week").groupby(KEY).tail(1)
-    latest = latest[latest["week"] >= latest.groupby("crop")["week"].transform("max")
-                    - pd.Timedelta(weeks=ACTIVE_WEEKS)]
+    # active = reported within ACTIVE_WEEKS of the history panel's end (or since, from the live feed), so mandis the
+    # live back-fill hasn't reached yet stay listed with their last known price
+    panel = prices[prices["source"] == "panel"] if "source" in prices else prices
+    panel_end = latest["crop"].map(panel.groupby("crop")["week"].max())
+    keep_rows = latest["week"] >= panel_end - pd.Timedelta(weeks=ACTIVE_WEEKS)
+    latest = latest.assign(live=latest["week"] > panel_end)[keep_rows]
     latest = latest.join(model.predict(latest)).reset_index(drop=True)
     adv = [model.advise(r["crop"], r["price"], r) for _, r in latest.iterrows()]
     latest["advice"] = [a.action for a in adv]
     latest["hold_weeks"] = [a.hold_weeks for a in adv]
     latest["advice_headline"] = [a.headline for a in adv]
     latest["advice_detail"] = [a.detail for a in adv]
+    latest = _warm_up(latest, ds, model.horizons)
     keep = ["week", "crop", "state", "district", "market", "price", "arrivals", "new_mandi", "naive",
-            "prob_rise", "advice", "hold_weeks", "advice_headline", "advice_detail"]
+            "prob_rise", "advice", "hold_weeks", "advice_headline", "advice_detail", "live", "warming"]
     keep += [f"p{q}_{h}" for h in model.horizons for q in (10, 50, 90)]
     snap = dict(fingerprint=fp, version=model.version, horizons=list(model.horizons),
                 metrics=json.loads(json.dumps(model.metrics, default=_clean)),
                 cashew=_cashew(MonthlyForecaster(joblib.load(CASHEW_MODEL))), latest=latest[keep])
     return snap
+
+
+def _warm_up(latest: pd.DataFrame, ds: pd.DataFrame, horizons) -> pd.DataFrame:
+    """Live series whose reports only just resumed (after a gap, or a new mandi) have too few recent weeks for the
+    model's lag features, which then read as a crash. Until they have WARMUP_WEEKS reported weeks out of the last 13,
+    show today's live price with the range prices usually moved for that crop (last 3 years) and no call."""
+    latest = latest.copy()
+    warm = latest["live"] & (latest["obs_last_13"] < WARMUP_WEEKS)
+    latest["warming"] = warm
+    if not warm.any():
+        return latest
+    recent = ds[ds["week"] >= ds["week"].max() - pd.Timedelta(weeks=156)]
+    for crop, g in latest[warm].groupby("crop"):
+        r = recent[recent["crop"] == crop]
+        price = latest.loc[g.index, "price"]
+        for h in horizons:
+            lo, hi = np.quantile(r[f"y_{h}"].dropna(), [0.1, 0.9])
+            latest.loc[g.index, f"p50_{h}"] = price
+            latest.loc[g.index, f"p10_{h}"] = price * np.exp(lo)
+            latest.loc[g.index, f"p90_{h}"] = price * np.exp(hi)
+        latest.loc[g.index, "prob_rise"] = float((r["y_2"].dropna() > np.log(1.05)).mean())
+    latest.loc[warm, "naive"] = True
+    latest.loc[warm, "advice"] = "Your call"
+    latest.loc[warm, "hold_weeks"] = 0
+    latest.loc[warm, "advice_headline"] = "Live price, forecast warming up"
+    latest.loc[warm, "advice_detail"] = (f"This mandi's live reports have just resumed. Forecasts start once it has "
+                                          f"{WARMUP_WEEKS} recent weeks; until then the range shows how prices usually move.")
+    return latest
 
 
 def _cashew(fc) -> dict:

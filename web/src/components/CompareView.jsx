@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowDownUp } from 'lucide-react';
 import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import Delta from './Delta.jsx';
+import DotStrip from './DotStrip.jsx';
 import { api } from '../api.js';
 import { compactRupees, date, pct0, rupees, weeks } from '../format.js';
 import { T } from '../theme.js';
@@ -17,7 +18,7 @@ function SortTh({ id, label, sort, setSort, right }) {
   );
 }
 
-export default function CompareView({ crop, state, market, mandis }) {
+export default function CompareView({ crop, state, market, mandis, onMarket }) {
   const variety = crop === 'Arecanut' ? varietyOf(market) : null;
   const [nat, setNat] = useState(null);
   const [sort, setSort] = useState({ id: 'price', desc: true });
@@ -48,6 +49,17 @@ export default function CompareView({ crop, state, market, mandis }) {
           {variety && ' Arecanut varieties have very different prices, so only the same variety is compared.'}
         </p>
       </div>
+
+      {rows.length >= 3 && (
+        <section className="panel" aria-labelledby="spread-title">
+          <div className="panel-head"><div><h2 id="spread-title">Price spread across {state}</h2>
+            <p className="sub">Each dot is one mandi’s latest weekly price. The shaded band holds the middle half of mandis;
+              {' '}{market} is highlighted. Select a dot to switch mandi.</p></div>
+            <div className="legend"><span className="key"><i className="dot me" />{market}</span><span className="key"><i className="dot" />Other mandis</span>
+              <span className="key"><i className="iqr" />Middle half</span></div></div>
+          <DotStrip rows={rows} market={market} onPick={onMarket} />
+        </section>
+      )}
 
       <section className="panel">
         <div className="panel-head"><div><h2>Mandis in {state}</h2>

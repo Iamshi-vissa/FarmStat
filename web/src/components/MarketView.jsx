@@ -29,7 +29,7 @@ export default function MarketView({ crop, state, market, meta }) {
   const naive = L.naive;
   return (
     <div className={switching ? 'is-switching' : undefined} aria-busy={switching}>
-      <RateBoard title={L.market} where={`${L.district}, ${L.state ?? state}`} priceLabel={priceWeek(L.week)} price={L.price}
+      <RateBoard title={L.market} where={`${L.district}, ${L.state ?? state}`} priceLabel={priceWeek(L.week)} price={L.price} live={L.live}
         slipKey={`${crop}|${L.market}`}
         advice={{ action: L.advice, headline: L.advice_headline, detail: L.advice_detail, chance: L.prob_rise,
           chanceLabel: naive ? 'Past weeks followed by a 5%+ rise in 2 weeks' : 'Chance of a 5%+ rise in 2 weeks',
@@ -44,7 +44,7 @@ export default function MarketView({ crop, state, market, meta }) {
       )}
 
       <Suspense fallback={<div className="sk chart-sk" style={{ marginTop: 16 }} />}>
-        <MarketChart crop={crop} market={L.market} data={data} maxHold={meta.max_hold_weeks?.[crop]} />
+        <MarketChart crop={crop} state={state} market={L.market} data={data} maxHold={meta.max_hold_weeks?.[crop]} />
       </Suspense>
     </div>
   );

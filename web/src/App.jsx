@@ -146,7 +146,7 @@ export default function App() {
           {weekly && !ready && view === 'market' && <MarketSkeleton label={`Loading ${crop.toLowerCase()} mandis`} />}
           {weekly && !ready && view === 'compare' && <Wait label={`Loading ${crop.toLowerCase()} mandis…`} />}
           {ready && view === 'market' && <MarketView crop={crop} state={state} market={market} meta={meta} />}
-          {ready && view === 'compare' && <CompareView crop={crop} state={state} market={market} mandis={mandis} />}
+          {ready && view === 'compare' && <CompareView crop={crop} state={state} market={market} mandis={mandis} onMarket={setMarket} />}
           {crop === 'Cashew' && view === 'overview' && (extra.cashew ? <CashewView data={extra.cashew} state={state} /> : <MarketSkeleton label="Loading cashew prices" />)}
           {crop === 'Sugarcane' && view === 'overview' && (extra.sugarcane ? <SugarcaneView data={extra.sugarcane} /> : <MarketSkeleton label="Loading" />)}
         </Suspense>

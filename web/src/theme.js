@@ -9,6 +9,7 @@ export const T = {
   arrivals: '#cccfc8',     // neutral-300
   arrivalsHeavy: '#7e827a',// neutral-500
   forest: '#2b7b47',       // forest-600
+  forestLight: '#6bb781',  // forest-400
   contour: '#6bb781',      // forest-400, rate board contour lines
   boardTile: '#04190b',    // split-flap tiles, a step below forest-950
   chalk: '#f5ead1',

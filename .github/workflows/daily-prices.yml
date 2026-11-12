@@ -1,0 +1,48 @@
+# Every evening: read the day's mandi prices that Supabase collected from data.gov.in (Edge Function ingest-mandi,
+# scheduled with pg_cron), rebuild the live weekly rows and refresh the forecasts and sell/hold calls.
+# Commits the updated files, so Vercel redeploys. Needs no secrets; SUPABASE_SERVICE_KEY and DATA_GOV_API_KEY are
+# optional (with them, this job also fetches from data.gov.in itself as a second source).
+name: Daily mandi prices
+
+on:
+  schedule:
+    - cron: "15 17 * * *"          # 22:45 IST, after Supabase's last pull of the day (22:00-22:15 IST)
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Past days to fetch (raise it to fill a gap)"
+        default: "7"
+
+permissions:
+  contents: write
+
+concurrency: farmstat-data           # never run alongside the retraining job
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATA_GOV_API_KEY: ${{ secrets.DATA_GOV_API_KEY }}
+      SUPABASE_URL: https://irwjvkbgtkyjuwtgkngt.supabase.co
+      SUPABASE_KEY: sb_publishable_LmEKIjlgTrfV4znof_lvMA_tpseHelF   # public, read-only
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: pip install -r requirements.txt scikit-learn==1.9.1
+      - name: Fetch prices, store them, refresh forecasts
+        run: python scripts/ingest_live.py --days "${{ inputs.days || '7' }}"
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/live_weekly.csv.gz models/web_snapshot.json.gz
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git commit -m "Daily mandi prices $(date -u +%Y-%m-%d)"
+          git pull --rebase origin main
+          git push origin HEAD:main

@@ -19,6 +19,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from . import livefeed
 from .service import FarmData
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,6 +46,8 @@ async def cache_headers(request, call_next):
     path = request.url.path
     if path.startswith("/assets/"):
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif path.startswith("/api/live") and response.status_code == 200:
+        response.headers.setdefault("Cache-Control", "public, max-age=600, stale-while-revalidate=3600")
     elif path.startswith("/api/") and response.status_code == 200:
         response.headers.setdefault("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
     else:
@@ -99,6 +102,17 @@ def cashew():
 @app.get("/api/sugarcane")
 def sugarcane():
     return data().sugarcane()
+
+
+@app.get("/api/live")
+def live(crop: str, state: str, market: str):
+    """Latest daily prices this mandi reported (from the daily data.gov.in fetch stored in Supabase)."""
+    return livefeed.mandi(weekly_crop(crop), state, market)
+
+
+@app.get("/api/live/status")
+def live_status():
+    return livefeed.status()
 
 
 @app.get("/api/accuracy")

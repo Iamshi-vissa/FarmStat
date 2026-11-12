@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown, Info } from 'lucide-react';
+import { api } from '../api.js';
+import { date } from '../format.js';
 
 const KEY = 'farmstat-notice-v1';
 const seen = () => { try { return localStorage.getItem(KEY) === '1'; } catch { return false; } };
@@ -24,6 +26,24 @@ export function SideLinks() {
   );
 }
 
+// When the live feed last brought in prices (shared by every sidebar; fetched once).
+let statusPromise = null;
+function LiveStatus() {
+  const [s, setS] = useState(null);
+  useEffect(() => {
+    statusPromise ??= api('live/status').catch(() => ({ available: false }));
+    statusPromise.then(setS);
+  }, []);
+  if (!s) return null;
+  if (!s.available || !s.latest_price_date) return <div className="live-status off">Live feed: not reachable right now</div>;
+  const at = s.last_fetch?.finished_at ?? s.last_fetch?.started_at;
+  const time = at ? new Date(at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : null;
+  return (
+    <div className="live-status"><i aria-hidden="true" />Live feed: prices to {date(s.latest_price_date)}
+      {at && <>, checked {date(at)}{time ? ` at ${time}` : ''}</>}</div>
+  );
+}
+
 // Sidebar frame. On phones it collapses to a header with a button showing the current choice;
 // the list opens below it and closes again once something is picked.
 export function SideShell({ label, current, footer, children }) {
@@ -41,7 +61,7 @@ export function SideShell({ label, current, footer, children }) {
       </div>
       <div className="side-body">
         {children}
-        <div className="side-foot">{footer}<SideLinks /></div>
+        <div className="side-foot">{footer}<LiveStatus /><SideLinks /></div>
       </div>
     </aside>
   );

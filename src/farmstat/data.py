@@ -5,6 +5,8 @@ Source: Agmarknet (Government of India) wholesale prices, one row per mandi per 
 modal price (Rs per quintal), arrivals (tonnes) and trading days.
   * onion, tomato, potato: 24 states, ~980 mandis, 2003-2026 (arrival-weighted weekly price)
   * arecanut: Karnataka and Kerala, one series per mandi and variety, 2021-2026 (no arrivals)
+  * live weeks (data/live_weekly.csv.gz): built every day from the daily prices that the scheduled job fetches
+    from data.gov.in and stores in Supabase (see farmstat.live). They extend each series past the panel.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_FILE = ROOT / "data" / "mandi_weekly.csv.gz"
+LIVE_FILE = ROOT / "data" / "live_weekly.csv.gz"
 
 CROPS = ["Onion", "Tomato", "Potato", "Arecanut"]
 KEY = ["crop", "state", "market"]
@@ -23,8 +26,18 @@ MIN_WEEKS = 52          # a crop-mandi series needs at least a year of reported 
 OUTLIER_RATIO = 3.0     # a weekly price 3x above/below its neighbours is treated as a typo
 
 
-def load_raw(path: Path = DATA_FILE) -> pd.DataFrame:
-    return pd.read_csv(path, parse_dates=["week"])
+def load_raw(path: Path = DATA_FILE, live: Path | None = LIVE_FILE) -> pd.DataFrame:
+    """The weekly panel, extended with live weeks that come after each series' last panel week."""
+    df = pd.read_csv(path, parse_dates=["week"])
+    df["source"] = "panel"
+    if live is not None and Path(live).exists():
+        lv = pd.read_csv(live, parse_dates=["week"])
+        last = df.groupby(KEY)["week"].max().rename("panel_last")
+        lv = lv.join(last, on=KEY)
+        lv = lv[lv["panel_last"].isna() | (lv["week"] > lv["panel_last"])].drop(columns="panel_last")
+        lv["source"] = "live"
+        df = pd.concat([df, lv[df.columns.intersection(lv.columns)]], ignore_index=True)
+    return df
 
 
 def remove_outliers(df: pd.DataFrame, ratio: float = OUTLIER_RATIO) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -53,4 +66,4 @@ def mandi_label(market: str, district: str, state: str) -> str:
     return f"{market} ({district})" if district and district.lower() not in market.lower() else market
 
 
-__all__ = ["CROPS", "KEY", "ROOT", "load_raw", "load_prices", "remove_outliers", "mandi_label"]
+__all__ = ["CROPS", "KEY", "ROOT", "DATA_FILE", "LIVE_FILE", "load_raw", "load_prices", "remove_outliers", "mandi_label"]

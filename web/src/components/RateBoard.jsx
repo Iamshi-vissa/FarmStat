@@ -6,7 +6,7 @@ import { T } from '../theme.js';
 
 // The mandi rate board: the current modal price on split-flap tiles over a faint contour map,
 // with the week's advice on a paper slip (parchi) pinned to it.
-export default function RateBoard({ title, where, priceLabel, price, advice, slipKey }) {
+export default function RateBoard({ title, where, priceLabel, price, advice, slipKey, live }) {
   const text = plain(price);
   return (
     <section className="board" aria-label="Current price and advice">
@@ -22,6 +22,7 @@ export default function RateBoard({ title, where, priceLabel, price, advice, sli
             charset="0123456789" fontSize={50} tileColor={T.boardTile} textColor={T.chalk} tileRadius={6} gap={4}
             flipsPerChar={6} stagger={0.05} glare={0.15} aria-label={`₹${text}`} />
           <span className="board-unit"><strong>per quintal</strong>{priceLabel}</span>
+          {live && <span className="live-chip" title="This week's price comes from the live daily feed"><i aria-hidden="true" />Live</span>}
         </div>
       </div>
       {advice && <AdviceSlip key={slipKey ?? title} {...advice} />}

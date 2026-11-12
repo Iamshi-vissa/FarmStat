@@ -9,7 +9,7 @@ Forecasts onion, tomato and potato prices in mandis across 24 Indian states, 1, 
 ## CONTENTS
 
 [About](#about) · [Results](#results) · [Features](#features) · [Web app](#web-app) · [How the model was built](#how-the-model-was-built) ·
-[Architecture](#architecture) · [Tech stack](#tech-stack) · [Getting started](#getting-started) ·
+[Live data](#live-data) · [Architecture](#architecture) · [Tech stack](#tech-stack) · [Getting started](#getting-started) ·
 [Project structure](#project-structure) · [Data](#data) · [Status and limitations](#status-and-limitations)
 
 ## ABOUT
@@ -103,9 +103,15 @@ FastAPI service that serves the models.
 - **Crop switcher** with a sliding forest-green thumb, **forecast tiles** with a range bar for each horizon
   (*SpotlightCard*), and accuracy figures that count up when they scroll into view
 - **Searchable mandi list** with a 12-week sparkline and expected change for every mandi, sortable by name, price or outlook
-- **Price chart:** history with a soft wash, a shaded forecast zone with the median and likely range, labelled
-  latest and 4-week prices, round axis values, 3M / 6M / 1Y / 2Y / 5Y ranges, an optional "same weeks last year"
-  line, and a table view of the same numbers
+- **Price chart:** history with a soft wash, a shaded forecast zone with the median and likely range, a band showing the
+  usual price for the season (10th to 90th percentile of the same weeks in the past 5 years), labelled latest and 4-week
+  prices, round axis values, 3M / 6M / 1Y / 2Y / 5Y ranges, an optional "same weeks last year" line, gaps in reporting
+  shaded and labelled instead of bridged, and a table view of the same numbers
+- **Live daily reports:** for every mandi in the live feed, the latest report and its date, that day's lowest-to-highest
+  lot, the change since the previous report, and a chart of the last 45 days; a "Live" chip on the rate board and the
+  feed's freshness in the sidebar
+- **Price statistics:** 52-week range and where today sits, change vs the same week last year, typical weekly move, how
+  prices moved in the same 4 weeks of past years, the seasonal pattern by month, and the distribution of the last 3 years
 - **Arrivals chart** under the price chart on the same time axis, with hover synced between the two and heavier-than-usual
   weeks shaded darker
 - **More charts:** state medians, cashew seasonality, and sugarcane price vs FRP, all with hover tooltips
@@ -135,6 +141,13 @@ FastAPI service that serves the models.
 <p align="center">
   <img src="docs/web-about.png" width="420" alt="About: risks and limitations">
   <img src="docs/web-terms.png" width="420" alt="About: terms of use">
+</p>
+<p align="center">
+  <img src="docs/web-live.png" width="420" alt="Live daily reports from a mandi">
+  <img src="docs/web-season.png" width="420" alt="Price chart with the usual range for the season">
+</p>
+<p align="center">
+  <img src="docs/web-stats.png" width="420" alt="Price statistics">
 </p>
 <p align="center">
   <img src="docs/web-mobile.png" width="260" alt="FarmStat on a phone">
@@ -181,6 +194,38 @@ flowchart LR
     S --> A[Web app + API]
 ```
 
+## LIVE DATA
+
+FarmStat keeps itself up to date from the government's free mandi price API and stores everything in the cloud.
+
+```mermaid
+flowchart LR
+    G[data.gov.in<br/>Agmarknet daily prices] -->|3 times a day + back-fill| E[Supabase Edge Function<br/>ingest-mandi, pg_cron]
+    E --> DB[(Supabase Postgres<br/>daily_prices, ingest_runs)]
+    DB -->|every evening| A[GitHub Actions<br/>daily-prices.yml]
+    A -->|live weekly rows + new forecasts| R[Repo: data/live_weekly.csv.gz<br/>models/web_snapshot.json.gz]
+    R -->|redeploy| V[Vercel web app]
+    DB -->|/api/live, read-only| V
+    A2[GitHub Actions<br/>weekly-retrain.yml] -->|champion vs challenger| R
+```
+
+- **Collecting:** the `ingest-mandi` Edge Function (`supabase/functions/ingest-mandi`) pulls today's onion, tomato,
+  potato, arecanut, cashew and sugarcane prices from the *Current Daily Price* resource at 16:00, 19:00 and 22:00 IST,
+  and back-fills past days from the *Variety-wise Daily Market Prices* resource, newest first, until the gap since the
+  history panel is closed (`backfill_queue`). Each run is logged in `ingest_runs`.
+- **Forecasting:** every evening a GitHub Actions job reads the stored prices (public, read-only key), turns them into
+  weekly rows that extend each mandi's history, and rebuilds the forecasts and sell / hold calls. A mandi whose live
+  reports only just resumed is "warming up" until it has 4 reported weeks out of the last 13: it shows the live price
+  with the usual range and no call, because the model's recent-week inputs would otherwise read as a crash.
+- **Retraining:** every Monday the weekly models are retrained on history plus live weeks and kept only if they beat
+  the current model on weeks neither has seen (champion / challenger), logged in `model_runs`.
+- **Endpoints:** `GET /api/live?crop=Onion&state=Maharashtra&market=Kolhapur` (that mandi's daily reports) and
+  `GET /api/live/status` (last fetch, last retrain, latest price date).
+- **API key:** without one the public sample key is used, which returns 10 records per request, so collecting is slow.
+  Register a free key at [data.gov.in](https://data.gov.in) and add it as the `DATA_GOV_IN_API_KEY` secret of the
+  Supabase project (Edge Functions → Secrets).
+- **Arrivals** aren't in the daily feed, so live weeks have none; the models handle missing values.
+
 ## ARCHITECTURE
 
 ```mermaid
@@ -219,6 +264,7 @@ flowchart TB
 | API | FastAPI, Uvicorn |
 | Web app | React 19, Vite, Recharts, React Bits (SplitFlapText, Topography, Noise, LineSidebar, SpotlightCard); Bricolage Grotesque, Archivo, Big Shoulders Display, Newsreader |
 | Simple app | Streamlit, Plotly |
+| Live data | data.gov.in API, Supabase (Postgres, Edge Functions, pg_cron, pg_net), GitHub Actions |
 | Hosting | Vercel (FastAPI, Python 3.12) |
 | Tests | pytest |
 
@@ -297,6 +343,7 @@ detects FastAPI, installs `requirements.txt` and runs `index.py`, which serves b
 index.py                            entry point for Vercel (imports api.main:app)
 api/main.py                         FastAPI app: JSON endpoints + serves the web app
 api/service.py                      reads the forecast snapshot, price history and comparisons
+api/livefeed.py                     read-only live daily prices and feed status from Supabase
 web/src/                            React app (components/reactbits = React Bits components)
 web/dist/                           built web app
 streamlit_app.py                    Streamlit app (simpler alternative)
@@ -304,6 +351,11 @@ src/farmstat/data.py                load and clean the weekly prices
 src/farmstat/features.py            38 leakage-free inputs and the 1/2/4-week targets
 src/farmstat/forecast.py            loads the models, forecasts, shrinkage, sell/hold advice
 src/farmstat/monthly.py             cashew / sugarcane monthly state data, features, forecaster
+src/farmstat/live.py                data.gov.in client, Supabase read/write, daily -> weekly rows
+supabase/functions/ingest-mandi/    Edge Function that collects daily prices into Supabase
+.github/workflows/                  daily forecast refresh and weekly retraining
+scripts/ingest_live.py              daily job: live weekly rows + refreshed forecasts
+scripts/retrain.py                  weekly job: retrain, champion vs challenger
 models/farmstat_model.joblib        trained weekly models (+ arecanut ranges)
 models/cashew_model.joblib          cashew monthly model and calibrated ranges
 models/metrics.json                 test results
@@ -312,6 +364,7 @@ notebooks/FarmStat_Training.ipynb   full training and validation (with outputs)
 figures/                            charts from the notebook
 data/mandi_weekly.csv.gz            635,658 weekly reports: onion, tomato, potato, arecanut
 data/state_monthly.csv.gz           monthly state prices: cashew, sugarcane
+data/live_weekly.csv.gz             weekly rows built from the live feed (written by the daily job)
 scripts/prepare_data.py             builds the data file from the source panel
 scripts/build_snapshot.py           runs the models and saves models/web_snapshot.json.gz
 vercel.json, .vercelignore          Vercel deployment settings
@@ -326,6 +379,7 @@ tests/                              pytest tests
 | Daily arecanut prices by mandi and variety | Agmarknet, via [Malabar Mandi Prices](https://github.com/achuthpv/malabar-mandi-prices) | Karnataka and Kerala · Jul 2021 – Jul 2026, aggregated to weekly |
 | Monthly state weighted-average price and arrivals | Agmarknet, via [India Mandi Arrivals](https://github.com/herrrickshaw/india-mandi-arrivals) | Cashew and sugarcane · Jan 2019 – Oct 2026 |
 | Sugarcane FRP | Cabinet Committee on Economic Affairs decisions | 2019–20 to 2026–27 seasons |
+| Live daily prices (min, max, modal) | [data.gov.in](https://data.gov.in) API: *Current Daily Price of Various Commodities* and *Variety-wise Daily Market Prices* | All six crops · from 21 Jul 2026, updated three times a day |
 
 All price data is from Agmarknet, Directorate of Marketing & Inspection, Government of India, used under the
 Open Government Data License – India.
@@ -341,6 +395,8 @@ Open Government Data License – India.
 - **The 4-week range is too narrow.** It contains the real price about 2 times in 3 instead of 4 in 5. Widening it with
   conformal calibration is the next fix.
 - **Potato covers only 72 mandis, in West Bengal and Uttarakhand** — the source panel only includes potato for these two states.
+- **Live mandi names must match the history exactly.** About half of the mandis in today's feed match a history series;
+  the rest start as new series and need a year of weeks before they're forecast.
 - **Weather is not used.** Rainfall data for every mandi's district would be a natural next input.
 - **Arecanut has no forecast,** only today's price with the usual range: with five years of data no model beat
   "no change". Arrival quantities aren't in the arecanut source and could help.
