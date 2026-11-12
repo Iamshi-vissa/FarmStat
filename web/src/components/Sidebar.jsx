@@ -1,0 +1,82 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Search } from 'lucide-react';
+import Sparkline from './Sparkline.jsx';
+import Delta from './Delta.jsx';
+import { rupees, weeks } from '../format.js';
+
+const SORTS = [
+  { id: 'name', label: 'Name' },
+  { id: 'price', label: 'Price' },
+  { id: 'change', label: 'Outlook' }
+];
+
+export default function Sidebar({ crop, states, state, onState, mandis, market, onMarket, footer, unit = 'mandis' }) {
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState('name');
+  const naive = mandis.length > 0 && mandis.every(m => m.naive);
+
+  const list = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    const rows = mandis.filter(m => !term || `${m.market} ${m.district}`.toLowerCase().includes(term));
+    const by = {
+      name: (a, b) => a.market.localeCompare(b.market),
+      price: (a, b) => b.price - a.price,
+      change: (a, b) => (b.change ?? -9) - (a.change ?? -9)
+    }[sort];
+    return [...rows].sort(by);
+  }, [mandis, q, sort]);
+
+  const horizon = mandis[0]?.horizon ?? 2;
+  const listRef = useRef(null);
+  useEffect(() => {   // keep the selected mandi visible in the list
+    listRef.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
+  }, [market, mandis]);
+  return (
+    <aside className="side" aria-label="Choose a mandi">
+      <div className="brand">
+        <span className="brand-mark">FarmStat</span>
+        <span className="brand-sub">mandi price intelligence</span>
+      </div>
+      <div className="side-controls">
+        <label className="field">
+          <span>State</span>
+          <select className="select" value={state ?? ''} onChange={e => onState(e.target.value)}>
+            {states.map(s => (
+              <option key={s.name} value={s.name}>{s.name} ({s.count} {unit})</option>
+            ))}
+          </select>
+        </label>
+        <div className="search-wrap">
+          <Search size={16} aria-hidden="true" />
+          <input className="search" type="search" placeholder="Search by mandi or district"
+            value={q} onChange={e => setQ(e.target.value)} aria-label="Search mandis" />
+        </div>
+        <div className="sortbar" role="group" aria-label="Sort mandis">
+          Sort by
+          {SORTS.filter(s => !(naive && s.id === 'change')).map(s => (
+            <button key={s.id} aria-pressed={sort === s.id} onClick={() => setSort(s.id)}
+              title={s.id === 'change' ? `Expected change in ${weeks(horizon)}` : undefined}>{s.label}</button>
+          ))}
+        </div>
+      </div>
+      <nav className="mandi-list" aria-label={`${crop} mandis`} ref={listRef}>
+        {list.length === 0 && <p className="empty">No mandi matches “{q}”. Try a district name.</p>}
+        {list.map(m => (
+          <button key={m.market} className="mandi-row" aria-current={m.market === market} onClick={() => onMarket(m.market)}>
+            <span className="mandi-name">{m.market}</span>
+            <span className="mandi-price num">{rupees(m.price)}</span>
+            <span className="mandi-dist">
+              {m.district}
+              {m.new_mandi && !m.naive && <span className="badge" title="Less than 3 years of price history">new</span>}
+            </span>
+            <span className="mandi-meta">
+              <Sparkline values={m.spark} />
+              {!m.naive && <Delta value={m.change} title={`Expected change in ${weeks(m.horizon)}`} />}
+            </span>
+          </button>
+        ))}
+      </nav>
+      <div className="side-foot">{footer}</div>
+    </aside>
+  );
+}

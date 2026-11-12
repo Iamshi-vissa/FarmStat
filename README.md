@@ -3,13 +3,12 @@
 Forecasts onion, tomato and potato prices in mandis across 24 Indian states, 1, 2 and 4 weeks ahead, tells the farmer whether to sell now or hold, and also covers arecanut, cashew and sugarcane.
 
 <p align="center">
-  <img src="docs/screenshot-forecast.png" width="420" alt="FarmStat forecast for onion at Lasalgaon">
-  <img src="docs/screenshot-compare.png" width="420" alt="FarmStat mandi comparison across India">
+  <img src="docs/web-market.png" width="860" alt="FarmStat: onion at Lasalgaon with the mandi rate board, forecast tiles and price chart">
 </p>
 
 ## CONTENTS
 
-[About](#about) · [Results](#results) · [Features](#features) · [How the model was built](#how-the-model-was-built) ·
+[About](#about) · [Results](#results) · [Features](#features) · [Web app](#web-app) · [How the model was built](#how-the-model-was-built) ·
 [Architecture](#architecture) · [Tech stack](#tech-stack) · [Getting started](#getting-started) ·
 [Project structure](#project-structure) · [Data](#data) · [Status and limitations](#status-and-limitations)
 
@@ -34,10 +33,6 @@ weekly reports from about 980 mandis in 24 states. For each crop and mandi it gi
 | Cashew | 5 states, monthly state average, 2019–2026 | Rough-guide forecast 1/2/3 months ahead + calibrated range, seasonal pattern, state comparison |
 | Sugarcane | Mostly sold to mills at the government FRP | FRP information (₹365/quintal for 2026–27) and the mandi price history |
 
-<p align="center">
-  <img src="docs/screenshot-arecanut.png" width="420" alt="FarmStat arecanut at Sirsi (Rashi)">
-  <img src="docs/screenshot-cashew.png" width="420" alt="FarmStat cashew in Karnataka">
-</p>
 
 ## RESULTS
 
@@ -95,6 +90,35 @@ Finding out *when a model doesn't help*, and saying so, is part of the result.
 - **Arecanut:** every mandi and variety (Rashi, Chali, Bette…), compared only with the same variety
 - **Cashew page:** monthly state price, rough-guide forecast with range, seasonal pattern, all-state comparison
 - **Sugarcane page:** current FRP with the recovery premium rules, and the price history
+
+## WEB APP
+
+An analytical web interface built with React, using [React Bits](https://reactbits.dev) components, on top of a
+FastAPI service that serves the models.
+
+- **Mandi rate board:** the current price on split-flap tiles (React Bits *SplitFlapText*) over a contour-map
+  background (*Topography*), like the price boards in a mandi, with the sell / hold advice beside it
+- **Crop switcher** (*RubberSegment*), **forecast tiles** with a range bar for each horizon (*SpotlightCard*), and
+  animated accuracy figures (*CountUp*)
+- **Searchable mandi list** with a 12-week sparkline and expected change for every mandi, sortable by name, price or outlook
+- **Price chart:** history with a soft wash, a shaded forecast zone with the median and likely range, labelled
+  latest and 4-week prices, round axis values, 3M / 6M / 1Y / 2Y / 5Y ranges, an optional "same weeks last year"
+  line, and a table view of the same numbers
+- **Arrivals chart** under the price chart on the same time axis, with hover synced between the two and heavier-than-usual
+  weeks shaded darker
+- **More charts:** state medians, cashew seasonality, and sugarcane price vs FRP, all with hover tooltips
+- **Links you can share:** the crop, state, mandi and tab are kept in the address bar
+
+<p align="center">
+  <img src="docs/web-compare.png" width="420" alt="Compare mandis">
+  <img src="docs/web-accuracy.png" width="420" alt="Model accuracy">
+</p>
+<p align="center">
+  <img src="docs/web-arecanut.png" width="420" alt="Arecanut at Sirsi (Rashi)">
+  <img src="docs/web-cashew.png" width="420" alt="Cashew in Karnataka">
+</p>
+
+The original Streamlit app (`app.py`) still works as a simpler alternative.
 
 ## HOW THE MODEL WAS BUILT
 
@@ -157,6 +181,9 @@ flowchart TB
   <img src="https://img.shields.io/badge/Python-000000?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/scikit--learn-000000?style=flat-square&logo=scikitlearn&logoColor=white" alt="scikit-learn">
   <img src="https://img.shields.io/badge/pandas-000000?style=flat-square&logo=pandas&logoColor=white" alt="pandas">
+  <img src="https://img.shields.io/badge/FastAPI-000000?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/React-000000?style=flat-square&logo=react&logoColor=white" alt="React">
+  <img src="https://img.shields.io/badge/Vite-000000?style=flat-square&logo=vite&logoColor=white" alt="Vite">
   <img src="https://img.shields.io/badge/Streamlit-000000?style=flat-square&logo=streamlit&logoColor=white" alt="Streamlit">
   <img src="https://img.shields.io/badge/Plotly-000000?style=flat-square&logo=plotly&logoColor=white" alt="Plotly">
   <img src="https://img.shields.io/badge/Jupyter-000000?style=flat-square&logo=jupyter&logoColor=white" alt="Jupyter">
@@ -166,7 +193,9 @@ flowchart TB
 |---|---|
 | Models | scikit-learn (HistGradientBoosting, quantile loss), joblib |
 | Training | Jupyter, pandas, NumPy, XGBoost, matplotlib, seaborn |
-| App | Streamlit, Plotly |
+| API | FastAPI, Uvicorn |
+| Web app | React 19, Vite, Recharts, React Bits (SplitFlapText, Topography, RubberSegment, SpotlightCard, CountUp), IBM Plex Sans |
+| Simple app | Streamlit, Plotly |
 | Tests | pytest |
 
 ## GETTING STARTED
@@ -179,13 +208,27 @@ cd FarmStat
 python -m venv .venv
 source .venv/bin/activate            # Windows PowerShell: .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-streamlit run app.py
+python -m uvicorn api.main:app --port 8000
 ```
 
-Open <http://localhost:8501>. The data and the trained model are included. The **first start takes about a minute**
-while forecasts are prepared for every mandi; after that the app opens instantly.
+Open <http://localhost:8000>. The data, the trained models and the built web app are included, so Node.js isn't
+needed. The **first start takes about a minute** while forecasts are prepared for every mandi; after that they're
+cached and it starts in seconds. API documentation is at <http://localhost:8000/docs>.
+
+To use the simpler Streamlit app instead: `streamlit run app.py`, then open <http://localhost:8501>.
 
 On Windows with more than one Python installed, use `py -3.12 -m venv .venv` to be sure you get the right one.
+
+### CHANGE THE WEB APP
+
+You need Node.js 20+. Keep the API running in one terminal, then in another:
+
+```bash
+cd web
+npm install
+npm run dev          # http://localhost:5173, reloads as you edit
+npm run build        # writes web/dist, which the API serves
+```
 
 ### RETRAIN THE MODEL
 
@@ -215,7 +258,11 @@ Push the repo to GitHub, then create an app on [Streamlit Community Cloud](https
 ## PROJECT STRUCTURE
 
 ```
-app.py                              Streamlit app
+api/main.py                         FastAPI app: JSON endpoints + serves the web app
+api/service.py                      prepares forecasts, history and comparisons (cached in .cache/)
+web/src/                            React app (components/reactbits = React Bits components)
+web/dist/                           built web app
+app.py                              Streamlit app (simpler alternative)
 src/farmstat/data.py                load and clean the weekly prices
 src/farmstat/features.py            38 leakage-free inputs and the 1/2/4-week targets
 src/farmstat/forecast.py            loads the models, forecasts, shrinkage, sell/hold advice
@@ -263,4 +310,5 @@ Open Government Data License – India.
 
 ## LICENSE
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). The React Bits components in `web/src/components/reactbits/` are © David Haz under the
+MIT + Commons Clause licence included in that folder.
