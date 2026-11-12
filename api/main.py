@@ -15,6 +15,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -32,8 +33,23 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="FarmStat API", version="2.1.0", lifespan=lifespan)
+app.add_middleware(GZipMiddleware, minimum_size=800, compresslevel=6)   # JSON shrinks ~5-8x
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
                    allow_methods=["GET"], allow_headers=["*"])
+
+
+@app.middleware("http")
+async def cache_headers(request, call_next):
+    """Hashed web-app files never change, so browsers keep them for a year; data is cached for an hour."""
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/assets/"):
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif path.startswith("/api/") and response.status_code == 200:
+        response.headers.setdefault("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
+    else:
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 def data() -> FarmData:

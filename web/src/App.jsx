@@ -1,32 +1,39 @@
-import { useEffect, useMemo, useState } from 'react';
-import RubberSegment from './components/reactbits/RubberSegment.jsx';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { useScrollEnd } from './useScrollEnd.js';
+import CropSwitch from './components/CropSwitch.jsx';
 import Sidebar from './components/Sidebar.jsx';
-import MarketView from './components/MarketView.jsx';
-import CompareView from './components/CompareView.jsx';
-import AccuracyView from './components/AccuracyView.jsx';
-import CashewView from './components/CashewView.jsx';
-import SugarcaneView from './components/SugarcaneView.jsx';
-import AboutView from './components/AboutView.jsx';
+import MarketView, { MarketSkeleton, loadMarketChart } from './components/MarketView.jsx';
+import { Notice, SideShell } from './components/Chrome.jsx';
 import { api } from './api.js';
 import { date, monthLabel, rupees } from './format.js';
 
+// Views other than the mandi page load on demand, so the first screen only downloads what it needs.
+const CompareView = lazy(() => import('./components/CompareView.jsx'));
+const AccuracyView = lazy(() => import('./components/AccuracyView.jsx'));
+const CashewView = lazy(() => import('./components/CashewView.jsx'));
+const SugarcaneView = lazy(() => import('./components/SugarcaneView.jsx'));
+const AboutView = lazy(() => import('./components/AboutView.jsx'));
+
 const DEFAULTS = { Onion: ['Maharashtra', 'Lasalgaon'], Tomato: ['Karnataka', 'Kolar'], Potato: ['West Bengal', null],
   Arecanut: ['Karnataka', 'Sirsi (Rashi)'] };
-
 const readHash = () => Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
+const Wait = ({ label = 'Loading…' }) => <div className="loading" role="status">{label}</div>;
 
 export default function App() {
+  const init = useMemo(readHash, []);
   const [meta, setMeta] = useState(null);
   const [error, setError] = useState(null);
-  const init = readHash();
   const [crop, setCrop] = useState(init.crop || 'Onion');
   const [state, setState] = useState(init.state || null);
   const [market, setMarket] = useState(init.mandi || null);
   const [view, setView] = useState(init.view || 'market');
+  const [section, setSection] = useState(init.section || null);   // About page section
   const [mandis, setMandis] = useState([]);
-  const [extra, setExtra] = useState({});   // cashew / sugarcane payloads
+  const [extra, setExtra] = useState({});                          // cashew / sugarcane payloads
+  const tabsRef = useRef(null);
+  useScrollEnd(tabsRef);
 
-  useEffect(() => { api('meta').then(setMeta).catch(e => setError(e.message)); }, []);
+  useEffect(() => { api('meta').then(setMeta).catch(e => setError(e.message)); loadMarketChart(); }, []);   // fetch chart code early
   useEffect(() => {   // follow links that only change the #… part of the address
     const onHash = () => {
       const h = readHash();
@@ -34,6 +41,7 @@ export default function App() {
       if (h.state) setState(h.state);
       if (h.mandi) setMarket(h.mandi);
       if (h.view) setView(h.view);
+      setSection(h.section || null);
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
@@ -56,7 +64,7 @@ export default function App() {
 
   // load the mandi list for the chosen state
   useEffect(() => {
-    if (cropMeta?.kind !== 'weekly' || !state || !cropMeta.states.some(s => s.name === state)) return;
+    if (cropMeta?.kind !== 'weekly' || !state || !cropMeta.states.some(s => s.name === state)) return undefined;
     let live = true;
     api('mandis', { crop, state }).then(rows => {
       if (!live) return;
@@ -71,12 +79,16 @@ export default function App() {
   }, [crop, state, cropMeta]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const p = new URLSearchParams({ crop, view, ...(state ? { state } : {}), ...(market && cropMeta?.kind === 'weekly' ? { mandi: market } : {}) });
+    const p = new URLSearchParams({ crop, view, ...(state ? { state } : {}), ...(market && cropMeta?.kind === 'weekly' ? { mandi: market } : {}),
+      ...(view === 'about' && section ? { section } : {}) });
     window.history.replaceState(null, '', `#${p}`);
-  }, [crop, state, market, view, cropMeta]);
+  }, [crop, state, market, view, cropMeta, section]);
+
+  // start each view at the top, unless a link points into the About page
+  useEffect(() => { if (!(view === 'about' && section)) window.scrollTo(0, 0); }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (error) return <div className="loading"><p>Couldn’t reach the FarmStat API: {error}.</p><p>Start it with <code>python -m uvicorn api.main:app</code> and reload.</p></div>;
-  if (!meta || !cropMeta) return <div className="loading">Loading FarmStat…</div>;
+  if (!meta || !cropMeta) return <Wait label="Loading FarmStat…" />;
 
   const weekly = cropMeta.kind === 'weekly';
   // only render a mandi once the list for this crop and state has arrived (avoids a mismatched request)
@@ -92,54 +104,52 @@ export default function App() {
       mandis={mandis} market={market} onMarket={setMarket} unit={crop === 'Arecanut' ? 'mandi-varieties' : 'mandis'}
       footer={<>Prices to the week of {date(cropMeta.data_until)}. Source: Agmarknet, Government of India.</>} />;
   } else if (crop === 'Cashew') {
-    const d = extra.cashew;
     side = (
-      <aside className="side" aria-label="Choose a state">
-        <div className="brand"><span className="brand-mark">FarmStat</span><span className="brand-sub">mandi price intelligence</span></div>
+      <SideShell label="Choose a state" current={state} footer="Monthly state averages from Agmarknet. No mandi-level cashew history is available.">
         <nav className="mandi-list" aria-label="Cashew states">
-          {d?.states.map(s => (
+          {extra.cashew?.states.map(s => (
             <button key={s.state} className="mandi-row" aria-current={s.state === state} onClick={() => setState(s.state)}>
-              <span className="mandi-name">{s.state}</span><span className="mandi-price num">{rupees(s.price)}</span>
+              <span className="mandi-name">{s.state}</span><span className="mandi-price">{rupees(s.price)}</span>
               <span className="mandi-dist">{s.product}, {monthLabel(s.month)}</span><span />
             </button>
           ))}
         </nav>
-        <div className="side-foot">Monthly state averages from Agmarknet. No mandi-level cashew history is available.</div>
-      </aside>
+      </SideShell>
     );
   } else {
     side = (
-      <aside className="side">
-        <div className="brand"><span className="brand-mark">FarmStat</span><span className="brand-sub">mandi price intelligence</span></div>
+      <SideShell label="About sugarcane prices" footer="FRP: Cabinet Committee on Economic Affairs. Mandi prices: Agmarknet.">
         <div className="side-controls"><p className="note" style={{ margin: 0 }}>Most sugarcane is sold to sugar mills at the Fair and
           Remunerative Price (FRP) set by the Government of India, so FarmStat shows the FRP instead of a forecast.</p></div>
         <div style={{ flex: 1 }} />
-        <div className="side-foot">FRP: Cabinet Committee on Economic Affairs. Mandi prices: Agmarknet.</div>
-      </aside>
+      </SideShell>
     );
   }
 
   return (
     <div className="app">
+      <a className="skip" href="#main">Skip to content</a>
       {side}
-      <main className="main">
+      <main className="main" id="main">
         <div className="topbar">
-          <RubberSegment aria-label="Crop" items={meta.crops.map(c => ({ value: c.id, label: c.id }))} value={crop}
-            onChange={v => { setCrop(v); }} trackColor="#dfe5de" thumbColor="#12382e" textColor="#15232b"
-            activeTextColor="#f1e8cf" size="md" radius={10} draggable={false} />
-          <div className="tabs" role="tablist" aria-label="View">
+          <CropSwitch items={meta.crops.map(c => ({ value: c.id, label: c.id }))} value={crop} onChange={setCrop} />
+          <div className="tabs" role="tablist" aria-label="View" ref={tabsRef}>
             {tabs.map(([id, label]) => (
               <button key={id} role="tab" className="tab" aria-selected={view === id} onClick={() => setView(id)}>{label}</button>
             ))}
           </div>
         </div>
-        {view === 'about' && <AboutView meta={meta} />}
-        {view === 'accuracy' && <AccuracyView />}
-        {weekly && !ready && <div className="loading">Loading {crop.toLowerCase()} mandis…</div>}
-        {ready && view === 'market' && <MarketView crop={crop} state={state} market={market} meta={meta} />}
-        {ready && view === 'compare' && <CompareView crop={crop} state={state} market={market} mandis={mandis} />}
-        {crop === 'Cashew' && view === 'overview' && (extra.cashew ? <CashewView data={extra.cashew} state={state} /> : <div className="loading">Loading cashew prices…</div>)}
-        {crop === 'Sugarcane' && view === 'overview' && (extra.sugarcane ? <SugarcaneView data={extra.sugarcane} /> : <div className="loading">Loading…</div>)}
+        <Notice />
+        <Suspense fallback={view === 'market' || view === 'overview' ? <MarketSkeleton label="Loading" /> : <Wait />}>
+          {view === 'about' && <AboutView meta={meta} section={section} onSection={setSection} />}
+          {view === 'accuracy' && <AccuracyView />}
+          {weekly && !ready && view === 'market' && <MarketSkeleton label={`Loading ${crop.toLowerCase()} mandis`} />}
+          {weekly && !ready && view === 'compare' && <Wait label={`Loading ${crop.toLowerCase()} mandis…`} />}
+          {ready && view === 'market' && <MarketView crop={crop} state={state} market={market} meta={meta} />}
+          {ready && view === 'compare' && <CompareView crop={crop} state={state} market={market} mandis={mandis} />}
+          {crop === 'Cashew' && view === 'overview' && (extra.cashew ? <CashewView data={extra.cashew} state={state} /> : <MarketSkeleton label="Loading cashew prices" />)}
+          {crop === 'Sugarcane' && view === 'overview' && (extra.sugarcane ? <SugarcaneView data={extra.sugarcane} /> : <MarketSkeleton label="Loading" />)}
+        </Suspense>
       </main>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import CountUp from './reactbits/CountUp.jsx';
+import CountUp from './CountUp.jsx';
 import { api } from '../api.js';
 import { pct, pct0, rupees, weeks } from '../format.js';
 

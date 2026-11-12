@@ -748,7 +748,8 @@ const Topography = ({
       antialias: ratio < 1.5,
       depth: true,
       stencil: false,
-      powerPreference: 'high-performance'
+      preserveDrawingBuffer: true,   // FarmStat: lets the board take a still image of the contours
+      powerPreference: 'low-power'
     });
     if (!container || !canvas || !gl) return undefined;
     cancelAnimationFrame(releaseRef.current);

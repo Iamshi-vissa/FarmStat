@@ -97,9 +97,11 @@ An analytical web interface built with React, using [React Bits](https://reactbi
 FastAPI service that serves the models.
 
 - **Mandi rate board:** the current price on split-flap tiles (React Bits *SplitFlapText*) over a contour-map
-  background (*Topography*), like the price boards in a mandi, with the sell / hold advice beside it
-- **Crop switcher** (*RubberSegment*), **forecast tiles** with a range bar for each horizon (*SpotlightCard*), and
-  animated accuracy figures (*CountUp*)
+  background (*Topography*) on a forest-green board, like the price boards in a mandi
+- **Advice slip (parchi):** the week's sell / hold call on an opaque paper slip pinned to the board, with animated paper
+  grain (*Noise*), a light that follows the pointer, a stamped verdict and the chance of a 5%+ rise
+- **Crop switcher** with a sliding forest-green thumb, **forecast tiles** with a range bar for each horizon
+  (*SpotlightCard*), and accuracy figures that count up when they scroll into view
 - **Searchable mandi list** with a 12-week sparkline and expected change for every mandi, sortable by name, price or outlook
 - **Price chart:** history with a soft wash, a shaded forecast zone with the median and likely range, labelled
   latest and 4-week prices, round axis values, 3M / 6M / 1Y / 2Y / 5Y ranges, an optional "same weeks last year"
@@ -107,7 +109,20 @@ FastAPI service that serves the models.
 - **Arrivals chart** under the price chart on the same time axis, with hover synced between the two and heavier-than-usual
   weeks shaded darker
 - **More charts:** state medians, cashew seasonality, and sugarcane price vs FRP, all with hover tooltips
-- **Links you can share:** the crop, state, mandi and tab are kept in the address bar
+- **About page:** overview, method, how to read the advice, data and updates, accuracy, a risk table, terms of use,
+  disclaimer, privacy, licences and contact, with a section rail (*LineSidebar*) that follows your reading
+- **Colour:** forest-green and neutral ramps graded in OKLCH, so each step looks evenly lighter or darker; every text
+  colour passes WCAG AA, and the chart pair (blue forecast, orange fall) is checked for colour-blind separation
+- **Type, one face per job:** Bricolage Grotesque for headlines, Archivo for the interface and tables, Big Shoulders Display
+  for big numbers and the rate board, Newsreader for the paper slip and the About page
+- **Fast:** each page loads its own code, the charting library loads in parallel with the board, the contour map is drawn
+  once in WebGL and kept as an image, the API compresses JSON (32 kB to 7 kB for a mandi list) and the built files are
+  cached for a year. The first screen needs 86 kB of compressed JavaScript and shows the board in about half a second
+- **Responsive:** on phones the mandi list folds into a drop-down under the header, crop and tab rows scroll sideways,
+  charts use tighter margins, and wide tables scroll inside their panel
+- **Small things:** a one-time notice that prices are estimates, links to the terms and risks from every page,
+  <kbd>/</kbd> to search mandis, loading skeletons, and a skip link for keyboard users
+- **Links you can share:** the crop, state, mandi, tab and About section are kept in the address bar
 
 <p align="center">
   <img src="docs/web-compare.png" width="420" alt="Compare mandis">
@@ -116,6 +131,13 @@ FastAPI service that serves the models.
 <p align="center">
   <img src="docs/web-arecanut.png" width="420" alt="Arecanut at Sirsi (Rashi)">
   <img src="docs/web-cashew.png" width="420" alt="Cashew in Karnataka">
+</p>
+<p align="center">
+  <img src="docs/web-about.png" width="420" alt="About: risks and limitations">
+  <img src="docs/web-terms.png" width="420" alt="About: terms of use">
+</p>
+<p align="center">
+  <img src="docs/web-mobile.png" width="260" alt="FarmStat on a phone">
 </p>
 
 The original Streamlit app (`streamlit_app.py`) still works as a simpler alternative.
@@ -195,7 +217,7 @@ flowchart TB
 | Models | scikit-learn (HistGradientBoosting, quantile loss), joblib |
 | Training | Jupyter, pandas, NumPy, XGBoost, matplotlib, seaborn |
 | API | FastAPI, Uvicorn |
-| Web app | React 19, Vite, Recharts, React Bits (SplitFlapText, Topography, RubberSegment, SpotlightCard, CountUp), IBM Plex Sans |
+| Web app | React 19, Vite, Recharts, React Bits (SplitFlapText, Topography, Noise, LineSidebar, SpotlightCard); Bricolage Grotesque, Archivo, Big Shoulders Display, Newsreader |
 | Simple app | Streamlit, Plotly |
 | Hosting | Vercel (FastAPI, Python 3.12) |
 | Tests | pytest |

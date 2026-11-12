@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 import Sparkline from './Sparkline.jsx';
 import Delta from './Delta.jsx';
+import { SideShell } from './Chrome.jsx';
 import { rupees, weeks } from '../format.js';
 
 const SORTS = [
@@ -28,15 +29,21 @@ export default function Sidebar({ crop, states, state, onState, mandis, market, 
 
   const horizon = mandis[0]?.horizon ?? 2;
   const listRef = useRef(null);
+  const searchRef = useRef(null);
+  useEffect(() => {   // "/" jumps to the mandi search
+    const onKey = e => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || /input|select|textarea/i.test(document.activeElement?.tagName)) return;
+      e.preventDefault();
+      searchRef.current?.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   useEffect(() => {   // keep the selected mandi visible in the list
     listRef.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [market, mandis]);
   return (
-    <aside className="side" aria-label="Choose a mandi">
-      <div className="brand">
-        <span className="brand-mark">FarmStat</span>
-        <span className="brand-sub">mandi price intelligence</span>
-      </div>
+    <SideShell label="Choose a mandi" current={market} footer={footer}>
       <div className="side-controls">
         <label className="field">
           <span>State</span>
@@ -48,8 +55,10 @@ export default function Sidebar({ crop, states, state, onState, mandis, market, 
         </label>
         <div className="search-wrap">
           <Search size={16} aria-hidden="true" />
-          <input className="search" type="search" placeholder="Search by mandi or district"
-            value={q} onChange={e => setQ(e.target.value)} aria-label="Search mandis" />
+          <input className="search" type="search" placeholder="Search by mandi or district" ref={searchRef}
+            value={q} onChange={e => setQ(e.target.value)} aria-label="Search mandis" aria-keyshortcuts="/"
+            onKeyDown={e => { if (e.key === 'Escape') setQ(''); if (e.key === 'Enter' && list[0]) onMarket(list[0].market); }} />
+          {!q && <kbd aria-hidden="true">/</kbd>}
         </div>
         <div className="sortbar" role="group" aria-label="Sort mandis">
           Sort by
@@ -57,6 +66,7 @@ export default function Sidebar({ crop, states, state, onState, mandis, market, 
             <button key={s.id} aria-pressed={sort === s.id} onClick={() => setSort(s.id)}
               title={s.id === 'change' ? `Expected change in ${weeks(horizon)}` : undefined}>{s.label}</button>
           ))}
+          <span className="list-count" aria-live="polite">{list.length} of {mandis.length}</span>
         </div>
       </div>
       <nav className="mandi-list" aria-label={`${crop} mandis`} ref={listRef}>
@@ -76,7 +86,6 @@ export default function Sidebar({ crop, states, state, onState, mandis, market, 
           </button>
         ))}
       </nav>
-      <div className="side-foot">{footer}</div>
-    </aside>
+    </SideShell>
   );
 }

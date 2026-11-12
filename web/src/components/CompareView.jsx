@@ -4,6 +4,7 @@ import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } 
 import Delta from './Delta.jsx';
 import { api } from '../api.js';
 import { compactRupees, date, pct0, rupees, weeks } from '../format.js';
+import { T } from '../theme.js';
 
 const varietyOf = m => (m.includes('(') ? m.slice(m.lastIndexOf('(') + 1, -1) : null);
 
@@ -87,10 +88,10 @@ export default function CompareView({ crop, state, market, mandis }) {
             <ResponsiveContainer width="100%" height={Math.max(160, nat.states.length * 30 + 20)}>
               <BarChart data={nat.states} layout="vertical" margin={{ top: 0, right: 64, bottom: 0, left: 8 }} barCategoryGap={6}>
                 <XAxis type="number" hide />
-                <YAxis type="category" dataKey="state" width={130} tick={{ fontSize: 12, fill: '#4b5a61' }} tickLine={false} axisLine={false} />
-                <Tooltip cursor={{ fill: 'rgba(21,35,43,0.04)' }} formatter={(v, _n, p) => [`${rupees(v)} (${p.payload.mandis} mandis)`, 'Median']} />
-                <Bar dataKey="median" fill="#2a78d6" radius={[0, 4, 4, 0]} maxBarSize={18} isAnimationActive={false}>
-                  <LabelList dataKey="median" position="right" formatter={compactRupees} style={{ fontSize: 12, fill: '#15232b' }} />
+                <YAxis type="category" dataKey="state" width={130} tick={{ fontSize: 12, fill: T.ink2 }} tickLine={false} axisLine={false} />
+                <Tooltip cursor={{ fill: 'rgba(22,24,19,0.05)' }} formatter={(v, _n, p) => [`${rupees(v)} (${p.payload.mandis} mandis)`, 'Median']} />
+                <Bar dataKey="median" fill={T.forecast} radius={[0, 4, 4, 0]} maxBarSize={18} isAnimationActive={false}>
+                  <LabelList dataKey="median" position="right" formatter={compactRupees} style={{ fontSize: 12, fill: T.ink }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>

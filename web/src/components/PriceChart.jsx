@@ -4,12 +4,15 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts';
 import { compactRupees, date, monthLabel, rupees } from '../format.js';
+import { T } from '../theme.js';
 
 // Chart tokens (validated pair: ink for actual price, blue for forecast; grey for context)
-const C = { ink: '#15232b', fc: '#2a78d6', ctx: '#a7b2b7', grid: '#e8ece7', axis: '#75838a', surface: '#ffffff' };
+const C = { ink: T.ink, fc: T.forecast, ctx: T.context, grid: T.grid, axis: T.ink3, surface: T.panel };
 const AXIS = { fontSize: 12, fill: C.axis };
 const MARGIN = { top: 26, right: 112, bottom: 4, left: 4 };
+const MARGIN_COMPACT = { top: 26, right: 70, bottom: 4, left: 0 };
 const Y_WIDTH = 64;
+const Y_WIDTH_COMPACT = 50;
 const DAY = 864e5;
 const ts = s => new Date(s).getTime();
 
@@ -125,7 +128,7 @@ export function buildRows({ history, full = history, forecast, naive, dateKey = 
 
 // Price history (ink + soft wash), forecast median (blue dashed), likely range (blue band) in a shaded forecast zone,
 // optional "same weeks last year" context line, and direct labels for today's price and the furthest forecast.
-export default function PriceChart({ rows, period = 'week', naive = false, height = 340, syncId, horizonLabel }) {
+export default function PriceChart({ rows, period = 'week', naive = false, height = 340, syncId, horizonLabel, compact = false }) {
   const now = rows.find(r => r.isNow);
   const last = rows[rows.length - 1];
   const { domain, ticks } = useMemo(() => {
@@ -133,11 +136,11 @@ export default function PriceChart({ rows, period = 'week', naive = false, heigh
     return niceTicks(Math.min(...vals), Math.max(...vals));
   }, [rows]);
   const xDomain = [rows[0]?.t, last?.t];
-  const xt = monthTicks(...xDomain, period === 'month' ? 6 : 8);
+  const xt = monthTicks(...xDomain, compact ? 4 : period === 'month' ? 6 : 8);
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <ComposedChart data={rows} margin={MARGIN} syncId={syncId}>
+      <ComposedChart data={rows} margin={compact ? MARGIN_COMPACT : MARGIN} syncId={syncId}>
         <defs>
           <linearGradient id="priceWash" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={C.ink} stopOpacity={0.1} />
@@ -152,7 +155,7 @@ export default function PriceChart({ rows, period = 'week', naive = false, heigh
         <XAxis dataKey="t" type="number" scale="time" domain={xDomain} ticks={xt} tickFormatter={monthTickFor(xt)}
           tick={AXIS} tickLine={false} axisLine={{ stroke: C.grid }} interval={0} />
         <YAxis domain={domain} ticks={ticks} tickFormatter={axisRupeesFor(ticks)} tick={AXIS} tickLine={false} axisLine={false}
-          width={Y_WIDTH} allowDataOverflow />
+          width={compact ? Y_WIDTH_COMPACT : Y_WIDTH} allowDataOverflow />
         <Tooltip content={<Tip period={period} naive={naive} />} cursor={{ stroke: C.axis, strokeWidth: 1 }} isAnimationActive={false} />
         <Area dataKey="price" stroke="none" fill="url(#priceWash)" isAnimationActive={false} connectNulls={false} activeDot={false} />
         <Line dataKey="lastYear" stroke={C.ctx} strokeWidth={2} dot={false} isAnimationActive={false} connectNulls activeDot={false} />
@@ -165,7 +168,7 @@ export default function PriceChart({ rows, period = 'week', naive = false, heigh
         )}
         {now && (
           <ReferenceLine x={now.t} stroke={C.axis} strokeWidth={1}
-            label={<TopLabel lines={[rupees(now.price), period === 'month' ? 'latest month' : 'latest week']} />} />
+            label={<TopLabel lines={[rupees(now.price), compact ? '' : period === 'month' ? 'latest month' : 'latest week']} />} />
         )}
         {now && <ReferenceDot x={now.t} y={now.price} r={5} fill={C.ink} stroke={C.surface} strokeWidth={2} ifOverflow="visible" />}
         {last && last.future && (
@@ -181,24 +184,24 @@ export default function PriceChart({ rows, period = 'week', naive = false, heigh
 }
 
 // Arrivals as small bars under the price chart: same x-scale and margins, hover synced with the price chart.
-export function ArrivalsChart({ rows, syncId, height = 130 }) {
+export function ArrivalsChart({ rows, syncId, height = 130, compact = false }) {
   const data = rows.map(r => ({ t: r.t, arrivals: r.future ? null : r.arrivals }));
   if (!data.some(d => d.arrivals != null)) return null;
   const vals = data.map(d => d.arrivals).filter(v => v != null);
   const sorted = [...vals].sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)];
   const { ticks, domain } = niceTicks(0, Math.max(...vals), 2);
-  const xa = monthTicks(data[0].t, data[data.length - 1].t);
+  const xa = monthTicks(data[0].t, data[data.length - 1].t, compact ? 4 : 8);
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ ...MARGIN, top: 6 }} syncId={syncId} barCategoryGap={1}>
+      <BarChart data={data} margin={{ ...(compact ? MARGIN_COMPACT : MARGIN), top: 6 }} syncId={syncId} barCategoryGap={1}>
         <CartesianGrid stroke={C.grid} vertical={false} />
         <XAxis dataKey="t" type="number" scale="time" domain={[data[0].t, data[data.length - 1].t]}
           ticks={xa} tickFormatter={monthTickFor(xa)} interval={0}
           tick={AXIS} tickLine={false} axisLine={{ stroke: C.grid }} />
-        <YAxis domain={domain} ticks={ticks} tick={AXIS} tickLine={false} axisLine={false} width={Y_WIDTH}
+        <YAxis domain={domain} ticks={ticks} tick={AXIS} tickLine={false} axisLine={false} width={compact ? Y_WIDTH_COMPACT : Y_WIDTH}
           tickFormatter={v => (v >= 1000 ? `${(v / 1000).toLocaleString('en-IN')}k t` : `${v} t`)} />
-        <Tooltip cursor={{ fill: 'rgba(21,35,43,0.06)' }} isAnimationActive={false}
+        <Tooltip cursor={{ fill: 'rgba(22,24,19,0.06)' }} isAnimationActive={false}
           content={({ active, payload }) => active && payload?.[0]?.value != null ? (
             <div className="chart-tip"><div className="tip-when">Week of {date(payload[0].payload.t)}</div>
               <div className="tip-row"><strong className="num">{Math.round(payload[0].value).toLocaleString('en-IN')} t</strong>
@@ -207,7 +210,7 @@ export function ArrivalsChart({ rows, syncId, height = 130 }) {
         <ReferenceLine y={median} stroke={C.axis} strokeDasharray="0" strokeWidth={1}
           label={{ value: 'typical', position: 'right', fontSize: 11, fill: C.axis }} />
         <Bar dataKey="arrivals" maxBarSize={8} radius={[3, 3, 0, 0]} isAnimationActive={false}>
-          {data.map(d => <Cell key={d.t} fill={d.arrivals > median * 1.3 ? '#7d8b91' : '#b9c3c7'} />)}
+          {data.map(d => <Cell key={d.t} fill={d.arrivals > median * 1.3 ? T.arrivalsHeavy : T.arrivals} />)}
         </Bar>
       </BarChart>
     </ResponsiveContainer>

@@ -1,6 +1,7 @@
 import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import RateBoard from './RateBoard.jsx';
 import { axisDate, monthLabel, rupees } from '../format.js';
+import { T } from '../theme.js';
 
 export default function SugarcaneView({ data }) {
   const c = data.current;
@@ -10,7 +11,7 @@ export default function SugarcaneView({ data }) {
     <>
       <RateBoard title="Sugarcane FRP" where={`Sugar season ${c.season}, from 1 October 2026`} priceLabel={`at ${c.recovery}% sugar recovery`}
         price={c.price} advice={{ action: 'Information', headline: 'Sold to mills, not forecast',
-          detail: `Mills pay ₹${c.step} more per quintal for every 0.1% recovery above ${c.recovery}%, and ₹${c.step} less below it. Below ${c.floor_below}% there is no further cut, so the minimum is ₹${c.floor}.` }} />
+          footnote: 'Set by the Government of India.', detail: `Mills pay ₹${c.step} more per quintal for every 0.1% recovery above ${c.recovery}%, and ₹${c.step} less below it. Below ${c.floor_below}% there is no further cut, so the minimum is ₹${c.floor}.` }} />
       <div className="grid-2">
         <section className="panel">
           <div className="panel-head"><div><h2>Chhattisgarh mandi price vs FRP</h2>
@@ -18,14 +19,14 @@ export default function SugarcaneView({ data }) {
             <div className="legend"><span className="key"><i />Mandi average</span><span className="key"><i className="fc" />FRP</span></div></div>
           <ResponsiveContainer width="100%" height={300}>
             <ComposedChart data={rows} margin={{ top: 8, right: 12, bottom: 0, left: 4 }}>
-              <CartesianGrid stroke="#e6eae5" vertical={false} />
+              <CartesianGrid stroke={T.grid} vertical={false} />
               <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={axisDate}
-                tick={{ fontSize: 12, fill: '#75838a' }} tickLine={false} minTickGap={40} />
-              <YAxis tick={{ fontSize: 12, fill: '#75838a' }} tickLine={false} axisLine={false} tickFormatter={v => `₹${v}`} width={52}
+                tick={{ fontSize: 12, fill: T.ink3 }} tickLine={false} minTickGap={40} />
+              <YAxis tick={{ fontSize: 12, fill: T.ink3 }} tickLine={false} axisLine={false} tickFormatter={v => `₹${v}`} width={52}
                 domain={[d => Math.floor((d - 30) / 50) * 50, d => Math.ceil((d + 30) / 50) * 50]} allowDecimals={false} />
               <Tooltip labelFormatter={t => monthLabel(t)} formatter={(v, n) => [rupees(v), n === 'frp' ? 'FRP' : 'Mandi average']} />
-              <Line dataKey="price" stroke="#15232b" strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: '#fff', strokeWidth: 2 }} isAnimationActive={false} />
-              <Line dataKey="frp" stroke="#2a78d6" strokeWidth={2} type="stepAfter" dot={false} isAnimationActive={false} />
+              <Line dataKey="price" stroke={T.ink} strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: T.panel, strokeWidth: 2 }} isAnimationActive={false} />
+              <Line dataKey="frp" stroke={T.forecast} strokeWidth={2} type="stepAfter" dot={false} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </section>

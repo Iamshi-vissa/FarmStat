@@ -4,6 +4,7 @@ import RateBoard from './RateBoard.jsx';
 import ForecastTiles from './ForecastTiles.jsx';
 import PriceChart, { buildRows } from './PriceChart.jsx';
 import { monthLabel, months, rupees } from '../format.js';
+import { T } from '../theme.js';
 
 export default function CashewView({ data, state }) {
   const s = data.states.find(x => x.state === state) ?? data.states[0];
@@ -32,12 +33,12 @@ export default function CashewView({ data, state }) {
             <p className="sub">% above or below the yearly average, all states. Usually highest in {peak.month}, lowest in {low.month}.</p></div></div>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={data.season} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap={4}>
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#75838a' }} tickLine={false} axisLine={false} />
-              <YAxis tickFormatter={v => `${v}%`} tick={{ fontSize: 12, fill: '#75838a' }} tickLine={false} axisLine={false} width={40} />
-              <ReferenceLine y={0} stroke="#9aa7ad" />
-              <Tooltip formatter={v => [`${v > 0 ? '+' : ''}${v}%`, 'vs yearly average']} cursor={{ fill: 'rgba(21,35,43,0.04)' }} />
+              <XAxis dataKey="month" tick={{ fontSize: 12, fill: T.ink3 }} tickLine={false} axisLine={false} />
+              <YAxis tickFormatter={v => `${v}%`} tick={{ fontSize: 12, fill: T.ink3 }} tickLine={false} axisLine={false} width={40} />
+              <ReferenceLine y={0} stroke={T.context} />
+              <Tooltip formatter={v => [`${v > 0 ? '+' : ''}${v}%`, 'vs yearly average']} cursor={{ fill: 'rgba(22,24,19,0.05)' }} />
               <Bar dataKey="pct" maxBarSize={22} isAnimationActive={false}>
-                {data.season.map(d => <Cell key={d.month} fill={d.pct >= 0 ? '#2a78d6' : '#c2410c'} radius={d.pct >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4]} />)}
+                {data.season.map(d => <Cell key={d.month} fill={d.pct >= 0 ? T.forecast : T.drop} radius={d.pct >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4]} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
