@@ -218,6 +218,17 @@ class FarmData:
                     n_states=int(lt["state"].nunique()), horizons=self.horizons,
                     max_hold_weeks=MAX_HOLD_WEEKS, version=self.version)
 
+    def has_series(self, crop: str, state: str, market: str) -> bool:
+        lt = self.latest
+        return bool(((lt["crop"] == crop) & (lt["state"] == state) & (lt["market"] == market)).any())
+
+    def index(self) -> dict:
+        """Every active series in one compact list, for the search-anywhere palette: [crop, state, market, district, price]."""
+        lt = self.latest.sort_values(["crop", "state", "market"])
+        cols = ["crop", "state", "market", "district", "price"]
+        rows = [[_clean(v) for v in r] for r in lt[cols].itertuples(index=False)]
+        return dict(columns=cols, rows=rows)
+
     def mandis(self, crop: str, state: str) -> list[dict]:
         sub = self.latest[(self.latest["crop"] == crop) & (self.latest["state"] == state)].copy()
         h = 1 if crop == "Tomato" else 2
@@ -266,4 +277,9 @@ class FarmData:
                     chhattisgarh=records(s[["month", "price"]]))
 
     def accuracy(self) -> dict:
+        # add the independent validation (scripts/evaluate.py) when it has been run
+        ev = ROOT / "reports" / "evaluation.json"
+        if "validation" not in self.metrics and ev.exists():
+            v = json.loads(ev.read_text())
+            self.metrics = {**self.metrics, "validation": {k: v[k] for k in ("test_years", "horizons", "by_year", "rise_warning") if k in v}}
         return self.metrics

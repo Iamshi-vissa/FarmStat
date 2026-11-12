@@ -1,5 +1,5 @@
 """
-Read-only access to the live daily prices in Supabase (filled every day by scripts/ingest_live.py).
+Read-only access to the live daily prices in Supabase (filled three times a day by the ingest-mandi Edge Function).
 
 The publishable key below is meant to be public: the tables only allow reading. Override with the
 SUPABASE_URL / SUPABASE_KEY environment variables (for example in Vercel's project settings).
@@ -18,6 +18,7 @@ import urllib.request
 URL = os.environ.get("SUPABASE_URL", "https://irwjvkbgtkyjuwtgkngt.supabase.co").rstrip("/")
 KEY = os.environ.get("SUPABASE_KEY", "sb_publishable_LmEKIjlgTrfV4znof_lvMA_tpseHelF")
 TTL = 600            # seconds; prices change once a day
+MAX_CACHE = 2000     # entries; oldest are dropped first
 _cache: dict = {}
 
 
@@ -31,6 +32,8 @@ def _get(table: str, params: dict) -> list:
     with urllib.request.urlopen(req, timeout=5) as r:
         rows = json.loads(r.read() or b"[]")
     _cache[k] = (time.time(), rows)
+    while len(_cache) > MAX_CACHE:          # dicts keep insertion order: drop the oldest
+        _cache.pop(next(iter(_cache)))
     return rows
 
 

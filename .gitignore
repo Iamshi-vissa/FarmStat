@@ -7,3 +7,5 @@ __pycache__/
 .streamlit/cache/
 web/node_modules/
 .cache/
+reports/.cache/
+reports/backtest_*.csv.gz

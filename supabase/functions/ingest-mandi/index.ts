@@ -5,6 +5,7 @@
 //        optional: {"commodities":["Onion"], "budget_s":110, "backfill":true}
 //   With "backfill": true, each (day, crop) that loads completely is marked done in public.backfill_queue.
 //
+// Callers must send the x-ingest-token header (see farmstat_private.call_ingest); requests without it get 401.
 // The API key comes from the DATA_GOV_IN_API_KEY secret. Without it the public sample key is used, which
 // returns at most 10 records per request, so back-fills are slow; register a free key at data.gov.in.
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -120,16 +121,31 @@ async function upsert(rows: Row[]) {
   return unique.length;
 }
 
+const MAX_DAYS = 31;   // a back-fill request covers at most a month
+
 Deno.serve(async (req) => {
+  // Only FarmStat's own schedules may run this: they send a random token kept in the database (farmstat_private.settings).
+  // The anon key that passes the JWT check is public, so it is not enough on its own.
+  const token = req.headers.get("x-ingest-token") ?? "";
+  const { data: ok } = token ? await db.rpc("ingest_token_ok", { t: token }) : { data: false };
+  if (ok !== true) return Response.json({ error: "missing or wrong x-ingest-token" }, { status: 401 });
+
   const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
-  // accept FarmStat names ("Arecanut") or Agmarknet names ("Arecanut(Betelnut/Supari)")
+  // accept FarmStat names ("Arecanut") or Agmarknet names ("Arecanut(Betelnut/Supari)"); anything else is refused
   const byCrop = Object.fromEntries(Object.entries(CROP).map(([k, v]) => [v, k]));
-  const commodities: string[] = (body.commodities ?? COMMODITIES).map((c: string) => byCrop[c] ?? c);
+  const asked = Array.isArray(body.commodities) ? body.commodities : COMMODITIES;
+  const commodities: string[] = asked.map((c: unknown) => byCrop[String(c)] ?? String(c));
+  const unknown = commodities.filter((c) => !(c in CROP));
+  if (unknown.length) return Response.json({ error: `unknown commodities: ${unknown.join(", ")}` }, { status: 400 });
   const backfill = body.backfill === true;   // sent by the back-fill schedule: mark the day done when complete
   const deadline = Date.now() + 1000 * Math.min(Number(body.budget_s ?? 110), 140);
 
   const dates: string[] = [];
   if (body.from) {
+    const span = (Date.parse(body.to ?? body.from) - Date.parse(body.from)) / 86_400_000;
+    if (!(span >= 0 && span < MAX_DAYS)) {
+      return Response.json({ error: `"from" and "to" must be valid dates at most ${MAX_DAYS} days apart` }, { status: 400 });
+    }
     for (let d = new Date(body.from); d <= new Date(body.to ?? body.from); d.setUTCDate(d.getUTCDate() + 1)) {
       dates.push(d.toISOString().slice(0, 10));
     }

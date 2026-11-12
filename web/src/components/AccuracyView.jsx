@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import CountUp from './CountUp.jsx';
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { T } from '../theme.js';
 import { api } from '../api.js';
 import { pct, pct0, rupees, weeks } from '../format.js';
@@ -13,6 +13,91 @@ function SkillBar({ v, scale = 0.15 }) {
       <span className="skill-half">{v < 0 && <span className="neg" style={{ width: w }} />}</span>
       <span className="skill-half">{v > 0 && <span className="pos" style={{ width: w }} />}</span>
     </span>
+  );
+}
+
+
+// Skill with its 95% interval on one shared scale: the dot is the estimate, the whisker the interval, 0 = "no change".
+function Interval({ v, lo, hi, min = -0.05, max = 0.15 }) {
+  const x = t => `${((Math.max(min, Math.min(max, t)) - min) / (max - min)) * 100}%`;
+  return (
+    <svg className="ci" viewBox="0 0 100 14" preserveAspectRatio="none" role="img"
+      aria-label={`${pct(v)}, 95% interval ${pct(lo)} to ${pct(hi)}`}>
+      <line x1={x(0)} x2={x(0)} y1="0" y2="14" stroke={T.context} strokeWidth="1" vectorEffect="non-scaling-stroke" />
+      <line x1={x(lo)} x2={x(hi)} y1="7" y2="7" stroke={T.forest} strokeWidth="2" vectorEffect="non-scaling-stroke" />
+      <circle cx={x(v)} cy="7" r="3.2" fill={T.forest} vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+const luck = p => (p < 0.001 ? 'under 0.1%' : p < 0.01 ? `${(p * 100).toFixed(1)}%` : `${Math.round(p * 100)}%`);
+
+// Independent check from scripts/evaluate.py: is the gain real, are the ranges honest, does the rise warning mean what it says?
+function Validation({ v }) {
+  const H = v.horizons;
+  const rel = v.rise_warning.reliability.map(b => ({ predicted: Math.round(b.predicted * 100), observed: Math.round(b.observed * 100), rows: b.rows }));
+  const rw = v.rise_warning;
+  return (
+    <>
+      <div className="page-head sub-head">
+        <h2>Checked independently</h2>
+        <p>A separate script re-ran the whole yearly test from scratch and asked three questions a sceptic would ask.
+          Years {v.test_years[0]}–{v.test_years.at(-1)}, onion, tomato and potato, every mandi.</p>
+      </div>
+      <div className="grid-2">
+        <section className="panel" aria-labelledby="real-title">
+          <div className="panel-head"><div><h2 id="real-title">Is the gain real, or luck?</h2>
+            <p className="sub">Less error than “no change”, with a 95% interval from resampling whole weeks. The
+              Diebold–Mariano test gives the chance a gain this size appears when the model is no better.</p></div></div>
+          <table className="table">
+            <thead><tr><th>Ahead</th><th className="r">Less error</th><th className="ci-head">95% interval <span>0 = no gain</span></th><th className="r">Chance it’s luck</th></tr></thead>
+            <tbody>{Object.entries(H).map(([h, r]) => (
+              <tr key={h}><td className="nw">{weeks(+h)}</td><td className="r num">{pct(r.skill_vs_naive)}</td>
+                <td><span className="ci-cell"><Interval v={r.skill_vs_naive} lo={r.skill_95ci[0]} hi={r.skill_95ci[1]} />
+                  <span className="num">{pct(r.skill_95ci[0])} to {pct(r.skill_95ci[1])}</span></span></td>
+                <td className="r num">{luck(r.diebold_mariano.p_value)}</td></tr>
+            ))}</tbody>
+          </table>
+        </section>
+        <section className="panel" aria-labelledby="cal-title">
+          <div className="panel-head"><div><h2 id="cal-title">Are the ranges honest?</h2>
+            <p className="sub">A 10th–90th percentile range should hold the real price 80% of the time. Widening each year’s
+              range by the previous year’s misses (split-conformal calibration) brings it back toward 80%.</p></div></div>
+          <table className="table">
+            <thead><tr><th>Ahead</th><th className="r">Model range</th><th className="r">Recalibrated</th><th className="r">Missed low / high</th></tr></thead>
+            <tbody>{Object.entries(H).map(([h, r]) => (
+              <tr key={h}><td className="nw">{weeks(+h)}</td><td className="r num">{pct0(r.coverage_10_90)}</td>
+                <td className="r num"><strong>{pct0(r.coverage_10_90_conformal)}</strong></td>
+                <td className="r num">{pct0(r.quantile_coverage.below_q10)} / {pct0(1 - r.quantile_coverage.below_q90)}</td></tr>
+            ))}</tbody>
+          </table>
+          <p className="note">Each end should miss about 10% of the time. Real prices fall below the low end too often, most of all at 4 weeks: the model underrates falls.</p>
+        </section>
+      </div>
+      <section className="panel" aria-labelledby="rel-title">
+        <div className="panel-head"><div><h2 id="rel-title">Does “47% chance of a rise” mean 47%?</h2>
+          <p className="sub">Weeks grouped by the warning’s predicted chance of a 5%+ rise in 2 weeks, against how often it
+            happened. On the dashed line the warning is honest. ROC-AUC {rw.roc_auc.toFixed(2)}; Brier score {rw.brier.toFixed(3)} vs{' '}
+            {rw.brier_base_rate.toFixed(3)} for always saying the base rate ({pct0(rw.base_rate)}).</p></div>
+          <div className="legend"><span className="key"><i style={{ background: T.forest }} />Observed</span><span className="key"><i className="ctx" />Perfectly honest</span></div></div>
+        <ResponsiveContainer width="100%" height={250}>
+          <LineChart data={rel} margin={{ top: 12, right: 16, bottom: 16, left: 0 }}>
+            <CartesianGrid stroke={T.grid} />
+            <XAxis type="number" dataKey="predicted" domain={[0, 80]} ticks={[0, 10, 20, 30, 40, 50, 60, 70, 80]} tickFormatter={v => `${v}%`}
+              tick={{ fontSize: 12, fill: T.ink3 }} tickLine={false} axisLine={false}
+              label={{ value: 'Predicted chance', position: 'insideBottom', offset: -8, fontSize: 12, fill: T.ink3 }} />
+            <YAxis domain={[0, 70]} ticks={[0, 20, 40, 60]} tickFormatter={v => `${v}%`} tick={{ fontSize: 12, fill: T.ink3 }}
+              tickLine={false} axisLine={false} width={44} />
+            <ReferenceLine segment={[{ x: 0, y: 0 }, { x: 70, y: 70 }]} ifOverflow="extendDomain" stroke={T.context} strokeDasharray="4 3" />
+            <Tooltip isAnimationActive={false} content={({ active, payload }) => active && payload?.[0] ? (
+              <div className="chart-tip"><div className="tip-when">Predicted about {payload[0].payload.predicted}%</div>
+                <div className="tip-row"><strong>{payload[0].payload.observed}%</strong><span>actually rose 5%+</span></div>
+                <div className="tip-row"><span>{payload[0].payload.rows.toLocaleString('en-IN')} mandi-weeks</span></div></div>) : null} />
+            <Line dataKey="observed" stroke={T.forest} strokeWidth={2} dot={{ r: 4, fill: T.forest }} isAnimationActive={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </section>
+    </>
   );
 }
 
@@ -131,6 +216,8 @@ export default function AccuracyView() {
           </table>
         </section>
       </div>
+
+      {m.validation && <Validation v={m.validation} />}
 
       <section className="panel">
         <div className="panel-head"><div><h2>Arecanut and cashew</h2>

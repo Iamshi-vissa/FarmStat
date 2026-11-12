@@ -30,7 +30,7 @@ weekly reports from about 980 mandis in 24 states. For each crop and mandi it gi
 |---|---|---|
 | Onion, tomato, potato | ~980 mandis, 24 states, weekly, 2003–2026 | Forecast 1/2/4 weeks ahead + range, rise chance, sell / hold advice |
 | Arecanut | 47 mandi-variety series in Karnataka and Kerala (Sirsi, Shimoga, Yellapur, Kasargod…), weekly, 2021–2026 | Today's price with the usual range of movement (no model beat "no change"), variety-wise mandi comparison |
-| Cashew | 5 states, monthly state average, 2019–2026 | Rough-guide forecast 1/2/3 months ahead + calibrated range, seasonal pattern, state comparison |
+| Cashew | 5 states, monthly state average, 2019–2026 | Rough-guide forecast 1/2/3 months ahead + range from past errors, seasonal pattern, state comparison |
 | Sugarcane | Mostly sold to mills at the government FRP | FRP information (₹365/quintal for 2026–27) and the mandi price history |
 
 
@@ -58,9 +58,40 @@ data only, exactly as it would be in use, and these years were never used to mak
 | Price-rise classifier (5%+ in 2 weeks) | ROC-AUC 0.746. When it says 60%+ chance, a rise followed **67%** of the time, vs 35% in an average week |
 | Farmer back-test (sell now vs follow the advice, after storage losses) | **+₹22 / quintal onion, +₹44 tomato, +₹11 potato**. Always holding *loses* money |
 
+These tables come from the training notebook's test (`models/metrics.json`). The independent re-run below agrees on
+the headline numbers; on small segments it differs slightly because it defines "new" as less than 3 years of history (onion in new mandis
+3.2% worse, tomato in new mandis 5.5% better) and its rise classifier, trained with slightly different settings, scores ROC-AUC 0.73. "New mandis" here
+means reporting since 2020; the app's "new" badge means less than 3 years of history.
+
 "The price won't change" is a hard benchmark in any market. FarmStat beats it overall at every horizon, and in every
 year from 2023 to 2026 for the 2-week forecast. The one segment where it doesn't, onion in recently added mandis, is shown openly, and the app
 warns users there.
+
+### INDEPENDENT VALIDATION
+
+`scripts/evaluate.py` re-runs the whole yearly walk-forward test from scratch (2022 for calibration, 2023–2026 as the
+test, about 168,000 mandi-weeks per horizon) and adds the checks a sceptic would ask for. Full tables:
+[reports/model_evaluation.md](reports/model_evaluation.md); the web app's accuracy page shows the same results.
+
+| Forecast | Less error than "no change" | 95% interval (block bootstrap over weeks) | Diebold-Mariano p-value | Range coverage | After conformal recalibration |
+|---|---|---|---|---|---|
+| 1 week | 7.7% | 4.8% to 10.4% | < 0.001 | 79.1% | 80.1% |
+| 2 weeks | 8.0% | 3.6% to 12.2% | 0.006 | 74.5% | 79.0% |
+| 4 weeks | 6.5% | 1.0% to 12.0% | 0.14 | 67.3% | 79.8% |
+
+- **The gain is real at 1 and 2 weeks.** The Diebold-Mariano test (weekly average errors, Newey-West variance, Harvey
+  correction) rejects "no better than no change"; at 4 weeks it does not (p = 0.14), so the 4-week forecast is a rough guide.
+- **It varies by year:** 17.6% (2023), 5.7% (2024), 1.1% (2025, when hundreds of new mandis joined) and 9.7% (2026) at 2 weeks.
+- **The ranges underrate falls.** The real price lands below the 10th percentile 11.6%, 14.9% and 19.5% of the time at 1, 2
+  and 4 weeks (target 10%). Split-conformal widening learned from the previous year's misses brings coverage to 79–80% (in the evaluation only; the
+  app still shows the unwidened ranges).
+- **The rise warning is honest:** ROC-AUC 0.73, Brier score 0.193 vs 0.227 for always quoting the base rate (35%); a
+  predicted 45% chance was followed by a rise 42% of the time.
+
+<p align="center">
+  <img src="docs/eval/accuracy.png" width="860" alt="Error, skill with 95% intervals and range coverage by horizon">
+  <img src="docs/eval/by_year_reliability.png" width="620" alt="Skill by year and rise-warning reliability">
+</p>
 
 ### ARECANUT, CASHEW AND SUGARCANE
 
@@ -102,6 +133,12 @@ FastAPI service that serves the models.
   grain (*Noise*), a light that follows the pointer, a stamped verdict and the chance of a 5%+ rise
 - **Crop switcher** with a sliding forest-green thumb, **forecast tiles** with a range bar for each horizon
   (*SpotlightCard*), and accuracy figures that count up when they scroll into view
+- **Search anywhere** (<kbd>Ctrl</kbd>/<kbd>⌘</kbd> <kbd>K</kbd>): one box that finds any of the ~1,400 mandi series in
+  India by mandi, district, state or crop, every word matched (`kolar tom` = tomato mandis in Kolar), plus pages; ported
+  from a [21st.dev](https://21st.dev) command-palette component, restyled with FarmStat's tokens and animated with CSS.
+  The palette code and the mandi index (18 kB compressed) load the first time it opens
+- **Tabs with a sliding indicator** for views and chart ranges, ported from a 21st.dev tabs component (arrow, Home and
+  End keys, roving focus)
 - **Searchable mandi list** with a 12-week sparkline and expected change for every mandi, sortable by name, price or outlook
 - **Price chart:** history with a soft wash, a shaded forecast zone with the median and likely range, a band showing the
   usual price for the season (10th to 90th percentile of the same weeks in the past 5 years), labelled latest and 4-week
@@ -129,6 +166,11 @@ FastAPI service that serves the models.
 - **Small things:** a one-time notice that prices are estimates, links to the terms and risks from every page,
   <kbd>/</kbd> to search mandis, loading skeletons, and a skip link for keyboard users
 - **Links you can share:** the crop, state, mandi, tab and About section are kept in the address bar
+
+<p align="center">
+  <img src="docs/web-search.png" width="420" alt="Search all mandis (Ctrl/Cmd K)">
+  <img src="docs/web-validation.png" width="420" alt="Independent validation on the accuracy page">
+</p>
 
 <p align="center">
   <img src="docs/web-compare.png" width="420" alt="Compare mandis">
@@ -184,7 +226,7 @@ classifier for price rises, re-trained on all data up to July 2026.
 flowchart LR
     P[Agmarknet weekly prices<br/>and arrivals, 2003-2026] --> C[Clean:<br/>names, typos,<br/>real reports only]
     C --> F[38 past-only inputs<br/>prices, arrivals,<br/>national + state trends]
-    F --> V[Compare and tune<br/>on 2018-2022]
+    F --> V[Compare and tune<br/>on 2019-2022]
     V --> T[Test 2023-2026<br/>retrained every year]
     V --> Q[Quantile gradient boosting<br/>1 / 2 / 4 weeks]
     V --> R[Rise classifier]
@@ -218,29 +260,37 @@ flowchart LR
   reports only just resumed is "warming up" until it has 4 reported weeks out of the last 13: it shows the live price
   with the usual range and no call, because the model's recent-week inputs would otherwise read as a crash.
 - **Retraining:** every Monday the weekly models are retrained on history plus live weeks and kept only if they beat
-  the current model on weeks neither has seen (champion / challenger), logged in `model_runs`.
-- **Endpoints:** `GET /api/live?crop=Onion&state=Maharashtra&market=Kolhapur` (that mandi's daily reports) and
-  `GET /api/live/status` (last fetch, last retrain, latest price date).
+  the current model on weeks neither has seen (champion / challenger), logged in `model_runs` when the
+  `SUPABASE_SERVICE_KEY` repository secret is set (without it the sidebar shows no retrain date).
+- **Endpoints:** `GET /api/live?crop=Onion&state=Maharashtra&market=Kolhapur` (that mandi's daily reports),
+  `GET /api/live/status` (last fetch, last retrain, latest price date) and `GET /api/index` (every active series, for search).
 - **API key:** without one the public sample key is used, which returns 10 records per request, so collecting is slow.
   Register a free key at [data.gov.in](https://data.gov.in) and add it as the `DATA_GOV_IN_API_KEY` secret of the
   Supabase project (Edge Functions → Secrets).
 - **Arrivals** aren't in the daily feed, so live weeks have none; the models handle missing values.
+- **Docs:** endpoint reference in [docs/API.md](docs/API.md); checks, back-fills, key rotation and pausing in
+  [docs/RUNBOOK.md](docs/RUNBOOK.md).
+- **Security:** tables allow public reads only (row-level security); writes need the service key. The ingest function
+  also requires an `x-ingest-token` header that only the project's own schedules send (the token lives in a private
+  schema and is checked by a function only the service role may call), and it refuses unknown crops and back-fills
+  longer than 31 days. `/api/live` only queries mandis that exist in FarmStat's data, and its cache is bounded.
 
 ## ARCHITECTURE
 
+The models never run inside the web app. They run offline (training, the daily job and the weekly retrain), which
+write one compressed snapshot of every forecast; the API serves that snapshot, so the deployed app needs no scikit-learn.
+
 ```mermaid
 flowchart TB
-    U[Farmer picks crop, state, mandi] --> APP[Web app]
-    APP --> D[Load weekly prices for all mandis]
-    D --> FE[Build inputs for the latest week]
-    FE --> MOD[Saved models]
-    MOD --> FC[Expected price + likely range<br/>for 1, 2, 4 weeks]
-    MOD --> PR[Chance of 5%+ rise]
-    FC --> ADV[Sell / hold advice<br/>after storage losses]
-    PR --> ADV
-    ADV --> APP
-    FC --> CMP[Compare mandis<br/>in the state and across India]
-    CMP --> APP
+    D[Weekly prices<br/>panel + live weeks] --> J[scripts/build_snapshot.py<br/>daily job, weekly retrain]
+    M[Saved models] --> J
+    J --> FC[Expected price + likely range for 1, 2, 4 weeks<br/>chance of 5%+ rise, sell / hold after storage losses]
+    FC --> S[(models/web_snapshot.json.gz)]
+    S --> API[FastAPI: api/service.py<br/>/api/meta, mandis, series, national, index, accuracy]
+    L[(Supabase daily_prices)] --> API2[/api/live/]
+    API --> APP[React web app]
+    API2 --> APP
+    U[Farmer picks crop, state, mandi<br/>or searches with Ctrl/Cmd K] --> APP
 ```
 
 ## TECH STACK
@@ -356,8 +406,11 @@ supabase/functions/ingest-mandi/    Edge Function that collects daily prices int
 .github/workflows/                  daily forecast refresh and weekly retraining
 scripts/ingest_live.py              daily job: live weekly rows + refreshed forecasts
 scripts/retrain.py                  weekly job: retrain, champion vs challenger
+scripts/evaluate.py                 independent validation: walk-forward, Diebold-Mariano, bootstrap, conformal, reliability
+reports/                            evaluation.json and model_evaluation.md written by scripts/evaluate.py
+docs/FarmStat_presentation.pptx     10-slide project presentation (generator: docs/deck/build_presentation.js)
 models/farmstat_model.joblib        trained weekly models (+ arecanut ranges)
-models/cashew_model.joblib          cashew monthly model and calibrated ranges
+models/cashew_model.joblib          cashew monthly model and its error ranges
 models/metrics.json                 test results
 models/web_snapshot.json.gz         latest forecasts, advice and test results the web app shows
 notebooks/FarmStat_Training.ipynb   full training and validation (with outputs)
@@ -389,7 +442,7 @@ Open Government Data License – India.
 - **Markets are hard to predict week to week.** The gain over "no change" is about 7–8%. That is useful, but it's not a
   crystal ball.
 - **New mandis are the hardest.** Hundreds of mandis joined the data in 2024–25. With little history and sticky prices,
-  onion forecasts there do not beat "no change"; the app marks these mandis and keeps their forecasts close to today's price.
+  onion forecasts there do not beat "no change"; the app marks these mandis with a "new" badge (less than 3 years of history) and says so next to the forecast.
 - **Government decisions can't be foreseen.** Export bans and duties move prices overnight, as the Lasalgaon case study
   shows.
 - **The 4-week range is too narrow.** It contains the real price about 2 times in 3 instead of 4 in 5. Widening it with

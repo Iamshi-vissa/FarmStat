@@ -1,3 +1,4 @@
+import Tabs from './ui/Tabs.jsx';
 import { useMemo, useState } from 'react';
 import { Info, LineChart, Table2 } from 'lucide-react';
 import PriceChart, { ArrivalsChart, ChartTable, buildRows } from './PriceChart.jsx';
@@ -36,9 +37,8 @@ export default function MarketChart({ crop, state, market, data, maxHold }) {
         </div>
       </div>
       <div className="chart-toolbar">
-        <div className="seg" role="group" aria-label="Time range">
-          {RANGES.map(([w, l]) => <button key={w} aria-pressed={range === w} onClick={() => setRange(w)}>{l}</button>)}
-        </div>
+        <Tabs variant="pill" role="group" label="Time range" items={RANGES.map(([w, l]) => ({ value: w, label: l }))}
+          value={range} onChange={setRange} />
         <label className="check"><input type="checkbox" checked={season} onChange={e => setSeason(e.target.checked)} />
           Usual for the season</label>
         <label className="check"><input type="checkbox" checked={lastYear} onChange={e => setLastYear(e.target.checked)} />

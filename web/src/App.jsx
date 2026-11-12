@@ -4,6 +4,8 @@ import CropSwitch from './components/CropSwitch.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import MarketView, { MarketSkeleton, loadMarketChart } from './components/MarketView.jsx';
 import { Notice, SideShell } from './components/Chrome.jsx';
+import Tabs from './components/ui/Tabs.jsx';
+import SearchButton from './components/SearchAnywhere.jsx';
 import { api } from './api.js';
 import { date, monthLabel, rupees } from './format.js';
 
@@ -133,11 +135,12 @@ export default function App() {
       <main className="main" id="main">
         <div className="topbar">
           <CropSwitch items={meta.crops.map(c => ({ value: c.id, label: c.id }))} value={crop} onChange={setCrop} />
-          <div className="tabs" role="tablist" aria-label="View" ref={tabsRef}>
-            {tabs.map(([id, label]) => (
-              <button key={id} role="tab" className="tab" aria-selected={view === id} onClick={() => setView(id)}>{label}</button>
-            ))}
-          </div>
+          <Tabs items={tabs.map(([value, label]) => ({ value, label }))} value={view} onChange={setView} label="View"
+            className="tabs" tabRef={tabsRef} />
+          <SearchButton crops={meta.crops} onPick={pick => {
+            if (pick.crop) { setCrop(pick.crop); if (pick.state) setState(pick.state); if (pick.market) setMarket(pick.market); }
+            setView(pick.view);
+          }} />
         </div>
         <Notice />
         <Suspense fallback={view === 'market' || view === 'overview' ? <MarketSkeleton label="Loading" /> : <Wait />}>

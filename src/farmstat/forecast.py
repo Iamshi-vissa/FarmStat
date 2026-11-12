@@ -11,8 +11,8 @@ for them the forecast is today's price, with a range taken from how much prices 
 over the same number of weeks in the past.
 
 Shrinkage: markets are noisy, so the predicted change is multiplied by a factor below 1
-(pulled towards "no change"). Mandis with less than 3 years of history get a stronger pull,
-because their forecasts were less reliable in testing. Both factors were tuned on 2019-2022.
+(pulled towards "no change"). Mandis with less than 3 years of history can get their own factor;
+both were tuned on 2019-2022 and the current model uses 0.8 for each.
 """
 
 from __future__ import annotations

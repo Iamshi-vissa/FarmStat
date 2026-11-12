@@ -81,6 +81,12 @@ def mandis(crop: str, state: str):
     return rows
 
 
+@app.get("/api/index")
+def index():
+    """All active mandi series (crop, state, market, district, latest price) for search across India."""
+    return data().index()
+
+
 @app.get("/api/series")
 def series(crop: str, state: str, market: str, weeks: int = Query(104, ge=8, le=520)):
     out = data().series(weekly_crop(crop), state, market, weeks)
@@ -107,7 +113,10 @@ def sugarcane():
 @app.get("/api/live")
 def live(crop: str, state: str, market: str):
     """Latest daily prices this mandi reported (from the daily data.gov.in fetch stored in Supabase)."""
-    return livefeed.mandi(weekly_crop(crop), state, market)
+    # only names FarmStat knows reach Supabase, so arbitrary input can't fill the cache or shape the query
+    if not data().has_series(weekly_crop(crop), state, market):
+        raise HTTPException(404, f"No data for {crop} at {market}, {state}.")
+    return livefeed.mandi(crop, state, market)
 
 
 @app.get("/api/live/status")

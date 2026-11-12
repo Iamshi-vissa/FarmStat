@@ -1,4 +1,4 @@
-import{r as ee,j as St}from"./react-C83MwftR.js";const io=.32,Ct=9,me=.05,Oe=160,Fe=1.7,Te=.45,no=2.8,ke=4,Lt=4,Re=256,ze=48,et=2e5,uo=[-.81,.58,-.02],At={forward:[0,1],backward:[0,-1],left:[-1,0],right:[1,0]},ao=["lift","trace","light"],lo={plus:0,dots:1},co=1.25,Ue=`
+import{r as ee,j as St}from"./react-D0kueKpy.js";const io=.32,Ct=9,me=.05,Oe=160,Fe=1.7,Te=.45,no=2.8,ke=4,Lt=4,Re=256,ze=48,et=2e5,uo=[-.81,.58,-.02],At={forward:[0,1],backward:[0,-1],left:[-1,0],right:[1,0]},ao=["lift","trace","light"],lo={plus:0,dots:1},co=1.25,Ue=`
 precision highp float;
 precision highp int;
 
