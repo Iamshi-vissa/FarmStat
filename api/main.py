@@ -81,6 +81,15 @@ def mandis(crop: str, state: str):
     return rows
 
 
+@app.get("/api/overview")
+def overview(crop: str):
+    """India-wide picture for a weekly crop: median price and trend, states, biggest expected moves, top prices."""
+    out = data().overview(weekly_crop(crop))
+    if out is None:
+        raise HTTPException(404, f"No data for {crop}.")
+    return out
+
+
 @app.get("/api/index")
 def index():
     """All active mandi series (crop, state, market, district, latest price) for search across India."""

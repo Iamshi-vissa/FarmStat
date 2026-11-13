@@ -253,6 +253,48 @@ class FarmData:
         return dict(latest={k: _clean(v) for k, v in r.items()},
                     history=records(hist[["week", "price", "arrivals_t"]]), forecast=fc)
 
+    @lru_cache(maxsize=8)
+    def overview(self, crop: str) -> dict | None:
+        """India-wide picture for one weekly crop, shown before a mandi is chosen."""
+        lt = self.latest[self.latest["crop"] == crop].copy()
+        if lt.empty:
+            return None
+        h = 1 if crop == "Tomato" else 2
+        lt["move"] = lt[f"p50_{h}"] / lt["price"] - 1
+        modelled = lt[~lt["naive"].astype(bool)]
+        week = lt["week"].max()
+        fresh = lt[lt["week"] >= week - pd.Timedelta(weeks=2)]           # reported in the last 3 weeks
+        hist = self.prices[(self.prices["crop"] == crop) & (self.prices["week"] > week - pd.Timedelta(weeks=26))
+                           & (self.prices["week"] <= week)]
+        trend = hist.groupby("week")["price"].median().round(0)
+        prev = trend.iloc[-2] if len(trend) > 1 else None
+        year = self.prices[(self.prices["crop"] == crop)
+                           & (self.prices["week"].between(week - pd.Timedelta(weeks=53), week - pd.Timedelta(weeks=51)))]
+        states = []
+        for st, g in fresh.groupby("state"):
+            m = g[~g["naive"].astype(bool)]
+            top = g.sort_values("price", ascending=False).iloc[0]
+            states.append(dict(state=st, median=_clean(g["price"].median()), mandis=int(len(g)),
+                               move=_clean(m["move"].median()) if len(m) else None,
+                               top_market=top["market"], top_price=_clean(top["price"])))
+        states.sort(key=lambda d: -(d["median"] or 0))
+        cols = ["state", "district", "market", "price", "move", "prob_rise", "advice", "new_mandi"]
+        movers = modelled[(modelled["week"] >= week - pd.Timedelta(weeks=2)) & ~modelled["warming"].astype(bool)]
+        return dict(
+            crop=crop, week=_clean(week), horizon=h, series=int(len(lt)), states_count=int(lt["state"].nunique()),
+            median=_clean(fresh["price"].median()), median_prev=_clean(prev),
+            median_year_ago=_clean(year["price"].median()) if len(year) else None,
+            move=_clean(modelled["move"].median()) if len(modelled) else None,
+            rise_share=_clean((modelled["prob_rise"] >= 0.5).mean()) if len(modelled) else None,
+            calls={k: int(v) for k, v in lt["advice"].value_counts().items()},
+            naive=bool(lt["naive"].all()),
+            trend=[dict(week=_clean(w), price=_clean(p)) for w, p in trend.items()],
+            states=states,
+            rises=records(movers.sort_values("move", ascending=False).head(5)[cols]),
+            falls=records(movers.sort_values("move").head(5)[cols]),
+            top=records(fresh.sort_values("price", ascending=False).head(5)[cols]),
+        )
+
     def national(self, crop: str, variety: str | None = None) -> dict:
         sub = self.latest[self.latest["crop"] == crop]
         if variety:

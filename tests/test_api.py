@@ -48,3 +48,12 @@ def test_live_cache_is_bounded(monkeypatch):
     for i in range(12):
         livefeed._get("daily_prices", {"market": f"eq.m{i}"})
     assert len(livefeed._cache) == 5
+
+
+def test_overview_summarises_a_crop_without_choosing_a_mandi(client):
+    d = client.get("/api/overview", params={"crop": "Onion"}).json()
+    assert d["series"] > 0 and d["median"] > 0 and d["states"]
+    assert sum(s["mandis"] for s in d["states"]) <= d["series"]
+    assert d["rises"][0]["move"] >= d["rises"][-1]["move"]          # sorted, biggest expected rise first
+    assert d["falls"][0]["move"] <= d["falls"][-1]["move"]
+    assert client.get("/api/overview", params={"crop": "Wheat"}).status_code == 404

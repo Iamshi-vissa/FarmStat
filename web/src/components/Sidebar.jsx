@@ -11,21 +11,21 @@ const SORTS = [
   { id: 'change', label: 'Outlook' }
 ];
 
-export default function Sidebar({ crop, states, state, onState, mandis, market, onMarket, footer, unit = 'mandis' }) {
+export default function Sidebar({ crop, states, state, onState, mandis, market, onMarket, footer, rail, unit = 'mandis' }) {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState('name');
   const naive = mandis.length > 0 && mandis.every(m => m.naive);
 
   const list = useMemo(() => {
     const term = q.trim().toLowerCase();
-    const rows = mandis.filter(m => !term || `${m.market} ${m.district}`.toLowerCase().includes(term));
+    const rows = state ? mandis.filter(m => m.state === state && (!term || `${m.market} ${m.district}`.toLowerCase().includes(term))) : [];
     const by = {
       name: (a, b) => a.market.localeCompare(b.market),
       price: (a, b) => b.price - a.price,
       change: (a, b) => (b.change ?? -9) - (a.change ?? -9)
     }[sort];
     return [...rows].sort(by);
-  }, [mandis, q, sort]);
+  }, [mandis, q, sort, state]);
 
   const horizon = mandis[0]?.horizon ?? 2;
   const listRef = useRef(null);
@@ -43,16 +43,18 @@ export default function Sidebar({ crop, states, state, onState, mandis, market, 
     listRef.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [market, mandis]);
   return (
-    <SideShell label="Choose a mandi" current={market} footer={footer}>
+    <SideShell label="Choose a mandi" current={market} placeholder="Choose a mandi" footer={footer} rail={rail}>
       <div className="side-controls">
         <label className="field">
           <span>State</span>
-          <select className="select" value={state ?? ''} onChange={e => onState(e.target.value)}>
+          <select className="select" value={state ?? ''} onChange={e => onState(e.target.value || null)}>
+            <option value="">Choose a state</option>
             {states.map(s => (
               <option key={s.name} value={s.name}>{s.name} ({s.count} {unit})</option>
             ))}
           </select>
         </label>
+        {state && <>
         <div className="search-wrap">
           <Search size={16} aria-hidden="true" />
           <input className="search" type="search" placeholder="Search by mandi or district" ref={searchRef}
@@ -68,9 +70,18 @@ export default function Sidebar({ crop, states, state, onState, mandis, market, 
           ))}
           <span className="list-count" aria-live="polite">{list.length} of {mandis.length}</span>
         </div>
+        </>}
       </div>
       <nav className="mandi-list" aria-label={`${crop} mandis`} ref={listRef}>
-        {list.length === 0 && <p className="empty">No mandi matches “{q}”. Try a district name.</p>}
+        {!state && (
+          <div className="empty pick-state">
+            <p>Choose a state to see its {crop.toLowerCase()} {unit}, or pick one here:</p>
+            <div className="chips">{[...states].sort((a, b) => b.count - a.count).slice(0, 8).map(s => (
+              <button key={s.name} type="button" className="chip" onClick={() => onState(s.name)}>{s.name}<span>{s.count}</span></button>
+            ))}</div>
+          </div>
+        )}
+        {state && list.length === 0 && q && <p className="empty">No mandi matches “{q}”. Try a district name.</p>}
         {list.map(m => (
           <button key={m.market} className="mandi-row" aria-current={m.market === market} onClick={() => onMarket(m.market)}>
             <span className="mandi-name">{m.market}</span>

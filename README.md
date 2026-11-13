@@ -3,7 +3,7 @@
 Forecasts onion, tomato and potato prices in mandis across 24 Indian states, 1, 2 and 4 weeks ahead, tells the farmer whether to sell now or hold, and also covers arecanut, cashew and sugarcane.
 
 <p align="center">
-  <img src="docs/web-market.png" width="860" alt="FarmStat: onion at Lasalgaon with the mandi rate board, forecast tiles and price chart">
+  <img src="docs/web-overview.png" width="860" alt="FarmStat first screen: onion across India, with the national rate board, calls, KPIs and prices by state">
 </p>
 
 ## CONTENTS
@@ -107,8 +107,16 @@ Finding out *when a model doesn't help*, and saying so, is part of the result.
 
 ## FEATURES
 
+- **Starts with India, not a guess:** nothing is pre-selected. The first screen shows the crop across India this week:
+  the national median price on the rate board with its 26-week trend, the change on last week and last year, the
+  median expected move, how many mandis say hold or sell, prices by state, and the mandis most likely to rise or fall.
+  Every row is a way in: a state opens its mandi list, a mandi opens its page
 - Pick a crop, a **state** and a **mandi** to see this week's price, the 1/2/4-week forecast and two years of history
   with the forecast range
+- **A side panel that stays out of the way:** on desktop a slim icon rail (overview, mandis, search, accuracy, about)
+  sits on the left; hovering or focusing it slides out the state picker and mandi list over the page, and the pin
+  button docks it. Ported from a 21st.dev rail-panel sidebar (hover peek with a grace period, Escape and click-outside
+  to close, a sliding active marker, arrow keys). On phones it is a "Choose a mandi" drop-down under the header
 - Sell / hold advice that subtracts storage losses (onion 4%, potato 3%, tomato 15% per 4 weeks)
 - Never advises holding tomatoes for more than a week, because they spoil
 - Shows the money involved for your quantity in quintals

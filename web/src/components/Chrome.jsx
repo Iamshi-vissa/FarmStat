@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ChevronDown, Info } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ChevronDown, Info, Pin, PinOff } from 'lucide-react';
 import { api } from '../api.js';
 import { date } from '../format.js';
 
@@ -44,24 +44,123 @@ function LiveStatus() {
   );
 }
 
-// Sidebar frame. On phones it collapses to a header with a button showing the current choice;
-// the list opens below it and closes again once something is picked.
-export function SideShell({ label, current, footer, children }) {
-  const [open, setOpen] = useState(false);
-  useEffect(() => { setOpen(false); }, [current]);
+// Open the side panel from anywhere (the rail's Mandis button, "choose a state" links on the overview).
+export const openSidePanel = () => window.dispatchEvent(new Event('farmstat:panel'));
+
+const PIN_KEY = 'farmstat-panel-pinned';
+const readPinned = () => { try { return localStorage.getItem(PIN_KEY) === '1'; } catch { return false; } };
+const PEEK_GRACE = 160;
+const DESKTOP = '(min-width: 861px)';
+function useDesktop() {
+  const [on, setOn] = useState(() => window.matchMedia(DESKTOP).matches);
+  useEffect(() => {
+    const m = window.matchMedia(DESKTOP);
+    const f = () => setOn(m.matches);
+    m.addEventListener('change', f);
+    return () => m.removeEventListener('change', f);
+  }, []);
+  return on;
+}   // ms the panel stays while the pointer travels from the rail into it
+
+// Sidebar frame.
+// Desktop: a slim icon rail (pages, search, mandis). Hovering or focusing it slides the panel with the state picker and
+// mandi list out over the page; pinning docks the panel beside the page instead. Ported from the 21st.dev "Rail Panel
+// Sidebar" by dhxwhy (hover peek with a grace period, pin to dock, Escape and click-outside to close, a sliding active
+// marker on the rail, arrow keys between rail buttons), rebuilt with FarmStat's tokens and CSS transitions.
+// Phones: a compact header with a button showing the current choice; the panel opens below it.
+export function SideShell({ label, current, placeholder, footer, rail = [], children }) {
+  const [open, setOpen] = useState(false);          // phone drop-down
+  const [peek, setPeek] = useState(false);          // desktop hover panel
+  const [pinned, setPinned] = useState(readPinned);
+  const aside = useRef(null);
+  const timer = useRef(0);
+  const railList = useRef(null);
+  const marker = useRef(null);
+  const buttons = useRef({});
+  const desktop = useDesktop();
+
+  const clear = () => { window.clearTimeout(timer.current); timer.current = 0; };
+  const show = useCallback(() => { clear(); setPeek(true); }, []);
+  const hide = useCallback(() => { clear(); setPeek(false); }, []);
+  const hideSoon = () => { clear(); timer.current = window.setTimeout(() => setPeek(false), PEEK_GRACE); };
+
+  useEffect(() => { setOpen(false); setPeek(false); }, [current]);   // a choice was made: get out of the way
+  useEffect(() => {
+    const onOpen = () => { setOpen(true); setPeek(true); };
+    window.addEventListener('farmstat:panel', onOpen);
+    return () => { window.removeEventListener('farmstat:panel', onOpen); clear(); };
+  }, []);
+  useEffect(() => {   // click outside closes the peek
+    if (!peek || pinned) return undefined;
+    const onDown = e => { if (aside.current && !aside.current.contains(e.target)) hide(); };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [peek, pinned, hide]);
+  useEffect(() => { document.documentElement.dataset.panel = pinned ? 'pinned' : 'rail'; }, [pinned]);
+
+  const togglePin = () => {
+    const next = !pinned;
+    setPinned(next);
+    setPeek(false);
+    try { localStorage.setItem(PIN_KEY, next ? '1' : '0'); } catch { /* storage unavailable */ }
+  };
+
+  const active = rail.find(r => r.active)?.id;
+  useLayoutEffect(() => {   // slide the marker to the active rail button
+    const b = buttons.current[active];
+    if (!marker.current) return;
+    marker.current.style.opacity = b ? '1' : '0';
+    if (b) marker.current.style.transform = `translateY(${b.offsetTop}px)`;
+  }, [active, rail.length]);
+
+  const onRailKeys = e => {
+    const ids = rail.map(r => r.id);
+    const at = ids.indexOf(e.target.dataset?.rail);
+    if (at < 0) return;
+    const next = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: ids.length - 1 }[e.key];
+    if (next == null) return;
+    e.preventDefault();
+    buttons.current[ids[(next + ids.length) % ids.length]]?.focus();
+  };
+
+  const hidden = desktop && !(pinned || peek);   // on phones the panel is the header, always there
   return (
-    <aside className="side" aria-label={label} data-open={open}>
-      <div className="side-head">
-        <Brand />
-        {current && (
+    <aside className="side" aria-label={label} ref={aside} data-open={open} data-peek={peek && !pinned} data-pinned={pinned}
+      onPointerEnter={e => { if (e.pointerType !== 'touch' && !pinned) show(); }}
+      onPointerLeave={e => { if (e.pointerType !== 'touch' && !pinned) hideSoon(); }}
+      onFocus={e => { if (!pinned && e.target.matches?.('.side-panel :focus-visible, .rail-btn[data-panel]:focus-visible')) show(); }}
+      onBlur={e => { if (!pinned && !aside.current?.contains(e.relatedTarget)) hideSoon(); }}
+      onKeyDown={e => { if (e.key === 'Escape' && peek && !pinned) { hide(); buttons.current[active]?.focus(); } }}>
+      <nav className="rail" aria-label="FarmStat pages" onKeyDown={onRailKeys}>
+        <span className="brand-glyph rail-brand" aria-hidden="true">₹</span>
+        <div className="rail-list" ref={railList}>
+          <span className="rail-marker" ref={marker} aria-hidden="true" />
+          {rail.map(r => (
+            <button key={r.id} type="button" className="rail-btn" data-rail={r.id} data-panel={r.panel ? '' : undefined}
+              ref={n => { buttons.current[r.id] = n; }} aria-label={r.label} title={r.label}
+              aria-current={r.active ? 'page' : undefined} tabIndex={r.active || (!active && r === rail[0]) ? 0 : -1}
+              onClick={() => { if (r.panel) show(); r.onClick?.(); }}>
+              {r.icon}
+              <span className="rail-tip" aria-hidden="true">{r.label}</span>
+            </button>
+          ))}
+        </div>
+        <button type="button" className="rail-btn rail-pin" aria-pressed={pinned} onClick={togglePin}
+          aria-label={pinned ? 'Unpin the side panel' : 'Pin the side panel open'} title={pinned ? 'Unpin panel' : 'Pin panel open'}>
+          {pinned ? <Pin size={18} aria-hidden="true" /> : <PinOff size={18} aria-hidden="true" />}
+        </button>
+      </nav>
+      <div className="side-panel" aria-hidden={hidden ? 'true' : undefined} inert={hidden}>
+        <div className="side-head">
+          <Brand />
           <button type="button" className="side-toggle" aria-expanded={open} onClick={() => setOpen(o => !o)}>
-            <span>{current}</span><ChevronDown size={16} aria-hidden="true" />
+            <span>{current || placeholder || 'Choose'}</span><ChevronDown size={16} aria-hidden="true" />
           </button>
-        )}
-      </div>
-      <div className="side-body">
-        {children}
-        <div className="side-foot">{footer}<LiveStatus /><SideLinks /></div>
+        </div>
+        <div className="side-body">
+          {children}
+          <div className="side-foot">{footer}<LiveStatus /><SideLinks /></div>
+        </div>
       </div>
     </aside>
   );

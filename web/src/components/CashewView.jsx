@@ -6,8 +6,9 @@ import PriceChart, { buildRows } from './PriceChart.jsx';
 import { monthLabel, months, pct, rupees } from '../format.js';
 import { T } from '../theme.js';
 
-export default function CashewView({ data, state }) {
-  const s = data.states.find(x => x.state === state) ?? data.states[0];
+export default function CashewView({ data, state, onState }) {
+  const s = data.states.find(x => x.state === state);
+  if (!s) return <CashewStart data={data} onState={onState} />;
   const stale = (new Date(data.states.reduce((a, b) => (a.month > b.month ? a : b)).month) - new Date(s.month)) / 864e5 > 120;
   const peak = data.season.reduce((a, b) => (b.pct > a.pct ? b : a));
   const low = data.season.reduce((a, b) => (b.pct < a.pct ? b : a));
@@ -54,6 +55,28 @@ export default function CashewView({ data, state }) {
           ))}</tbody>
         </table>
       </section>
+    </>
+  );
+}
+
+// Before a state is chosen: every state's latest price as a card to pick from, plus the all-states season.
+function CashewStart({ data, onState }) {
+  const rows = [...data.states].sort((a, b) => b.price - a.price);
+  return (
+    <>
+      <div className="page-head">
+        <h1>Cashew prices by state</h1>
+        <p>Monthly state averages from {rows.length} states. Choose a state for its price history and a rough 3-month guide.</p>
+      </div>
+      <div className="kpis">
+        {rows.map(x => (
+          <button key={x.state} type="button" className="kpi kpi-button" onClick={() => onState(x.state)}>
+            <span className="kpi-label">{x.state}</span>
+            <span className="kpi-value num">{rupees(x.price)}</span>
+            <span className="kpi-note">{x.product === 'raw nuts' ? 'Raw nuts' : 'Kernels'}, {monthLabel(x.month)}</span>
+          </button>
+        ))}
+      </div>
     </>
   );
 }

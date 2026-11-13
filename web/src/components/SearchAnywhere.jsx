@@ -27,7 +27,8 @@ export default function SearchButton({ crops, onPick }) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); show(); }
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('farmstat:search', show);   // the rail's search button and other "search" links
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('farmstat:search', show); };
   }, [show]);
 
   const items = useMemo(() => {

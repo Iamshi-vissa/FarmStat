@@ -17,6 +17,7 @@ interactive docs are at `/docs`. On Vercel the same app is served from the site'
 | `GET /api/mandis?crop=&state=` | Every active mandi for a weekly crop in one state, with forecasts, advice and a 12-week sparkline |
 | `GET /api/series?crop=&state=&market=&weeks=104` | One mandi's history (8 to 520 weeks) and its 1/2/4-week forecast |
 | `GET /api/national?crop=&variety=` | State medians and the highest-paying mandis in India; `variety` (optional, arecanut) matches the `(Variety)` part of series names |
+| `GET /api/overview?crop=` | The crop across India: median price, 26-week trend, change on last week and last year, calls by type, prices by state, biggest expected rises and falls, top prices |
 | `GET /api/index` | Every active series in one compact list, for search |
 | `GET /api/cashew` | Cashew monthly state prices and forecasts |
 | `GET /api/sugarcane` | Sugarcane FRP and mandi prices |
