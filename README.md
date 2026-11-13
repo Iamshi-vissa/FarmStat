@@ -105,8 +105,6 @@ Finding out *when a model doesn't help*, and saying so, is part of the result.
 
 ![Model comparison](figures/model_comparison.png)
 
-![Case studies](figures/case_studies.png)
-
 ## FEATURES
 
 - Pick a crop, a **state** and a **mandi** to see this week's price, the 1/2/4-week forecast and two years of history
@@ -166,34 +164,6 @@ FastAPI service that serves the models.
 - **Small things:** a one-time notice that prices are estimates, links to the terms and risks from every page,
   <kbd>/</kbd> to search mandis, loading skeletons, and a skip link for keyboard users
 - **Links you can share:** the crop, state, mandi, tab and About section are kept in the address bar
-
-<p align="center">
-  <img src="docs/web-search.png" width="420" alt="Search all mandis (Ctrl/Cmd K)">
-  <img src="docs/web-validation.png" width="420" alt="Independent validation on the accuracy page">
-</p>
-
-<p align="center">
-  <img src="docs/web-compare.png" width="420" alt="Compare mandis">
-  <img src="docs/web-accuracy.png" width="420" alt="Model accuracy">
-</p>
-<p align="center">
-  <img src="docs/web-arecanut.png" width="420" alt="Arecanut at Sirsi (Rashi)">
-  <img src="docs/web-cashew.png" width="420" alt="Cashew in Karnataka">
-</p>
-<p align="center">
-  <img src="docs/web-about.png" width="420" alt="About: risks and limitations">
-  <img src="docs/web-terms.png" width="420" alt="About: terms of use">
-</p>
-<p align="center">
-  <img src="docs/web-live.png" width="420" alt="Live daily reports from a mandi">
-  <img src="docs/web-season.png" width="420" alt="Price chart with the usual range for the season">
-</p>
-<p align="center">
-  <img src="docs/web-stats.png" width="420" alt="Price statistics">
-</p>
-<p align="center">
-  <img src="docs/web-mobile.png" width="260" alt="FarmStat on a phone">
-</p>
 
 The original Streamlit app (`streamlit_app.py`) still works as a simpler alternative.
 
