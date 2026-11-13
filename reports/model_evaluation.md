@@ -6,9 +6,9 @@ Model 2.1.0. Walk-forward test on 2023-2026: for each year the models were retra
 
 | Horizon | Rows | Avg error (Rs/q) | No change (Rs/q) | Skill | 95% interval | Direction right | Range coverage | After conformal |
 |---|---|---|---|---|---|---|---|---|
-| 1 week | 171,072 | 256 | 278 | 7.7% | 4.8% to 10.4% | 67.0% | 79.1% | 80.1% |
-| 2 weeks | 168,637 | 395 | 429 | 8.0% | 3.6% to 12.2% | 67.1% | 74.5% | 79.0% |
-| 4 weeks | 164,797 | 618 | 661 | 6.5% | 1.0% to 12.0% | 65.8% | 67.3% | 79.8% |
+| 1 week | 171,072 | 256 | 278 | 7.7% | 4.8% to 10.4% | 67.0% | 79.1% | 80.8% |
+| 2 weeks | 168,637 | 395 | 429 | 8.0% | 3.6% to 12.2% | 67.1% | 74.5% | 79.8% |
+| 4 weeks | 164,797 | 618 | 661 | 6.5% | 1.0% to 12.0% | 65.8% | 67.3% | 80.1% |
 
 ## Is the gain real? (Diebold-Mariano test vs no change)
 
@@ -24,11 +24,11 @@ A negative difference means FarmStat's error is lower. The test uses each week's
 
 | Horizon | Below 10th pct (target 10%) | Below median (target 50%) | Below 90th pct (target 90%) | Median range width, before -> after conformal |
 |---|---|---|---|---|
-| 1 | 11.6% | 50.3% | 90.7% | 32.2% -> 33.0% |
-| 2 | 14.9% | 53.1% | 89.3% | 43.6% -> 48.7% |
-| 4 | 19.5% | 55.5% | 86.8% | 56.8% -> 74.4% |
+| 1 | 11.6% | 50.3% | 90.7% | 32.2% -> 33.2% |
+| 2 | 14.9% | 53.1% | 89.3% | 43.6% -> 47.9% |
+| 4 | 19.5% | 55.5% | 86.8% | 56.8% -> 71.2% |
 
-Conformal widening: each test year's range is widened by the amount that made the previous year's out-of-sample ranges contain 80% of outcomes (split-conformal, CQR-style).
+Recalibrated ranges: each test year's range is adjusted using only the out-of-sample errors of up to 3 earlier years: each end of the range moves by the amount that would have left 10% of outcomes outside it (split-conformal, one shift per tail).
 
 ## 2 weeks ahead by crop and mandi type
 

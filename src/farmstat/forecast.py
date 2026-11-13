@@ -24,6 +24,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
+from .calibration import load_shifts
 from .data import ROOT
 
 DEFAULT_MODEL_PATH = ROOT / "models" / "farmstat_model.joblib"
@@ -54,9 +55,10 @@ class Forecaster:
         self.metrics = bundle.get("metrics", {})
         self.version = bundle.get("version", "unknown")
         self.naive_crops = bundle.get("naive_crops", {})   # {crop: {"range": {h: (q10, q90)}, "prob_rise": p}}
+        self.range_shifts = load_shifts()             # {h: (low, high)} from farmstat.calibration; {} = none
 
     @classmethod
-    def load(cls, path: str | Path = DEFAULT_MODEL_PATH) -> "Forecaster":
+    def load(cls, path: str | Path = DEFAULT_MODEL_PATH) -> Forecaster:
         return cls(joblib.load(path))
 
     def shrink_factor(self, rows: pd.DataFrame) -> np.ndarray:
@@ -72,8 +74,10 @@ class Forecaster:
         for h in self.horizons:
             q = {k: m.predict(X) for k, m in self.bundle["quantile_models"][h].items()}
             mid = s * q[50]
-            lo = mid - np.maximum(q[50] - q[10], 0)
-            hi = mid + np.maximum(q[90] - q[50], 0)
+            low_shift, high_shift = self.range_shifts.get(h, (0.0, 0.0))   # calibrated so ~80% of prices land inside
+            lo = mid - np.maximum(q[50] - q[10], 0) - low_shift
+            hi = mid + np.maximum(q[90] - q[50], 0) + high_shift
+            lo, hi = np.minimum(lo, mid), np.maximum(hi, mid)              # the range always contains the forecast
             out[f"p10_{h}"], out[f"p50_{h}"], out[f"p90_{h}"] = price * np.exp(lo), price * np.exp(mid), price * np.exp(hi)
         out["prob_rise"] = self.bundle["rise_classifier"].predict_proba(X)[:, 1]
         out["new_mandi"] = rows["history_weeks"].to_numpy() < YOUNG_WEEKS

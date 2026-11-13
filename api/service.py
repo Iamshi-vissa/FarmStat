@@ -21,7 +21,6 @@ import json
 import os
 import sys
 import tempfile
-from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -31,12 +30,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from farmstat.data import CROPS, DATA_FILE, KEY, LIVE_FILE, load_prices  # noqa: E402
+from farmstat.calibration import CALIBRATION_FILE  # noqa: E402
 from farmstat.forecast import DEFAULT_MODEL_PATH, MAX_HOLD_WEEKS  # noqa: E402
 from farmstat.monthly import M_HORIZONS, MONTHLY_FILE, build_monthly, load_monthly, product_label  # noqa: E402
 
 CASHEW_MODEL = ROOT / "models" / "cashew_model.joblib"
 SNAPSHOT = ROOT / "models" / "web_snapshot.json.gz"
-SNAPSHOT_VERSION = "3"   # bump when the snapshot's contents change shape
+SNAPSHOT_VERSION = "4"   # bump when the snapshot's contents change shape (4: calibrated ranges)
 ACTIVE_WEEKS = 8
 WARMUP_WEEKS = 4        # a live series needs this many reported weeks in the last 13 before the model forecasts it
 FRP = [("2019-20", "2019-10-01", 275), ("2020-21", "2020-10-01", 285), ("2021-22", "2021-10-01", 290),
@@ -47,7 +47,7 @@ FRP = [("2019-20", "2019-10-01", 275), ("2020-21", "2020-10-01", 285), ("2021-22
 def fingerprint() -> str:
     """Content hash of the data and models the snapshot was built from."""
     h = hashlib.md5(SNAPSHOT_VERSION.encode())
-    for p in [DATA_FILE, LIVE_FILE, MONTHLY_FILE, DEFAULT_MODEL_PATH, CASHEW_MODEL]:
+    for p in [DATA_FILE, LIVE_FILE, MONTHLY_FILE, DEFAULT_MODEL_PATH, CASHEW_MODEL, CALIBRATION_FILE]:
         if p.exists():
             h.update(p.read_bytes())
     return h.hexdigest()[:12]
@@ -151,9 +151,8 @@ def _cashew(fc) -> dict:
     for _, r in last.iterrows():
         hist = df[df["state"] == r["state"]].sort_values("month")
         fcast = [dict(month=_clean(r["month"]), p10=_clean(r["price"]), p50=_clean(r["price"]), p90=_clean(r["price"]), h=0)]
-        for h in M_HORIZONS:
-            fcast.append(dict(month=_clean(r["month"] + pd.DateOffset(months=h)), h=h, p10=_clean(r[f"p10_{h}"]),
-                              p50=_clean(r[f"p50_{h}"]), p90=_clean(r[f"p90_{h}"])))
+        fcast += [dict(month=_clean(r["month"] + pd.DateOffset(months=h)), h=h, p10=_clean(r[f"p10_{h}"]),
+                       p50=_clean(r[f"p50_{h}"]), p90=_clean(r[f"p90_{h}"])) for h in M_HORIZONS]
         states.append(dict(state=r["state"], product=product_label("Cashew", hist["price"].median()),
                            month=_clean(r["month"]), price=_clean(r["price"]),
                            history=records(hist[["month", "price"]]), forecast=fcast))
@@ -199,7 +198,12 @@ class FarmData:
         self._cashew = snap["cashew"]
         # last 12 weekly prices per series, for the sparklines in the mandi list
         recent = self.prices[self.prices["week"] >= self.prices["week"].max() - pd.Timedelta(weeks=40)]
-        self.spark = {k: g.sort_values("week")["price"].tail(12).round(0).tolist() for k, g in recent.groupby(KEY)}
+        last12 = recent.sort_values(KEY + ["week"]).groupby(KEY, sort=False).tail(12)   # sort once, not per series
+        self.spark = {k: g.round(0).tolist() for k, g in last12.groupby(KEY, sort=False)["price"]}
+        # row positions of each series, so a mandi's history is a lookup instead of a scan of every row
+        self._rows = self.prices.groupby(KEY, sort=False).indices
+        self._overview: dict[str, dict | None] = {}
+        self._sugarcane: dict | None = None
 
     # ── weekly crops ────────────────────────────────────────────────────────
     def meta(self) -> dict:
@@ -244,18 +248,21 @@ class FarmData:
         if row.empty:
             return None
         r = row.iloc[0]
-        hist = self.prices[(self.prices["crop"] == crop) & (self.prices["state"] == state) & (self.prices["market"] == market)]
+        hist = self.prices.iloc[self._rows.get((crop, state, market), [])]
         hist = hist[hist["week"] >= r["week"] - pd.Timedelta(weeks=weeks)].sort_values("week")
         fc = [dict(week=_clean(r["week"]), p10=_clean(r["price"]), p50=_clean(r["price"]), p90=_clean(r["price"]), h=0)]
-        for h in self.horizons:
-            fc.append(dict(week=_clean(r["week"] + pd.Timedelta(weeks=h)), h=h,
-                           p10=_clean(r[f"p10_{h}"]), p50=_clean(r[f"p50_{h}"]), p90=_clean(r[f"p90_{h}"])))
+        fc += [dict(week=_clean(r["week"] + pd.Timedelta(weeks=h)), h=h,
+                    p10=_clean(r[f"p10_{h}"]), p50=_clean(r[f"p50_{h}"]), p90=_clean(r[f"p90_{h}"])) for h in self.horizons]
         return dict(latest={k: _clean(v) for k, v in r.items()},
                     history=records(hist[["week", "price", "arrivals_t"]]), forecast=fc)
 
-    @lru_cache(maxsize=8)
     def overview(self, crop: str) -> dict | None:
-        """India-wide picture for one weekly crop, shown before a mandi is chosen."""
+        """India-wide picture for one weekly crop, shown before a mandi is chosen (computed once per crop)."""
+        if crop not in self._overview:
+            self._overview[crop] = self._build_overview(crop)
+        return self._overview[crop]
+
+    def _build_overview(self, crop: str) -> dict | None:
         lt = self.latest[self.latest["crop"] == crop].copy()
         if lt.empty:
             return None
@@ -310,8 +317,12 @@ class FarmData:
         return self._cashew
 
     # ── sugarcane ───────────────────────────────────────────────────────────
-    @lru_cache(maxsize=1)
     def sugarcane(self) -> dict:
+        if self._sugarcane is None:
+            self._sugarcane = self._build_sugarcane()
+        return self._sugarcane
+
+    def _build_sugarcane(self) -> dict:
         s = pd.read_csv(MONTHLY_FILE)
         s = s[(s["crop"] == "Sugarcane") & (s["state"] == "Chhattisgarh") & s["price"].notna()].sort_values("month")
         return dict(frp=[dict(season=a, start=b, price=c) for a, b, c in FRP],

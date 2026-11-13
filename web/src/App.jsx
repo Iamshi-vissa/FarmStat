@@ -18,6 +18,7 @@ const SugarcaneView = lazy(() => import('./components/SugarcaneView.jsx'));
 const AboutView = lazy(() => import('./components/AboutView.jsx'));
 const OverviewView = lazy(() => import('./components/OverviewView.jsx'));
 
+const WEEKLY = ['Onion', 'Tomato', 'Potato', 'Arecanut'];   // crops with a weekly mandi panel (meta confirms)
 const readHash = () => Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
 const Wait = ({ label = 'Loading…' }) => <div className="loading" role="status">{label}</div>;
 
@@ -36,7 +37,18 @@ export default function App() {
   const tabsRef = useRef(null);
   useScrollEnd(tabsRef);
 
-  useEffect(() => { api('meta').then(setMeta).catch(e => setError(e.message)); loadMarketChart(); }, []);   // fetch chart code early
+  useEffect(() => {
+    api('meta').then(setMeta).catch(e => setError(e.message));
+    // start the first screen's data and code alongside meta instead of after it
+    if (init.mandi) loadMarketChart();
+    else if (WEEKLY.includes(init.crop || 'Onion')) {
+      api('overview', { crop: init.crop || 'Onion' }).catch(() => {});
+      import('./components/OverviewView.jsx');
+    }
+    // the chart code is only needed once a mandi is opened: fetch it when the browser is idle
+    const idle = window.requestIdleCallback ?? (f => setTimeout(f, 1500));
+    idle(() => loadMarketChart());
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {   // follow links that only change the #… part of the address
     const onHash = () => {
       const h = readHash();

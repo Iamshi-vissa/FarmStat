@@ -40,6 +40,7 @@ import pandas as pd  # noqa: E402
 from scipy import stats  # noqa: E402
 from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor  # noqa: E402
 from sklearn.metrics import brier_score_loss, roc_auc_score  # noqa: E402
+from farmstat.calibration import CAL_YEARS, tail_shifts  # noqa: E402
 
 from farmstat.data import load_prices  # noqa: E402
 from farmstat.features import CAT_FEATURES, FEATURES, HORIZONS, build_dataset  # noqa: E402
@@ -171,19 +172,17 @@ def main() -> int:
         preds[h].to_csv(OUT / f"backtest_h{h}.csv.gz", index=False, float_format="%.5f")
     clf = pd.concat(clf_rows, ignore_index=True)
 
-    # 6. split-conformal widening from the previous year's out-of-sample errors (CQR-style) ------------------
+    # 6. range calibration (split-conformal, one shift per tail), learned only from the out-of-sample errors of up to
+    #    CAL_YEARS earlier years -- the same rule the app uses (src/farmstat/calibration.py)
     for h in HORIZONS:
         p = preds[h]
         p["lo"], p["hi"] = p["q10"], p["q90"]
         p["lo_cal"], p["hi_cal"] = np.nan, np.nan
         for yr in TEST_YEARS:
-            prev, cur = p["year"] == yr - 1, p["year"] == yr
-            # conformity score: how far outside [q10, q90] the outcome fell (negative if inside)
-            sc = np.maximum(p.loc[prev, "q10"] - p.loc[prev, f"y_{h}"], p.loc[prev, f"y_{h}"] - p.loc[prev, "q90"])
-            n = len(sc)
-            adj = np.quantile(sc, min(1.0, np.ceil((n + 1) * 0.8) / n))
-            p.loc[cur, "lo_cal"] = p.loc[cur, "q10"] - adj
-            p.loc[cur, "hi_cal"] = p.loc[cur, "q90"] + adj
+            prev, cur = p["year"].between(yr - CAL_YEARS, yr - 1), p["year"] == yr
+            lo_shift, hi_shift = tail_shifts(p.loc[prev, "q10"], p.loc[prev, "q90"], p.loc[prev, f"y_{h}"])
+            p.loc[cur, "lo_cal"] = p.loc[cur, "q10"] - lo_shift
+            p.loc[cur, "hi_cal"] = p.loc[cur, "q90"] + hi_shift
 
     test = {h: preds[h][preds[h]["year"].isin(TEST_YEARS)].copy() for h in HORIZONS}
 
@@ -301,8 +300,9 @@ def write_report(r: dict) -> None:
         q = m["quantile_coverage"]
         lines.append(f"| {h} | {q['below_q10']:.1%} | {q['below_median']:.1%} | {q['below_q90']:.1%} | "
                      f"{m['range_width_pct']:.1%} -> {m['range_width_pct_conformal']:.1%} |")
-    lines += ["", "Conformal widening: each test year's range is widened by the amount that made the previous year's "
-              "out-of-sample ranges contain 80% of outcomes (split-conformal, CQR-style).", "",
+    lines += ["", "Recalibrated ranges: each test year's range is adjusted using only the "
+              f"out-of-sample errors of up to {CAL_YEARS} earlier years: each end of the range moves by the amount that would "
+              "have left 10% of outcomes outside it (split-conformal, one shift per tail).", "",
               "## 2 weeks ahead by crop and mandi type", "", "New = less than 3 years (156 weeks) of price history at the forecast date; established = the rest.", "", "| Group | Rows | Avg error (Rs/q) | Skill | Direction | Coverage |", "|---|---|---|---|---|---|"]
     for t in r["by_crop_and_type"]:
         lines.append(f"| {t['group']} | {t['rows']:,} | {t['MAE_Rs']:.0f} | {t['skill_vs_naive']:.1%} | {t['direction_acc']:.1%} | {t['coverage_10_90']:.1%} |")

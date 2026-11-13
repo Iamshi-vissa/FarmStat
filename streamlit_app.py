@@ -106,7 +106,7 @@ if crop == "Cashew":
         st.caption(f"State average for {r_['month']:%B %Y} · ₹ per quintal")
         cols = st.columns(4)
         cols[0].metric("This month", rs(price))
-        for c, h in zip(cols[1:], M_HORIZONS):
+        for c, h in zip(cols[1:], M_HORIZONS, strict=True):
             mid = r_[f"p50_{h}"]
             c.metric(f"In {h} month{'s' if h > 1 else ''} (rough guide)", rs(mid), f"{mid / price - 1:+.1%}")
             c.caption(f"Likely range {rs(r_[f'p10_{h}'])} – {rs(r_[f'p90_{h}'])}")
@@ -218,7 +218,7 @@ with tab_fc:
     naive = bool(row["naive"])
     cols = st.columns(4)
     cols[0].metric("Price this week", rs(price))
-    for c, h in zip(cols[1:], model.horizons):
+    for c, h in zip(cols[1:], model.horizons, strict=True):
         mid, lo, hi = row[f"p50_{h}"], row[f"p10_{h}"], row[f"p90_{h}"]
         if naive:
             c.markdown(f"<div style='font-size:0.875rem'>In {wk(h)}: usual range</div>"
@@ -332,7 +332,7 @@ with tab_acc:
     bt = m["backtest_extra_Rs_per_quintal"]
     cols = st.columns(1 + len(bt))
     cols[0].metric("Rise classifier ROC-AUC", f"{m['rise_classifier']['ROC_AUC']:.3f}")
-    for c, (k, v) in zip(cols[1:], bt.items()):
+    for c, (k, v) in zip(cols[1:], bt.items(), strict=True):
         c.metric(f"Back-test: {k}", f"{v:+.0f} ₹/qtl", help="Extra rupees per quintal from following the advice "
                  "instead of always selling at once, after storage losses (2023–2026).")
     st.subheader("Arecanut and cashew")

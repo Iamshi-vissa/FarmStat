@@ -61,8 +61,9 @@ function Validation({ v }) {
         </section>
         <section className="panel" aria-labelledby="cal-title">
           <div className="panel-head"><div><h2 id="cal-title">Are the ranges honest?</h2>
-            <p className="sub">A 10th–90th percentile range should hold the real price 80% of the time. Widening each year’s
-              range by the previous year’s misses (split-conformal calibration) brings it back toward 80%.</p></div></div>
+            <p className="sub">A 10th–90th percentile range should hold the real price 80% of the time. Moving each end of the
+              range by what earlier years’ misses call for (split-conformal calibration) brings it back to about 80%; the app
+              shows these calibrated ranges.</p></div></div>
           <table className="table">
             <thead><tr><th>Ahead</th><th className="r">Model range</th><th className="r">Recalibrated</th><th className="r">Missed low / high</th></tr></thead>
             <tbody>{Object.entries(H).map(([h, r]) => (

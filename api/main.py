@@ -141,7 +141,10 @@ def accuracy():
 if DIST.exists():
     app.mount("/assets", StaticFiles(directory=DIST / "assets"), name="assets")
 
+    DIST_ROOT = DIST.resolve()
+
     @app.get("/{path:path}", include_in_schema=False)
     def spa(path: str):
-        f = DIST / path
-        return FileResponse(f if path and f.is_file() else DIST / "index.html")
+        # a real file inside web/dist (favicon, fonts), else the app shell; never anything outside web/dist
+        f = (DIST_ROOT / path).resolve()
+        return FileResponse(f if path and f.is_file() and f.is_relative_to(DIST_ROOT) else DIST_ROOT / "index.html")

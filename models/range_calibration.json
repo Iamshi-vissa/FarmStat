@@ -1,0 +1,39 @@
+{
+  "method": "split-conformal, one shift per tail, target 10% beyond each end",
+  "years": [
+    2024,
+    2025,
+    2026
+  ],
+  "shifts": {
+    "1": {
+      "low": 0.01215,
+      "high": -0.00731
+    },
+    "2": {
+      "low": 0.04176,
+      "high": 0.00508
+    },
+    "4": {
+      "low": 0.10897,
+      "high": 0.0388
+    }
+  },
+  "in_sample_check": {
+    "1": {
+      "coverage_before": 0.7901,
+      "coverage_after": 0.8,
+      "rows": 137492
+    },
+    "2": {
+      "coverage_before": 0.7402,
+      "coverage_after": 0.8,
+      "rows": 135387
+    },
+    "4": {
+      "coverage_before": 0.6677,
+      "coverage_after": 0.8,
+      "rows": 131864
+    }
+  }
+}

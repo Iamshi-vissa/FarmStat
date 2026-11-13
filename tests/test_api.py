@@ -57,3 +57,9 @@ def test_overview_summarises_a_crop_without_choosing_a_mandi(client):
     assert d["rises"][0]["move"] >= d["rises"][-1]["move"]          # sorted, biggest expected rise first
     assert d["falls"][0]["move"] <= d["falls"][-1]["move"]
     assert client.get("/api/overview", params={"crop": "Wheat"}).status_code == 404
+
+
+def test_web_app_route_never_serves_files_outside_dist(client):
+    for path in ["/../api/service.py", "/..%2Fapi%2Fservice.py", "/%2e%2e/requirements.txt"]:
+        r = client.get(path)
+        assert "FarmData" not in r.text and "fastapi" not in r.text

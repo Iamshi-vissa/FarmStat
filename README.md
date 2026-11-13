@@ -75,16 +75,18 @@ test, about 168,000 mandi-weeks per horizon) and adds the checks a sceptic would
 
 | Forecast | Less error than "no change" | 95% interval (block bootstrap over weeks) | Diebold-Mariano p-value | Range coverage | After conformal recalibration |
 |---|---|---|---|---|---|
-| 1 week | 7.7% | 4.8% to 10.4% | < 0.001 | 79.1% | 80.1% |
-| 2 weeks | 8.0% | 3.6% to 12.2% | 0.006 | 74.5% | 79.0% |
-| 4 weeks | 6.5% | 1.0% to 12.0% | 0.14 | 67.3% | 79.8% |
+| 1 week | 7.7% | 4.8% to 10.4% | < 0.001 | 79.1% | 80.8% |
+| 2 weeks | 8.0% | 3.6% to 12.2% | 0.006 | 74.5% | 79.8% |
+| 4 weeks | 6.5% | 1.0% to 12.0% | 0.14 | 67.3% | 80.1% |
 
 - **The gain is real at 1 and 2 weeks.** The Diebold-Mariano test (weekly average errors, Newey-West variance, Harvey
   correction) rejects "no better than no change"; at 4 weeks it does not (p = 0.14), so the 4-week forecast is a rough guide.
 - **It varies by year:** 17.6% (2023), 5.7% (2024), 1.1% (2025, when hundreds of new mandis joined) and 9.7% (2026) at 2 weeks.
 - **The ranges underrate falls.** The real price lands below the 10th percentile 11.6%, 14.9% and 19.5% of the time at 1, 2
-  and 4 weeks (target 10%). Split-conformal widening learned from the previous year's misses brings coverage to 79–80% (in the evaluation only; the
-  app still shows the unwidened ranges).
+  and 4 weeks (target 10%). Split-conformal calibration fixes it: each end of the range moves by the amount that
+  would have left 10% of outcomes beyond it in up to 3 earlier years of out-of-sample forecasts (so the low end moves
+  more). Learned only from the past, it brings each test year to 76–85% and the four years together to 80–81%. **The app
+  uses these calibrated ranges** (`src/farmstat/calibration.py`, refreshed with `scripts/calibrate_ranges.py`).
 - **The rise warning is honest:** ROC-AUC 0.73, Brier score 0.193 vs 0.227 for always quoting the base rate (35%); a
   predicted 45% chance was followed by a rise 42% of the time.
 
@@ -247,7 +249,8 @@ flowchart LR
   Supabase project (Edge Functions → Secrets).
 - **Arrivals** aren't in the daily feed, so live weeks have none; the models handle missing values.
 - **Docs:** endpoint reference in [docs/API.md](docs/API.md); checks, back-fills, key rotation and pausing in
-  [docs/RUNBOOK.md](docs/RUNBOOK.md).
+  [docs/RUNBOOK.md](docs/RUNBOOK.md); what to check before and after a push in [docs/DEPLOY_CHECKLIST.md](docs/DEPLOY_CHECKLIST.md);
+  known debt and its priority in [docs/TECH_DEBT.md](docs/TECH_DEBT.md).
 - **Security:** tables allow public reads only (row-level security); writes need the service key. The ingest function
   also requires an `x-ingest-token` header that only the project's own schedules send (the token lives in a private
   schema and is checked by a function only the service role may call), and it refuses unknown crops and back-fills
@@ -380,16 +383,19 @@ src/farmstat/features.py            38 leakage-free inputs and the 1/2/4-week ta
 src/farmstat/forecast.py            loads the models, forecasts, shrinkage, sell/hold advice
 src/farmstat/monthly.py             cashew / sugarcane monthly state data, features, forecaster
 src/farmstat/live.py                data.gov.in client, Supabase read/write, daily -> weekly rows
+src/farmstat/calibration.py         split-conformal range calibration used by the forecasts
 supabase/functions/ingest-mandi/    Edge Function that collects daily prices into Supabase
-.github/workflows/                  daily forecast refresh and weekly retraining
+.github/workflows/                  CI (lint, tests, web build check), daily forecast refresh, weekly retraining
 scripts/ingest_live.py              daily job: live weekly rows + refreshed forecasts
 scripts/retrain.py                  weekly job: retrain, champion vs challenger
 scripts/evaluate.py                 independent validation: walk-forward, Diebold-Mariano, bootstrap, conformal, reliability
+scripts/calibrate_ranges.py         learns the range calibration from the back-tests -> models/range_calibration.json
 reports/                            evaluation.json and model_evaluation.md written by scripts/evaluate.py
 docs/FarmStat_presentation.pptx     10-slide project presentation (generator: docs/deck/build_presentation.js)
 models/farmstat_model.joblib        trained weekly models (+ arecanut ranges)
 models/cashew_model.joblib          cashew monthly model and its error ranges
 models/metrics.json                 test results
+models/range_calibration.json       how far to move each end of the forecast ranges (from scripts/calibrate_ranges.py)
 models/web_snapshot.json.gz         latest forecasts, advice and test results the web app shows
 notebooks/FarmStat_Training.ipynb   full training and validation (with outputs)
 figures/                            charts from the notebook
@@ -423,8 +429,8 @@ Open Government Data License – India.
   onion forecasts there do not beat "no change"; the app marks these mandis with a "new" badge (less than 3 years of history) and says so next to the forecast.
 - **Government decisions can't be foreseen.** Export bans and duties move prices overnight, as the Lasalgaon case study
   shows.
-- **The 4-week range is too narrow.** It contains the real price about 2 times in 3 instead of 4 in 5. Widening it with
-  conformal calibration is the next fix.
+- **Ranges rest on the recent past.** The calibrated ranges hold the real price about 80% of the time on past years,
+  but a year with bigger shocks than 2024–2026 would still push more prices outside them.
 - **Potato covers only 72 mandis, in West Bengal and Uttarakhand** — the source panel only includes potato for these two states.
 - **Live mandi names must match the history exactly.** About half of the mandis in today's feed match a history series;
   the rest start as new series and need a year of weeks before they're forecast.
