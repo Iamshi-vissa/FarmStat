@@ -174,7 +174,7 @@ s.addChart(pres.charts.BAR, [{ name: 'Skill at 2 weeks', labels: byYear.map(r =>
 
 // 8. Calibration ------------------------------------------------------------------------------------------------
 s = pres.addSlide({ masterName: 'FS Content', sectionTitle: 'Validation' });
-s.addText('Ranges run narrow; recalibration restores 80%', { placeholder: 'title' });
+s.addText('Calibrated ranges now hold the price 80% of the time', { placeholder: 'title' });
 sub(s, 'Left: share of weeks the real price fell inside the 10th to 90th percentile range. Right: does a 40% warning mean 40%?');
 s.addChart(pres.charts.BAR, [
   { name: 'Model range', labels: hs.map(h => `${h} wk`), values: hs.map(h => Math.round(H[h].coverage_10_90 * 100)) },
@@ -219,8 +219,8 @@ s = pres.addSlide({ masterName: 'FS Dark', sectionTitle: 'Close' });
 s.addText('Live today, honest about its limits', { x: 0.6, y: 0.45, w: 8.8, h: 0.7, fontSize: 30, bold: true, color: HEX.chalk, fontFace: 'Cambria', margin: 0, isTextBox: true, objectName: 'close-title' });
 const cols = [
   ['Live pipeline', ['data.gov.in daily prices, 3 pulls a day', 'Stored in Supabase Postgres (read-only public)', 'Forecasts rebuilt every evening', 'Weekly champion / challenger retrain']],
-  ['Limits', ['New mandis: onion does not beat "no change"', 'Policy shocks are not in past prices', '4-week range holds the price too rarely', 'Only half of live mandi names match']],
-  ['Next', ['Ship the recalibrated ranges', 'Personal API key for fast back-fills', 'Reviewed list of mandi name matches', 'Weather and policy events as features']],
+  ['Limits', ['New mandis: onion does not beat "no change"', 'Policy shocks are not in past prices', 'Ranges assume shocks no bigger than 2024–26', 'Only half of live mandi names match']],
+  ['Next', ['Refresh range calibration monthly', 'Personal API key for fast back-fills', 'Reviewed list of mandi name matches', 'Weather and policy events as features']],
 ];
 cols.forEach(([h, items], i) => {
   const x = 0.6 + i * 3.0;
