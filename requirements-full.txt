@@ -4,3 +4,4 @@ scikit-learn==1.9.1   # the saved models must be loaded with this exact version
 streamlit>=1.50
 plotly>=5.20
 pytest>=8.0
+httpx2            # FastAPI TestClient (tests/test_api.py)
