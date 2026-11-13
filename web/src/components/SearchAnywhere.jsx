@@ -43,7 +43,7 @@ export default function SearchButton({ crops, onPick }) {
   return (
     <>
       <button type="button" className="search-any" onClick={show} onPointerEnter={() => { loadIndex().catch(() => {}); import('./ui/CommandPalette.jsx'); }}
-        aria-keyshortcuts={mac ? 'Meta+K' : 'Control+K'} aria-haspopup="dialog">
+        aria-keyshortcuts={mac ? 'Meta+K' : 'Control+K'} aria-haspopup="dialog" aria-label="Search all mandis" title="Search all mandis">
         <Search size={15} aria-hidden="true" /><span>Search all mandis</span><kbd>{mac ? '⌘' : 'Ctrl'} K</kbd>
       </button>
       {open && (

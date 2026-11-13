@@ -8,7 +8,12 @@ export const compactRupees = v => {
   if (Math.abs(v) >= 10000) return `₹${(v / 1000).toFixed(1)}k`;
   return rupees(v);
 };
-export const pct = (v, digits = 1) => (v == null ? '–' : `${v > 0 ? '+' : ''}${(v * 100).toFixed(digits)}%`);
+// Signed percentage with a real minus sign (−), and no sign on a value that rounds to zero.
+export const pct = (v, digits = 1) => {
+  if (v == null) return '–';
+  const s = Math.abs(v * 100).toFixed(digits);
+  return `${Number(s) === 0 ? '' : v > 0 ? '+' : '−'}${s}%`;
+};
 export const pct0 = v => (v == null ? '–' : `${Math.round(v * 100)}%`);
 export const weeks = h => `${h} week${h > 1 ? 's' : ''}`;
 export const months = h => `${h} month${h > 1 ? 's' : ''}`;

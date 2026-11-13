@@ -3,7 +3,7 @@ import {
   Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts';
-import { compactRupees, date, monthLabel, rupees } from '../format.js';
+import { compactRupees, date, monthLabel, pct, rupees } from '../format.js';
 import { T } from '../theme.js';
 
 // Chart tokens (validated pair: ink for actual price, blue for forecast; grey for context)
@@ -95,7 +95,7 @@ function Tip({ active, payload, period, naive }) {
   return (
     <div className="chart-tip">
       <div className="tip-when">{when}{d.future ? ' (forecast)' : ''}{d.gap ? ' (no reports)' : ''}</div>
-      {d.price != null && <Row color={C.ink} value={rupees(d.price)} label={d.wow != null ? `${d.wow >= 0 ? '+' : ''}${(d.wow * 100).toFixed(1)}% vs previous` : 'price'} />}
+      {d.price != null && <Row color={C.ink} value={rupees(d.price)} label={d.wow != null ? `${pct(d.wow)} vs previous` : 'price'} />}
       {d.p50 != null && !d.isNow && !naive && <Row color={C.fc} dash="4 3" value={rupees(d.p50)} label="forecast" />}
       {d.band && !d.isNow && <Row color="rgba(42,120,214,0.35)" value={`${rupees(d.band[0])} – ${rupees(d.band[1])}`} label={naive ? 'usual range' : 'likely range'} />}
       {d.lastYear != null && <Row color={C.ctx} value={rupees(d.lastYear)} label="a year earlier" />}
@@ -269,7 +269,7 @@ export function ChartTable({ rows, naive, period }) {
           <tr key={r.t}>
             <td className="num">{period === 'month' ? monthLabel(r.t) : date(r.t)}</td>
             <td className="r num">{r.price != null ? rupees(r.price) : '–'}</td>
-            <td className="r num">{r.wow != null ? `${r.wow >= 0 ? '+' : ''}${(r.wow * 100).toFixed(1)}%` : '–'}</td>
+            <td className="r num">{r.wow != null ? pct(r.wow) : '–'}</td>
             <td className="r num">{r.band && !r.isNow ? `${naive ? '' : `${rupees(r.p50)} (`}${rupees(r.band[0])} – ${rupees(r.band[1])}${naive ? '' : ')'}` : '–'}</td>
             {rows.some(x => x.season) && <td className="r num">{r.season ? `${rupees(r.season[0])} – ${rupees(r.season[1])}` : '–'}</td>}
             {rows.some(x => x.arrivals != null) && <td className="r num">{r.arrivals != null ? `${Math.round(r.arrivals).toLocaleString('en-IN')} t` : '–'}</td>}

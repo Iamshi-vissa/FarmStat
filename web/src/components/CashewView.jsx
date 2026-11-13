@@ -3,7 +3,7 @@ import { Info } from 'lucide-react';
 import RateBoard from './RateBoard.jsx';
 import ForecastTiles from './ForecastTiles.jsx';
 import PriceChart, { buildRows } from './PriceChart.jsx';
-import { monthLabel, months, rupees } from '../format.js';
+import { monthLabel, months, pct, rupees } from '../format.js';
 import { T } from '../theme.js';
 
 export default function CashewView({ data, state }) {
@@ -36,7 +36,7 @@ export default function CashewView({ data, state }) {
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: T.ink3 }} tickLine={false} axisLine={false} />
               <YAxis tickFormatter={v => `${v}%`} tick={{ fontSize: 12, fill: T.ink3 }} tickLine={false} axisLine={false} width={40} />
               <ReferenceLine y={0} stroke={T.context} />
-              <Tooltip formatter={v => [`${v > 0 ? '+' : ''}${v}%`, 'vs yearly average']} cursor={{ fill: 'rgba(22,24,19,0.05)' }} />
+              <Tooltip formatter={v => [pct(v / 100, Number.isInteger(v) ? 0 : 1), 'vs yearly average']} cursor={{ fill: 'rgba(22,24,19,0.05)' }} />
               <Bar dataKey="pct" maxBarSize={22} isAnimationActive={false}>
                 {data.season.map(d => <Cell key={d.month} fill={d.pct >= 0 ? T.forecast : T.drop} radius={d.pct >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4]} />)}
               </Bar>

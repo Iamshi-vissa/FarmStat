@@ -6,7 +6,10 @@ export function useScrollEnd(ref) {
   useEffect(() => {
     const el = node;
     if (!el) return undefined;
-    const update = () => el.classList.toggle('at-end', el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+    const update = () => {
+      el.classList.toggle('at-end', el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+      el.classList.toggle('scrolled', el.scrollLeft > 2);
+    };
     update();
     el.addEventListener('scroll', update, { passive: true });
     const ro = new ResizeObserver(update);

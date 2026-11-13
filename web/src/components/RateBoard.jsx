@@ -18,9 +18,16 @@ export default function RateBoard({ title, where, priceLabel, price, advice, sli
         </div>
         <div className="board-price">
           <span className="board-rupee" aria-hidden="true">₹</span>
-          <SplitFlapText key={title} text={text} loop={false} padTo={text.length} align="right"
-            charset="0123456789" fontSize={50} tileColor={T.boardTile} textColor={T.chalk} tileRadius={6} gap={4}
-            flipsPerChar={6} stagger={0.05} glare={0.15} aria-label={`₹${text}`} />
+          <span className="board-digits" role="img" aria-label={`₹${text}`}>
+            {text.split(',').map((group, i) => (
+              <span key={`${title}-${i}`} className="board-group" aria-hidden="true">
+                {i > 0 && <span className="board-sep">,</span>}
+                <SplitFlapText text={group} loop={false} padTo={group.length} align="right"
+                  charset="0123456789" fontSize={50} tileColor={T.boardTile} textColor={T.chalk} tileRadius={6} gap={4}
+                  flipsPerChar={6} stagger={0.05} glare={0.15} />
+              </span>
+            ))}
+          </span>
           <span className="board-unit"><strong>per quintal</strong>{priceLabel}</span>
           {live && <span className="live-chip" title="This week's price comes from the live daily feed"><i aria-hidden="true" />Live</span>}
         </div>

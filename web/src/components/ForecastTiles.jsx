@@ -25,9 +25,10 @@ export default function ForecastTiles({ items, now, naive, unitLabel }) {
       {items.map(it => (
         <SpotlightCard key={it.h} className="tile" theme="light" spotlightColor="rgba(42,120,214,0.14)"
           intensity={0.5} spotlightSize={220} borderGlow={0.25} flare={false}>
-          <div className="tile-label">{naive ? `Usual range in ${unitLabel(it.h)}` : `Expected in ${unitLabel(it.h)}`}</div>
+          <div className="tile-label"><span className="wide-only">{naive ? 'Usual range in ' : 'Expected in '}</span>
+            <span className="narrow-only">In </span>{unitLabel(it.h)}</div>
           {naive ? (
-            <div className="tile-value num">{compactRupees(it.p10)} – {compactRupees(it.p90)}</div>
+            <div className="tile-value tile-value-range num">{compactRupees(it.p10)} – {compactRupees(it.p90)}</div>
           ) : (
             <div className="tile-row">
               <span className="tile-value num">{rupees(it.p50)}</span>
@@ -36,7 +37,10 @@ export default function ForecastTiles({ items, now, naive, unitLabel }) {
           )}
           <RangeBar lo={it.p10} mid={naive ? null : it.p50} hi={it.p90} now={now} min={min} max={max} />
           <div className="tile-range num">
-            {naive ? 'Range of real moves in the past (8 in 10 weeks)' : `Likely ${rupees(it.p10)} to ${rupees(it.p90)}`}
+            {naive ? 'Range of real moves in the past (8 in 10 weeks)' : (
+              <><span className="wide-only">Likely {rupees(it.p10)} to {rupees(it.p90)}</span>
+                <span className="narrow-only">{rupees(it.p10)}–{rupees(it.p90)}</span></>
+            )}
           </div>
         </SpotlightCard>
       ))}

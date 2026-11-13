@@ -27,7 +27,9 @@ export default function LiveReports({ crop, state, market, narrow }) {
   if (!live.available) {
     return (
       <p className="live-note"><Radio size={14} aria-hidden="true" />
-        No daily report from {market} in the live feed yet ({live.reason}). FarmStat checks data.gov.in three times a day.</p>
+        <span>{/unreachable/.test(live.reason ?? '')
+          ? 'The live daily feed couldn’t be reached just now, so this page shows the weekly data only.'
+          : `No daily reports from ${market} in the live feed yet. FarmStat checks data.gov.in three times a day.`}</span></p>
     );
   }
   const days = live.days.map(d => ({ ...d, t: new Date(d.date).getTime(), range: d.min != null && d.max != null ? [d.min, d.max] : null }));

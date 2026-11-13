@@ -61,12 +61,12 @@ export default function PriceStats({ crop, market, data }) {
                 <CartesianGrid stroke={T.grid} vertical={false} />
                 <XAxis dataKey="month" tick={AXIS} tickLine={false} axisLine={false} interval={0}
                   tickFormatter={m => m.slice(0, 1)} />
-                <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} tickFormatter={v => `${v > 0 ? '+' : ''}${v}%`} />
+                <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} tickFormatter={v => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)}%`} />
                 <ReferenceLine y={0} stroke={T.context} />
                 <Tooltip cursor={{ fill: 'rgba(22,24,19,0.05)' }} isAnimationActive={false}
                   content={({ active, payload }) => active && payload?.[0] ? (
                     <div className="chart-tip"><div className="tip-when">{payload[0].payload.month}, {payload[0].payload.years} years</div>
-                      <div className="tip-row"><strong>{payload[0].value > 0 ? '+' : ''}{payload[0].value}%</strong>
+                      <div className="tip-row"><strong>{pct(payload[0].value / 100, 0)}</strong>
                         <span>vs the year’s average</span></div></div>) : null} />
                 <Bar dataKey="pct" maxBarSize={20} isAnimationActive={false}>
                   {s.season.map(d => (

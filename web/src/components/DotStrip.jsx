@@ -4,7 +4,7 @@ import { compactRupees, rupees } from '../format.js';
 import { quantile } from '../stats.js';
 import { T } from '../theme.js';
 
-const R = 5, PAD = { l: 12, r: 12, t: 30, b: 28 };
+const R = 5, PAD = { l: 12, r: 12, t: 50, b: 28 };
 
 // Every mandi in the state as a dot on one price axis (a beeswarm, so dots never overlap), with the middle half of
 // mandis shaded, the median marked and the chosen mandi highlighted. Hover or focus a dot for its name and price.
@@ -57,7 +57,9 @@ export default function DotStrip({ rows, market, onPick }) {
           </g>
         ))}
         <line x1={x(med)} x2={x(med)} y1={PAD.t - 10} y2={h - PAD.b} stroke={T.ink} strokeWidth={1.5} strokeDasharray="4 3" />
-        <text x={x(med)} y={PAD.t - 14} textAnchor="middle" fontSize={12} fill={T.ink2}>median {compactRupees(med)}</text>
+        {me && <line x1={me.cx} x2={me.cx} y1={PAD.t - 30} y2={me.cy - R - 3} stroke={T.forest} strokeWidth={1} />}
+        <text x={x(med)} y={PAD.t - 14} textAnchor="middle" fontSize={12} fill={T.ink2}
+          style={{ paintOrder: 'stroke' }} stroke={T.panel} strokeWidth={4}>median {compactRupees(med)}</text>
         {dots.map(d => (
           <circle key={d.market} cx={d.cx} cy={d.cy} r={d.market === market ? R + 2 : R}
             fill={d.market === market ? T.forest : T.arrivalsHeavy} fillOpacity={d.market === market ? 1 : 0.55}
@@ -68,8 +70,12 @@ export default function DotStrip({ rows, market, onPick }) {
           </circle>
         ))}
         {me && (
-          <text x={Math.min(Math.max(me.cx, 40), w - 40)} y={me.cy - R - 7} textAnchor="middle" fontSize={12} fontWeight={650}
-            fill={T.forest} style={{ paintOrder: 'stroke' }} stroke={T.panel} strokeWidth={4}>{market}</text>
+          // the chosen mandi's name gets its own row above the median label, with a thin leader down to its dot,
+          // so the two labels never collide however close the prices are
+          <g>
+            <text x={Math.min(Math.max(me.cx, 90), w - 90)} y={PAD.t - 36} textAnchor="middle" fontSize={12} fontWeight={650}
+              fill={T.forest} style={{ paintOrder: 'stroke' }} stroke={T.panel} strokeWidth={4}>{market} {compactRupees(me.price)}</text>
+          </g>
         )}
       </svg>
       {tip && (
