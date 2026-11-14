@@ -49,8 +49,8 @@ bigger number means fix sooner. Items fixed in this review are listed at the end
    training). The weekly retrain changes the model but keeps the old shifts. They are small and stable (the 4-week low end
    moves about 11% in log terms), so the risk is low. *Fix:* re-run `evaluate.py` and `calibrate_ranges.py` monthly, or
    after any model change, in a scheduled workflow.
-10. **App state.** Crop, state, mandi, view and the address bar are kept in step by five effects in `App.jsx`. It works
-    and is tested by hand, but each new screen adds a case. *Fix:* move it into a `useNavigation()` hook backed by the
+10. **App state.** Crop, state, mandi, view and the address bar are kept in step by five effects in `App.jsx`. Choosing
+    the page is now one readable `page()` switch, but the effects remain and each new screen adds a case. *Fix:* move it into a `useNavigation()` hook backed by the
     URL, with unit tests for the transitions (crop change, mandi missing for a crop, deep links).
 11. **Large files in git.** The weekly data (5.3 MB), the models (3 MB) and the daily job's commits grow the history.
     *Fix:* Git LFS for `data/` and `models/`, or keep only the latest data in the repo and the history in Supabase.
@@ -78,3 +78,7 @@ bigger number means fix sooner. Items fixed in this review are listed at the end
   learned from three out-of-sample years). Coverage across 2023–2026 is 80–81% at every horizon, against 67–79% before.
 - **Repo hygiene:** removed 13 screenshots the README no longer uses, fixed all ruff findings, and made the
   Streamlit `zip()` calls strict.
+- **Web code cleanup (November 2026):** ESLint added (`npm run lint`, zero warnings, run in CI); duplicated
+  screen-size, browser-storage and event code moved into `hooks.js`, `storage.js` and `events.js`; inline spacing
+  replaced by one `.page` stack; the WebGL contour background replaced by a pre-rendered image, removing two ~1.5 s
+  main-thread stalls after load.

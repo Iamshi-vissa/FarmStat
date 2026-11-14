@@ -3,7 +3,7 @@
 Forecasts onion, tomato and potato prices in mandis across 24 Indian states, 1, 2 and 4 weeks ahead, tells the farmer whether to sell now or hold, and also covers arecanut, cashew and sugarcane.
 
 <p align="center">
-  <img src="docs/web-overview.png" width="860" alt="FarmStat first screen: onion across India, with the national rate board, calls, KPIs and prices by state">
+  <img src="docs/web-overview.png" width="860" alt="FarmStat first screen: onion across India, with the national rate board, the calls slip, KPI cards and prices by state, beside the two-button side rail">
 </p>
 
 ## CONTENTS
@@ -115,20 +115,28 @@ Finding out *when a model doesn't help*, and saying so, is part of the result.
   Every row is a way in: a state opens its mandi list, a mandi opens its page
 - Pick a crop, a **state** and a **mandi** to see this week's price, the 1/2/4-week forecast and two years of history
   with the forecast range
-- **A side panel that stays out of the way:** on desktop a slim icon rail with just two buttons, the mandi list and search (pages live in the tabs),
-  sits on the left; hovering or focusing it slides out the state picker and mandi list over the page, and the pin
-  button docks it. Ported from a 21st.dev rail-panel sidebar (hover peek with a grace period, Escape and click-outside
-  to close, a sliding active marker, arrow keys). On phones it is a "Choose a mandi" drop-down under the header
+- **A side panel that stays out of the way:** on desktop a slim rail on the left holds just two buttons: the side panel
+  and search (pages are switched with the tabs at the top). Resting the pointer on the rail slides out the state
+  picker and mandi list; passing over it does nothing. The panel closes when the pointer leaves, on a click outside,
+  with <kbd>Esc</kbd> or with its close button, and the pin button docks it beside the page. For cashew the panel lists
+  states, and for sugarcane it explains the FRP. Ported from a 21st.dev rail-panel sidebar. On phones it is a
+  "Choose a mandi" drop-down under the header
 - Sell / hold advice that subtracts storage losses (onion 4%, potato 3%, tomato 15% per 4 weeks)
 - Never advises holding tomatoes for more than a week, because they spoil
 - Shows the money involved for your quantity in quintals
 - Arrivals chart for every mandi
-- Compare tab with every mandi in the chosen state, the median price in each state, and the highest-paying mandis in India
+- **Compare tab:** the spread of prices across the chosen state's mandis (select a dot to highlight a mandi), a sortable
+  table of every mandi whose names open that mandi's page, the median price in each state with the chosen state
+  darker, and the highest-paying mandis in India. With no mandi chosen it names the top-paying mandi and the state median
 - Warning on mandis with less than 3 years of history
 - Accuracy tab with the test results, so users can see how far to trust the forecasts
 - **Arecanut:** every mandi and variety (Rashi, Chali, Bette…), compared only with the same variety
-- **Cashew page:** monthly state price, rough-guide forecast with range, seasonal pattern, all-state comparison
-- **Sugarcane page:** current FRP with the recovery premium rules, and the price history
+- **Cashew page:** opens on every state's latest price, the seasonal pattern and a note that kernels cost several times
+  more than raw nuts; states whose data is out of date are flagged. A state adds its price history and a rough-guide
+  forecast with range
+- **Sugarcane page:** current FRP with the recovery premium rules, and the mandi price against the FRP
+- **Readable mandi names:** Agmarknet names like `Junnar(Alephata)` are shown as "Junnar (Alephata)"; links and
+  searches keep the original name
 
 ## WEB APP
 
@@ -144,14 +152,16 @@ FastAPI service that serves the models.
 - **Search anywhere** (<kbd>Ctrl</kbd>/<kbd>⌘</kbd> <kbd>K</kbd>): one box that finds any of the ~1,400 mandi series in
   India by mandi, district, state or crop, every word matched (`kolar tom` = tomato mandis in Kolar), plus pages; ported
   from a [21st.dev](https://21st.dev) command-palette component, restyled with FarmStat's tokens and animated with CSS.
-  The palette code and the mandi index (18 kB compressed) load the first time it opens
+  It has a clear button and a Cancel button. The palette code and the mandi index (18 kB compressed) load the first
+  time it opens
 - **Tabs with a sliding indicator** for views and chart ranges, ported from a 21st.dev tabs component (arrow, Home and
   End keys, roving focus)
 - **Searchable mandi list** with a 12-week sparkline and expected change for every mandi, sortable by name, price or outlook
 - **Price chart:** history with a soft wash, a shaded forecast zone with the median and likely range, a band showing the
   usual price for the season (10th to 90th percentile of the same weeks in the past 5 years), labelled latest and 4-week
   prices, round axis values, 3M / 6M / 1Y / 2Y / 5Y ranges, an optional "same weeks last year" line, gaps in reporting
-  shaded and labelled instead of bridged, and a table view of the same numbers
+  shaded and labelled instead of bridged, and a table view of the same numbers. The range and display controls sit on
+  one row and the legend on its own quieter row below
 - **Live daily reports:** for every mandi in the live feed, the latest report and its date, that day's lowest-to-highest
   lot, the change since the previous report, and a chart of the last 45 days; a "Live" chip on the rate board and the
   feed's freshness in the sidebar
@@ -159,18 +169,23 @@ FastAPI service that serves the models.
   prices moved in the same 4 weeks of past years, the seasonal pattern by month, and the distribution of the last 3 years
 - **Arrivals chart** under the price chart on the same time axis, with hover synced between the two and heavier-than-usual
   weeks shaded darker
-- **More charts:** state medians, cashew seasonality, and sugarcane price vs FRP, all with hover tooltips
+- **More charts:** state medians, cashew seasonality, and sugarcane price vs FRP (axis in round ₹50 steps), all with
+  hover tooltips
 - **About page:** overview, method, how to read the advice, data and updates, accuracy, a risk table, terms of use,
   disclaimer, privacy, licences and contact, with a section rail (*LineSidebar*) that follows your reading
 - **Colour:** forest-green and neutral ramps graded in OKLCH, so each step looks evenly lighter or darker; every text
   colour passes WCAG AA, and the chart pair (blue forecast, orange fall) is checked for colour-blind separation
 - **Type, one face per job:** Bricolage Grotesque for headlines, Archivo for the interface and tables, Big Shoulders Display
   for big numbers and the rate board, Newsreader for the paper slip and the About page
-- **Fast:** each page loads its own code, the charting library loads in parallel with the board, the contour map is drawn
-  once in WebGL and kept as an image, the API compresses JSON (32 kB to 7 kB for a mandi list) and the built files are
-  cached for a year. The first screen needs 86 kB of compressed JavaScript and shows the board in about half a second
+- **Fast:** each page loads its own code, the charting library loads in parallel with the board, and the contour map
+  is a 32 KB image rendered once ahead of time, so no WebGL runs in the browser and the page never stalls after loading.
+  The API compresses JSON (32 kB to 7 kB for a mandi list) and the built files are cached for a year. The first screen
+  needs about 90 kB of compressed JavaScript and shows the board in about half a second
+- **Even layout:** every page is one vertical stack with a single gap, so cards in a row line up and side-by-side
+  cards are the same height
 - **Responsive:** on phones the mandi list folds into a drop-down under the header, crop and tab rows scroll sideways,
-  charts use tighter margins, and wide tables scroll inside their panel
+  charts use tighter margins, the Compare table folds the district under the mandi name, and wide tables scroll inside
+  their panel
 - **Small things:** a one-time notice that prices are estimates, links to the terms and risks from every page,
   <kbd>/</kbd> to search mandis, loading skeletons, and a skip link for keyboard users
 - **Links you can share:** the crop, state, mandi, tab and About section are kept in the address bar
@@ -267,7 +282,7 @@ flowchart TB
     M[Saved models] --> J
     J --> FC[Expected price + likely range for 1, 2, 4 weeks<br/>chance of 5%+ rise, sell / hold after storage losses]
     FC --> S[(models/web_snapshot.json.gz)]
-    S --> API[FastAPI: api/service.py<br/>/api/meta, mandis, series, national, index, accuracy]
+    S --> API[FastAPI: api/service.py<br/>/api/meta, overview, mandis, series, national, index, accuracy]
     L[(Supabase daily_prices)] --> API2[/api/live/]
     API --> APP[React web app]
     API2 --> APP
@@ -297,7 +312,7 @@ flowchart TB
 | Simple app | Streamlit, Plotly |
 | Live data | data.gov.in API, Supabase (Postgres, Edge Functions, pg_cron, pg_net), GitHub Actions |
 | Hosting | Vercel (FastAPI, Python 3.12) |
-| Tests | pytest |
+| Checks | pytest, Ruff, ESLint (React and hooks rules, zero warnings), GitHub Actions CI |
 
 ## GETTING STARTED
 
@@ -336,6 +351,24 @@ npm run lint         # ESLint (CI fails on any warning)
 npm run build        # writes web/dist, which the API serves
 ```
 
+Vercel serves the committed `web/dist`, so **commit the rebuilt `web/dist` with every change to `web/src`**; CI fails
+if they don't match.
+
+How the web code is organised:
+
+| Where | What goes there |
+|---|---|
+| `App.jsx` | Crop, state, mandi and page choice, the address bar, and one `page()` switch that picks the view |
+| `components/*View.jsx` | One file per page (overview, mandi, compare, accuracy, cashew, sugarcane, about) |
+| `components/Sidebar.jsx`, `Chrome.jsx` | The side panels for each crop, and the rail, hover panel and notice they sit in |
+| `components/ui/` | Ported 21st.dev components (command palette, tabs) |
+| `components/reactbits/` | React Bits components |
+| `hooks.js` | `useMedia`, `useNarrow`, `useDesktop`, `useScrollEnd`, `useAppEvent` |
+| `events.js` | `openSearch()` and `openSidePanel()`, callable from any component |
+| `storage.js` | Settings kept in the browser (pinned panel, notice seen) |
+| `api.js`, `format.js`, `stats.js`, `theme.js` | API calls, number and name formatting, small statistics, chart colours |
+| `styles.css` | Design tokens and all styles. Pages are a `.page` stack, so blocks don't set their own outer margins |
+
 ### RETRAIN THE MODEL
 
 ```bash
@@ -365,7 +398,9 @@ detects FastAPI, installs `requirements.txt` and runs `index.py`, which serves b
 
 - The bundle is about 125 MB, well under Vercel's limit, because the deployed app reads the saved forecast snapshot
   and doesn't install scikit-learn. Keep `requirements.txt` lean; add local-only packages to `requirements-full.txt`.
-- `.vercelignore` leaves the notebooks, docs, tests and web source out of the upload.
+- `.vercelignore` leaves the notebooks, docs, tests and web source out of the upload, so the web app must be built and
+  committed (`web/dist`) before pushing.
+- [docs/DEPLOY_CHECKLIST.md](docs/DEPLOY_CHECKLIST.md) lists the checks to run before and after a release.
 - After retraining or updating the data, run `python scripts/build_snapshot.py` and commit the new snapshot,
   otherwise the deployed app can't build forecasts (Vercel's disk is read-only and it has no scikit-learn).
 
@@ -376,7 +411,8 @@ index.py                            entry point for Vercel (imports api.main:app
 api/main.py                         FastAPI app: JSON endpoints + serves the web app
 api/service.py                      reads the forecast snapshot, price history and comparisons
 api/livefeed.py                     read-only live daily prices and feed status from Supabase
-web/src/                            React app (components/reactbits = React Bits components)
+web/src/                            React app (see "Change the web app" for its layout)
+web/eslint.config.js                ESLint rules for the web app
 web/dist/                           built web app
 streamlit_app.py                    Streamlit app (simpler alternative)
 src/farmstat/data.py                load and clean the weekly prices
