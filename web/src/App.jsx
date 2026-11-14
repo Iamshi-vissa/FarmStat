@@ -3,7 +3,7 @@ import { Info, MapPin, Search, Store } from 'lucide-react';
 import CropSwitch from './components/CropSwitch.jsx';
 import Sidebar, { CashewSidebar, SugarcaneSidebar } from './components/Sidebar.jsx';
 import MarketView, { MarketSkeleton, loadMarketChart } from './components/MarketView.jsx';
-import { Notice } from './components/Chrome.jsx';
+import { Brand, Notice } from './components/Chrome.jsx';
 import Tabs from './components/ui/Tabs.jsx';
 import SearchButton from './components/SearchAnywhere.jsx';
 import { api } from './api.js';
@@ -182,21 +182,29 @@ export default function App() {
     }
   }
 
+  // The About page stands on its own: no crop switcher, side panel, search or notice, only the tabs to go back.
+  const plain = view === 'about';
+  const pageTabs = <Tabs items={tabs.map(([value, label]) => ({ value, label }))} value={view} onChange={setView} label="Page"
+    className="tabs" tabRef={tabsRef} />;
+
   return (
-    <div className="app">
+    <div className={`app${plain ? ' app-plain' : ''}`}>
       <a className="skip" href="#main">Skip to content</a>
-      {side}
+      {!plain && side}
       <main className="main" id="main">
-        <div className="topbar">
-          <CropSwitch items={meta.crops.map(c => ({ value: c.id, label: c.id }))} value={crop} onChange={setCrop} />
-          <Tabs items={tabs.map(([value, label]) => ({ value, label }))} value={view} onChange={setView} label="Page"
-            className="tabs" tabRef={tabsRef} />
-          <SearchButton crops={meta.crops} onPick={pick => {
-            if (pick.crop) { setCrop(pick.crop); setState(pick.state ?? null); setMarket(pick.market ?? null); }
-            setView(pick.view);
-          }} />
-        </div>
-        <Notice />
+        {plain ? (
+          <div className="topbar topbar-plain"><Brand />{pageTabs}</div>
+        ) : (
+          <div className="topbar">
+            <CropSwitch items={meta.crops.map(c => ({ value: c.id, label: c.id }))} value={crop} onChange={setCrop} />
+            {pageTabs}
+            <SearchButton crops={meta.crops} onPick={pick => {
+              if (pick.crop) { setCrop(pick.crop); setState(pick.state ?? null); setMarket(pick.market ?? null); }
+              setView(pick.view);
+            }} />
+          </div>
+        )}
+        {!plain && <Notice />}
         <div className="page">
           <Suspense fallback={view === 'market' || view === 'overview' ? <MarketSkeleton label="Loading" /> : <Wait />}>
             {page()}

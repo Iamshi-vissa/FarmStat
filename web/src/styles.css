@@ -715,3 +715,9 @@ kbd { font: inherit; font-size: 0.6875rem; font-weight: 600; padding: 1px 5px; b
 .cashew-note { color: var(--ink-2); font-size: var(--t-sm); margin: 0; }
 .narrow-cell { display: none; }
 @media (max-width: 520px) { .wide-cell { display: none; } .narrow-cell { display: block; } }
+
+/* About stands alone: one column, no rail or panel (also when the panel is pinned elsewhere in the app). */
+.app.app-plain, :root[data-panel="pinned"] .app.app-plain { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; }
+.topbar-plain { align-items: flex-end; }
+.topbar-plain .brand { padding: 0 0 10px; }
+.topbar-plain .tabs { flex: 0 1 auto; }

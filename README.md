@@ -172,7 +172,8 @@ FastAPI service that serves the models.
 - **More charts:** state medians, cashew seasonality, and sugarcane price vs FRP (axis in round ₹50 steps), all with
   hover tooltips
 - **About page:** overview, method, how to read the advice, data and updates, accuracy, a risk table, terms of use,
-  disclaimer, privacy, licences and contact, with a section rail (*LineSidebar*) that follows your reading
+  disclaimer, privacy, licences and contact, with a section rail (*LineSidebar*) that follows your reading. It stands
+  on its own: the crop switcher, side panel, search and notice are hidden there, and the tabs lead back into the app
 - **Colour:** forest-green and neutral ramps graded in OKLCH, so each step looks evenly lighter or darker; every text
   colour passes WCAG AA, and the chart pair (blue forecast, orange fall) is checked for colour-blind separation
 - **Type, one face per job:** Bricolage Grotesque for headlines, Archivo for the interface and tables, Big Shoulders Display
