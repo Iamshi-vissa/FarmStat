@@ -332,18 +332,16 @@ kbd { font: inherit; font-size: 0.6875rem; font-weight: 600; padding: 1px 5px; b
 
 /* ── panels & charts ───────────────────────────────────────────────── */
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 18px 20px; box-shadow: var(--shadow-1); }
-.panel + .panel, .grid-2 + .panel, .panel + .grid-2 { margin-top: 16px; }
 .panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: baseline; margin-bottom: 10px; }
 .panel h2 { margin: 0; font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; letter-spacing: -0.015em; }
-.panel .sub { margin: 2px 0 0; color: var(--ink-2); font-size: var(--t-sm); max-width: 70ch; }
+.panel .sub { margin: 2px 0 0; color: var(--ink-2); font-size: var(--t-sm); max-width: 80ch; text-wrap: pretty; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: var(--t-sm); color: var(--ink-2); }
 .key { display: inline-flex; align-items: center; gap: 6px; }
 .key i { display: inline-block; width: 16px; height: 2px; background: var(--ink); }
 .key i.fc { background: var(--forecast); }
 .key i.band { height: 10px; background: rgba(42, 120, 214, 0.18); border-radius: 2px; }
 .key i.ctx { background: var(--n-400); }
-.grid-2 { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; margin-top: 16px; align-items: start; }
-.grid-2 > .panel { margin-top: 0; }
+.grid-2 { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: stretch; }
 .chart-tip { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 10px;
   font-size: var(--t-sm); box-shadow: 0 6px 18px rgba(22, 24, 19, 0.10); min-width: 190px; }
 .chart-tip b { display: block; margin-bottom: 2px; }
@@ -351,7 +349,9 @@ kbd { font: inherit; font-size: 0.6875rem; font-weight: 600; padding: 1px 5px; b
 .tip-row { display: flex; align-items: center; gap: 8px; font-size: var(--t-sm); line-height: 1.6; }
 .tip-row strong { font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; }
 .tip-row span { color: var(--ink-3); }
-.chart-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 8px 0 12px; border-bottom: 1px solid var(--line-2); margin-bottom: 8px; }
+.chart-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 8px 0 10px; }
+.chart-toolbar .seg-end { margin-left: auto; }
+.chart-legend { padding: 8px 0 10px; border-top: 1px solid var(--line-2); margin-bottom: 4px; font-size: var(--t-xs); color: var(--ink-3); }
 .seg { display: inline-flex; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
 .seg button { border: 0; background: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; color: var(--ink-2);
   font-size: var(--t-sm); display: inline-flex; align-items: center; gap: 4px; }
@@ -367,6 +367,7 @@ kbd { font: inherit; font-size: 0.6875rem; font-weight: 600; padding: 1px 5px; b
 .note { color: var(--ink-2); font-size: var(--t-sm); margin: 10px 0 0; }
 .callout { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--r-sm);
   background: #e8eff8; color: #1f3d63; font-size: var(--t-sm); margin-top: 12px; }
+.page > .callout { margin-top: 0; }
 .callout svg { flex: none; margin-top: 2px; }
 .callout.warn { background: #f7eed8; color: #573f00; }
 
@@ -514,7 +515,7 @@ kbd { font: inherit; font-size: 0.6875rem; font-weight: 600; padding: 1px 5px; b
 }
 /* phones and small tablets: the mandi list becomes a drop-down panel under a compact header */
 @media (max-width: 860px) {
-  .app, :root[data-panel="pinned"] .app { grid-template-columns: minmax(0, 1fr); }
+  .app, :root[data-panel="pinned"] .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
   .side { height: auto; max-height: 100vh; border-bottom: 1px solid var(--line); box-shadow: 0 2px 10px rgba(22, 24, 19, .06); background: var(--panel); }
   .rail { display: none; }
   .side-panel, .side[data-pinned] .side-panel { position: static; width: 100%; height: auto; visibility: visible; opacity: 1; transform: none;
@@ -646,7 +647,7 @@ kbd { font: inherit; font-size: 0.6875rem; font-weight: 600; padding: 1px 5px; b
 .sb-value { text-align: right; font-weight: 600; }
 .sb-move { justify-self: end; }
 
-.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
 .mover h3 { margin: 0 0 8px; font-family: var(--font-display); font-size: var(--t-lg); letter-spacing: -0.01em; }
 .mover ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .mover button { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 0; background: none;
@@ -654,7 +655,8 @@ kbd { font: inherit; font-size: 0.6875rem; font-weight: 600; padding: 1px 5px; b
 .mover button:hover, .mover button:focus-visible { background: var(--select); }
 .mv-name { display: flex; flex-direction: column; min-width: 0; font-weight: 600; line-height: 1.25; }
 .mv-name small { color: var(--ink-3); font-weight: 400; font-size: var(--t-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mv-name .badge { align-self: flex-start; margin-top: 2px; }
+.mv-name > span { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.mv-name .badge { margin-left: 0; flex: none; }
 .mv-value { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; }
 
 /* choose-first panels and state chips */
@@ -697,3 +699,19 @@ kbd { font: inherit; font-size: 0.6875rem; font-weight: 600; padding: 1px 5px; b
   color: var(--ink-3); place-items: center; }
 .side-close:hover { background: var(--panel-2); color: var(--ink); }
 @media (min-width: 861px) { .side-close { display: grid; } }
+
+/* ── page rhythm ───────────────────────────────────────────────────────
+   Every page is a vertical stack with one gap; blocks inside it don't set their own outer margins. */
+.page { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.page > * { margin-block: 0; }
+.page > .sub-head { margin-top: 20px; }
+.side-grow { flex: 1; border-bottom: 0; }
+.side-grow .note { margin: 0; }
+.cell-link { border: 0; background: none; padding: 0; font: inherit; color: var(--forest-800); font-weight: 600; cursor: pointer; text-align: left;
+  text-decoration: underline; text-decoration-color: var(--forest-200); text-underline-offset: 3px; }
+.cell-link:hover { color: var(--forest-950); text-decoration-color: currentColor; }
+.stat-chart-gap { margin-top: 12px; }
+.kpi-button .kpi-note.old { color: var(--warn-ink, #8a5a00); }
+.cashew-note { color: var(--ink-2); font-size: var(--t-sm); margin: 0; }
+.narrow-cell { display: none; }
+@media (max-width: 520px) { .wide-cell { display: none; } .narrow-cell { display: block; } }

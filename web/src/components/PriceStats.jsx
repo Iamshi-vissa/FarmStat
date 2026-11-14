@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import Delta from './Delta.jsx';
 import { priceStats } from '../stats.js';
-import { compactRupees, pct, pct0, rupees } from '../format.js';
+import { compactRupees, pct, pct0, placeName, rupees } from '../format.js';
 import { T } from '../theme.js';
 
 const AXIS = { fontSize: 12, fill: T.ink3 };
@@ -16,10 +16,10 @@ export default function PriceStats({ crop, market, data }) {
   const pos = s.hi > s.lo ? (L.price - s.lo) / (s.hi - s.lo) : 0.5;
 
   return (
-    <section className="panel" style={{ marginTop: 16 }} aria-labelledby="stats-title">
+    <section className="panel" aria-labelledby="stats-title">
       <div className="panel-head"><div>
         <h2 id="stats-title">Price statistics</h2>
-        <p className="sub">How this week’s {crop.toLowerCase()} price at {market} compares with its own history. Context for the
+        <p className="sub">How this week’s {crop.toLowerCase()} price at {placeName(market)} compares with its own history. Context for the
           forecast, worked out from past prices only.</p>
       </div></div>
 

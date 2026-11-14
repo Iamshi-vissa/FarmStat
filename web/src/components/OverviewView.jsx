@@ -4,9 +4,9 @@ import RateBoard from './RateBoard.jsx';
 import SpotlightCard from './reactbits/SpotlightCard.jsx';
 import Delta from './Delta.jsx';
 import { MarketSkeleton } from './MarketView.jsx';
-import { openSidePanel } from './Chrome.jsx';
+import { openSearch, openSidePanel } from '../events.js';
 import { api } from '../api.js';
-import { date, pct, pct0, rupees, weeks } from '../format.js';
+import { date, pct, pct0, placeName, rupees, weeks } from '../format.js';
 import { T } from '../theme.js';
 
 // The first screen for a weekly crop, before any state or mandi is chosen: the crop across India this week.
@@ -44,9 +44,8 @@ export default function OverviewView({ crop, onState, onPick }) {
 
       <p className="start-hint">
         <MousePointerClick size={16} aria-hidden="true" />
-        <span>Pick a state below, <span className="wide-only">hover the bar on the left</span><span className="narrow-only">tap “Choose a mandi” at the top</span> to choose a mandi, or
-          <button type="button" className="linklike" onClick={() => window.dispatchEvent(new Event('farmstat:search'))}>
-            <Search size={14} aria-hidden="true" /> search all mandis</button>.</span>
+        <span>To see one mandi’s forecast, choose a state below or
+          {' '}<button type="button" className="linklike" onClick={openSearch}><Search size={14} aria-hidden="true" /> search all mandis</button>.</span>
       </p>
 
       <div className="kpis">
@@ -66,14 +65,11 @@ export default function OverviewView({ crop, onState, onPick }) {
         <StateBars rows={d.states} onPick={chooseState} />
       </section>
 
-      {!d.naive && (
-        <div className="grid-3">
-          <MoverList title={`Likely to rise in ${weeks(d.horizon)}`} rows={d.rises} onPick={pick} />
-          <MoverList title={`Likely to fall in ${weeks(d.horizon)}`} rows={d.falls} onPick={pick} />
-          <MoverList title="Highest prices this week" rows={d.top} onPick={pick} />
-        </div>
-      )}
-      {d.naive && <div className="grid-3"><MoverList title="Highest prices this week" rows={d.top} onPick={pick} noMove /></div>}
+      <div className="grid-3">
+        {!d.naive && <MoverList title={`Likely to rise in ${weeks(d.horizon)}`} rows={d.rises} onPick={pick} />}
+        {!d.naive && <MoverList title={`Likely to fall in ${weeks(d.horizon)}`} rows={d.falls} onPick={pick} />}
+        <MoverList title="Highest prices this week" rows={d.top} onPick={pick} noMove={d.naive} />
+      </div>
     </>
   );
 }
@@ -143,7 +139,8 @@ function MoverList({ title, rows, onPick, noMove = false }) {
         {rows.map(r => (
           <li key={`${r.state}-${r.market}`}>
             <button type="button" onClick={() => onPick(r)}>
-              <span className="mv-name">{r.market}{r.new_mandi && <span className="badge" title="Less than 3 years of price history">new</span>}
+              <span className="mv-name">
+                <span>{placeName(r.market)}{r.new_mandi && <span className="badge" title="Less than 3 years of price history">new</span>}</span>
                 <small>{r.district}, {r.state}</small></span>
               <span className="mv-value">
                 <span className="num">{rupees(r.price)}</span>

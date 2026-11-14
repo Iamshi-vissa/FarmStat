@@ -130,7 +130,7 @@ function seasonalBands(rows, full, dateKey, period) {
   });
 }
 
-export function buildRows({ history, full = history, forecast, naive, dateKey = 'week', showLastYear, showSeason }) {
+export function buildRows({ history, full = history, forecast, dateKey = 'week', showLastYear, showSeason }) {
   const period = dateKey === 'month' ? 'month' : 'week';
   const byT = new Map(full.map(h => [ts(h[dateKey]), h.price]));
   const shift = t => {   // same period one year earlier

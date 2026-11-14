@@ -165,7 +165,7 @@ export default function AccuracyView() {
         </section>
         <section className="panel" aria-labelledby="cov-title">
           <div className="panel-head"><div><h2 id="cov-title">Does the likely range hold?</h2>
-            <p className="sub">Share of weeks the real price landed inside the forecast range. The aim is 80%.</p></div>
+            <p className="sub">Share of weeks the real price landed inside the model’s raw range. The aim is 80%; the app widens each range to reach it (see “Are the ranges honest?” below).</p></div>
             <div className="legend"><span className="key"><i className="sq fs" />Onion, tomato, potato</span><span className="key"><i className="sq ar" />Arecanut</span></div></div>
           <ResponsiveContainer width="100%" height={230}>
             <BarChart data={covRows} layout="vertical" margin={{ top: 22, right: 48, bottom: 0, left: 0 }} barCategoryGap="30%">

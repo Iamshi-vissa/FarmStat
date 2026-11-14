@@ -1,7 +1,9 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { api } from '../api.js';
-import { rupees } from '../format.js';
+import { SEARCH } from '../events.js';
+import { useAppEvent } from '../hooks.js';
+import { placeName, rupees } from '../format.js';
 
 // "Search all mandis": one box that finds any mandi in India for any crop, or jumps to a page.
 // The palette code and the mandi index (one compact list) load only when it is first opened.
@@ -22,13 +24,13 @@ export default function SearchButton({ crops, onPick }) {
     setOpen(true);
     loadIndex().then(d => setRows(d.rows)).catch(() => setRows([]));
   }, []);
-  useEffect(() => {
+  useAppEvent(SEARCH, show);   // the rail's search button and other "search" links
+  useEffect(() => {   // Ctrl K / ⌘ K
     const onKey = e => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); show(); }
     };
     window.addEventListener('keydown', onKey);
-    window.addEventListener('farmstat:search', show);   // the rail's search button and other "search" links
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('farmstat:search', show); };
+    return () => window.removeEventListener('keydown', onKey);
   }, [show]);
 
   const items = useMemo(() => {
@@ -36,7 +38,7 @@ export default function SearchButton({ crops, onPick }) {
       hint: c.kind === 'weekly' ? `${c.series.toLocaleString('en-IN')} mandi series` : c.kind === 'monthly' ? 'Monthly state prices' : 'Government price (FRP)',
       view: c.kind === 'weekly' ? 'market' : 'overview' }));
     const mandis = (rows ?? []).map(([crop, state, market, district, price]) => ({
-      id: `m-${crop}-${state}-${market}`, label: market, hint: `${district}, ${state}`, group: `${crop} mandis`,
+      id: `m-${crop}-${state}-${market}`, label: placeName(market), hint: `${district}, ${state}`, group: `${crop} mandis`,
       aside: rupees(price), keywords: `${market} ${district} ${state} ${crop}`, crop, state, market, view: 'market' }));
     return [...cropItems, ...PAGES, ...mandis];
   }, [crops, rows]);

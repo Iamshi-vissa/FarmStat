@@ -4,7 +4,7 @@ import { Radio } from 'lucide-react';
 import Delta from './Delta.jsx';
 import { niceTicks } from './PriceChart.jsx';
 import { api } from '../api.js';
-import { compactRupees, date, rupees } from '../format.js';
+import { compactRupees, date, placeName, rupees } from '../format.js';
 import { T } from '../theme.js';
 
 const AXIS = { fontSize: 12, fill: T.ink3 };
@@ -29,7 +29,7 @@ export default function LiveReports({ crop, state, market, narrow }) {
       <p className="live-note"><Radio size={14} aria-hidden="true" />
         <span>{/unreachable/.test(live.reason ?? '')
           ? 'The live daily feed couldn’t be reached just now, so this page shows the weekly data only.'
-          : `No daily reports from ${market} in the live feed yet. FarmStat checks data.gov.in three times a day.`}</span></p>
+          : `No daily reports from ${placeName(market)} in the live feed yet. FarmStat checks data.gov.in three times a day.`}</span></p>
     );
   }
   const days = live.days.map(d => ({ ...d, t: new Date(d.date).getTime(), range: d.min != null && d.max != null ? [d.min, d.max] : null }));
@@ -41,9 +41,9 @@ export default function LiveReports({ crop, state, market, narrow }) {
   const { domain, ticks } = niceTicks(Math.min(...days.flatMap(d => d.range ?? [d.modal])), Math.max(...days.flatMap(d => d.range ?? [d.modal])), 4);
 
   return (
-    <section className="panel live-panel" style={{ marginTop: 16 }} aria-labelledby="live-title">
+    <section className="panel live-panel" aria-labelledby="live-title">
       <div className="panel-head"><div>
-        <h2 id="live-title"><span className="live-dot" aria-hidden="true" />Daily reports from {market}</h2>
+        <h2 id="live-title"><span className="live-dot" aria-hidden="true" />Daily reports from {placeName(market)}</h2>
         <p className="sub">Live from Agmarknet (data.gov.in), collected into FarmStat’s cloud store three times a day. The
           weekly forecast above is rebuilt from these every evening.</p>
       </div></div>
@@ -70,7 +70,7 @@ export default function LiveReports({ crop, state, market, narrow }) {
         </div>
       </div>
       {days.length >= 2 && (
-        <figure className="stat-chart" style={{ marginTop: 12 }}>
+        <figure className="stat-chart stat-chart-gap">
           <figcaption><b>Last {days.length} reports</b><span>Modal price (line) and the day’s lowest to highest lot (band).</span></figcaption>
           <ResponsiveContainer width="100%" height={narrow ? 170 : 200}>
             <ComposedChart data={days} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>

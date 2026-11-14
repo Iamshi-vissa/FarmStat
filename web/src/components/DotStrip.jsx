@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { niceTicks } from './PriceChart.jsx';
-import { compactRupees, rupees } from '../format.js';
+import { compactRupees, placeName, rupees } from '../format.js';
 import { quantile } from '../stats.js';
 import { T } from '../theme.js';
 
@@ -47,7 +47,7 @@ export default function DotStrip({ rows, market, onPick }) {
   return (
     <div className="dotstrip" ref={wrap}>
       <svg width={w} height={h} role="img"
-        aria-label={`Prices across ${dots.length} mandis: median ${rupees(med)}, middle half ${rupees(q1)} to ${rupees(q3)}${me ? `; ${market} ${rupees(me.price)}` : ''}`}
+        aria-label={`Prices across ${dots.length} mandis: median ${rupees(med)}, middle half ${rupees(q1)} to ${rupees(q3)}${me ? `; ${placeName(market)} ${rupees(me.price)}` : ''}`}
         onMouseLeave={() => setHover(null)}>
         <rect x={x(q1)} y={PAD.t - 6} width={Math.max(2, x(q3) - x(q1))} height={h - PAD.t - PAD.b + 6} rx={4} fill={T.forest} opacity={0.08} />
         {ticks.map(t => (
@@ -74,7 +74,7 @@ export default function DotStrip({ rows, market, onPick }) {
           // so the two labels never collide however close the prices are
           <g>
             <text x={Math.min(Math.max(me.cx, 90), w - 90)} y={PAD.t - 36} textAnchor="middle" fontSize={12} fontWeight={650}
-              fill={T.forest} style={{ paintOrder: 'stroke' }} stroke={T.panel} strokeWidth={4}>{market} {compactRupees(me.price)}</text>
+              fill={T.forest} style={{ paintOrder: 'stroke' }} stroke={T.panel} strokeWidth={4}>{placeName(market)} {compactRupees(me.price)}</text>
           </g>
         )}
       </svg>
@@ -82,7 +82,7 @@ export default function DotStrip({ rows, market, onPick }) {
         <div className="chart-tip dot-tip" style={{ left: Math.min(Math.max(tip.cx - 95, 0), w - 200), top: tip.cy + 12 }}>
           <div className="tip-when">{tip.district}</div>
           <div className="tip-row"><strong>{tip.market}</strong><span>{rupees(tip.price)}</span></div>
-          {me && tip.market !== market && <div className="tip-row"><span>{tip.price >= me.price ? '+' : '−'}{rupees(Math.abs(tip.price - me.price))} vs {market}</span></div>}
+          {me && tip.market !== market && <div className="tip-row"><span>{tip.price >= me.price ? '+' : '−'}{rupees(Math.abs(tip.price - me.price))} vs {placeName(market)}</span></div>}
         </div>
       )}
     </div>

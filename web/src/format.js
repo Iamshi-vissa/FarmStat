@@ -23,3 +23,7 @@ const mfmt = new Intl.DateTimeFormat('en-IN', { month: 'short', year: 'numeric' 
 export const date = s => (s ? dfmt.format(new Date(s)) : '–');
 export const monthLabel = s => (s ? mfmt.format(new Date(s)) : '–');
 export const axisDate = s => mfmt.format(new Date(s));
+
+// Agmarknet names often run into their brackets ("Junnar(Alephata)", "Karambakkudi(Uzhavar Sandhai )"); tidy them for display.
+// Only for showing a name: lookups and links keep the raw name.
+export const placeName = s => (s ? s.replace(/\s*\(\s*/g, ' (').replace(/\s*\)/g, ')').replace(/\s{2,}/g, ' ').trim() : s);

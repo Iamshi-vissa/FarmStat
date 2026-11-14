@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { useScrollEnd } from '../useScrollEnd.js';
+import { useScrollEnd } from '../hooks.js';
 
 // Crop switcher: a segmented control whose forest-green thumb slides to the chosen crop (CSS transition only).
 export default function CropSwitch({ items, value, onChange }) {

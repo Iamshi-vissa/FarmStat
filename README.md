@@ -332,6 +332,7 @@ You need Node.js 20+. Keep the API running in one terminal, then in another:
 cd web
 npm install
 npm run dev          # http://localhost:5173, reloads as you edit
+npm run lint         # ESLint (CI fails on any warning)
 npm run build        # writes web/dist, which the API serves
 ```
 

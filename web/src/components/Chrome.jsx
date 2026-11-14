@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronDown, Info, Pin, PinOff, X } from 'lucide-react';
 import { api } from '../api.js';
+import { PANEL } from '../events.js';
 import { date } from '../format.js';
+import { useAppEvent, useDesktop } from '../hooks.js';
+import { readFlag, writeFlag } from '../storage.js';
 
-const KEY = 'farmstat-notice-v1';
-const seen = () => { try { return localStorage.getItem(KEY) === '1'; } catch { return false; } };
+const NOTICE_KEY = 'farmstat-notice-v1';
+const PIN_KEY = 'farmstat-panel-pinned';
+const PEEK_GRACE = 220;   // ms the panel stays while the pointer travels from the rail into it
+const PEEK_INTENT = 140;  // ms the pointer must rest on the rail before the panel opens (passing over it does nothing)
 
 export function Brand() {
   return (
@@ -44,25 +49,6 @@ function LiveStatus() {
   );
 }
 
-// Open the side panel from anywhere (the rail's Mandis button, "choose a state" links on the overview).
-export const openSidePanel = () => window.dispatchEvent(new Event('farmstat:panel'));
-
-const PIN_KEY = 'farmstat-panel-pinned';
-const readPinned = () => { try { return localStorage.getItem(PIN_KEY) === '1'; } catch { return false; } };
-const PEEK_GRACE = 220;   // ms the panel stays while the pointer travels from the rail into it
-const PEEK_INTENT = 140;  // ms the pointer must rest on the rail before the panel opens (passing over it does nothing)
-const DESKTOP = '(min-width: 861px)';
-function useDesktop() {
-  const [on, setOn] = useState(() => window.matchMedia(DESKTOP).matches);
-  useEffect(() => {
-    const m = window.matchMedia(DESKTOP);
-    const f = () => setOn(m.matches);
-    m.addEventListener('change', f);
-    return () => m.removeEventListener('change', f);
-  }, []);
-  return on;
-}   // ms the panel stays while the pointer travels from the rail into it
-
 // Sidebar frame.
 // Desktop: a slim icon rail (pages, search, mandis). Hovering or focusing it slides the panel with the state picker and
 // mandi list out over the page; pinning docks the panel beside the page instead. Ported from the 21st.dev "Rail Panel
@@ -72,10 +58,9 @@ function useDesktop() {
 export function SideShell({ label, current, placeholder, footer, rail = [], children }) {
   const [open, setOpen] = useState(false);          // phone drop-down
   const [peek, setPeek] = useState(false);          // desktop hover panel
-  const [pinned, setPinned] = useState(readPinned);
+  const [pinned, setPinned] = useState(() => readFlag(PIN_KEY));
   const aside = useRef(null);
   const timer = useRef(0);
-  const railList = useRef(null);
   const marker = useRef(null);
   const buttons = useRef({});
   const desktop = useDesktop();
@@ -92,11 +77,8 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
   };
 
   useEffect(() => { setOpen(false); setPeek(false); }, [current]);   // a choice was made: get out of the way
-  useEffect(() => {
-    const onOpen = () => { setOpen(true); setPeek(true); };
-    window.addEventListener('farmstat:panel', onOpen);
-    return () => { window.removeEventListener('farmstat:panel', onOpen); clear(); };
-  }, []);
+  useAppEvent(PANEL, useCallback(() => { setOpen(true); setPeek(true); }, []));
+  useEffect(() => () => window.clearTimeout(timer.current), []);
   useEffect(() => {   // a click outside, or Escape from anywhere on the page, closes the peek
     if (!peek || pinned) return undefined;
     const onDown = e => { if (aside.current && !aside.current.contains(e.target)) hide(); };
@@ -111,7 +93,7 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
     const next = !pinned;
     setPinned(next);
     setPeek(false);
-    try { localStorage.setItem(PIN_KEY, next ? '1' : '0'); } catch { /* storage unavailable */ }
+    writeFlag(PIN_KEY, next);
   };
 
   const active = rail.find(r => r.active)?.id;
@@ -142,7 +124,7 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
       onKeyDown={e => { if (e.key === 'Escape' && peek && !pinned && aside.current?.contains(document.activeElement)) buttons.current[active]?.focus(); }}>
       <nav className="rail" aria-label="FarmStat pages" onKeyDown={onRailKeys}>
         <span className="brand-glyph rail-brand" aria-hidden="true">₹</span>
-        <div className="rail-list" ref={railList}>
+        <div className="rail-list">
           <span className="rail-marker" ref={marker} aria-hidden="true" />
           {rail.map(r => (
             <button key={r.id} type="button" className="rail-btn" data-rail={r.id} data-panel={r.panel ? '' : undefined}
@@ -182,9 +164,9 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
 
 // Shown once: forecasts are estimates, with a link to the risks. Closing it is remembered in this browser.
 export function Notice() {
-  const [open, setOpen] = useState(() => !seen());
+  const [open, setOpen] = useState(() => !readFlag(NOTICE_KEY));
   if (!open) return null;
-  const close = () => { try { localStorage.setItem(KEY, '1'); } catch { /* storage unavailable */ } setOpen(false); };
+  const close = () => { writeFlag(NOTICE_KEY, true); setOpen(false); };
   return (
     <div className="notice" role="note">
       <Info size={16} aria-hidden="true" />

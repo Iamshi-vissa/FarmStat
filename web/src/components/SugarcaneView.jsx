@@ -7,9 +7,14 @@ export default function SugarcaneView({ data }) {
   const c = data.current;
   const frpAt = t => [...data.frp].reverse().find(f => new Date(f.start).getTime() <= t)?.price ?? null;
   const rows = data.chhattisgarh.map(r => { const t = new Date(r.month).getTime(); return { t, price: r.price, frp: frpAt(t) }; });
+  // round ₹50 steps that hold every price and FRP, so the axis reads 150, 200, 250… instead of odd values
+  const values = rows.flatMap(r => [r.price, r.frp]).filter(v => v != null);
+  const lo = Math.floor(Math.min(...values) / 50) * 50, hi = Math.ceil(Math.max(...values) / 50) * 50;
+  const ticks = Array.from({ length: (hi - lo) / 50 + 1 }, (_, i) => lo + i * 50);
+  const seasonStart = c.season.slice(0, 4);   // "2026-27" starts on 1 October 2026
   return (
     <>
-      <RateBoard title="Sugarcane FRP" where={`Sugar season ${c.season}, from 1 October 2026`} priceLabel={`at ${c.recovery}% sugar recovery`}
+      <RateBoard title="Sugarcane FRP" where={`Sugar season ${c.season}, from 1 October ${seasonStart}`} priceLabel={`at ${c.recovery}% sugar recovery`}
         price={c.price} advice={{ action: 'Information', headline: 'Sold to mills, not forecast',
           footnote: 'Set by the Government of India.', detail: `Mills pay ₹${c.step} more per quintal for every 0.1% recovery above ${c.recovery}%, and ₹${c.step} less below it. Below ${c.floor_below}% there is no further cut, so the minimum is ₹${c.floor}.` }} />
       <div className="grid-2">
@@ -23,7 +28,7 @@ export default function SugarcaneView({ data }) {
               <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={axisDate}
                 tick={{ fontSize: 12, fill: T.ink3 }} tickLine={false} minTickGap={40} />
               <YAxis tick={{ fontSize: 12, fill: T.ink3 }} tickLine={false} axisLine={false} tickFormatter={v => `₹${v}`} width={52}
-                domain={[d => Math.floor((d - 30) / 50) * 50, d => Math.ceil((d + 30) / 50) * 50]} allowDecimals={false} />
+                domain={[lo, hi]} ticks={ticks} />
               <Tooltip labelFormatter={t => monthLabel(t)} formatter={(v, n) => [rupees(v), n === 'frp' ? 'FRP' : 'Mandi average']} />
               <Line dataKey="price" stroke={T.ink} strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: T.panel, strokeWidth: 2 }} isAnimationActive={false} />
               <Line dataKey="frp" stroke={T.forecast} strokeWidth={2} type="stepAfter" dot={false} isAnimationActive={false} />

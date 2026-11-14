@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 import Sparkline from './Sparkline.jsx';
 import Delta from './Delta.jsx';
 import { SideShell } from './Chrome.jsx';
-import { rupees, weeks } from '../format.js';
+import { monthLabel, placeName, rupees, weeks } from '../format.js';
 
 const SORTS = [
   { id: 'name', label: 'Name' },
@@ -43,7 +43,7 @@ export default function Sidebar({ crop, states, state, onState, mandis, market, 
     listRef.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [market, mandis]);
   return (
-    <SideShell label="Choose a mandi" current={market} placeholder="Choose a mandi" footer={footer} rail={rail}>
+    <SideShell label="Choose a mandi" current={placeName(market)} placeholder="Choose a mandi" footer={footer} rail={rail}>
       <div className="side-controls">
         <label className="field">
           <span>State</span>
@@ -84,7 +84,7 @@ export default function Sidebar({ crop, states, state, onState, mandis, market, 
         {state && list.length === 0 && q && <p className="empty">No mandi matches “{q}”. Try a district name.</p>}
         {list.map(m => (
           <button key={m.market} className="mandi-row" aria-current={m.market === market} onClick={() => onMarket(m.market)}>
-            <span className="mandi-name">{m.market}</span>
+            <span className="mandi-name">{placeName(m.market)}</span>
             <span className="mandi-price num">{rupees(m.price)}</span>
             <span className="mandi-dist">
               {m.district}
@@ -97,6 +97,36 @@ export default function Sidebar({ crop, states, state, onState, mandis, market, 
           </button>
         ))}
       </nav>
+    </SideShell>
+  );
+}
+
+// Cashew has no mandi-level history: the panel lists states with their latest monthly average.
+export function CashewSidebar({ states = [], state, onState, rail }) {
+  return (
+    <SideShell label="Choose a state" current={state} placeholder="Choose a state" rail={rail}
+      footer="Monthly state averages from Agmarknet. No mandi-level cashew history is available.">
+      <nav className="mandi-list" aria-label="Cashew states">
+        {states.map(s => (
+          <button key={s.state} type="button" className="mandi-row" aria-current={s.state === state} onClick={() => onState(s.state)}>
+            <span className="mandi-name">{s.state}</span><span className="mandi-price num">{rupees(s.price)}</span>
+            <span className="mandi-dist">{s.product}, {monthLabel(s.month)}</span><span />
+          </button>
+        ))}
+      </nav>
+    </SideShell>
+  );
+}
+
+// Sugarcane is sold to mills at a government price, so there is nothing to choose: the panel explains why.
+export function SugarcaneSidebar({ rail }) {
+  return (
+    <SideShell label="About sugarcane prices" placeholder="Sugarcane" rail={rail}
+      footer="FRP: Cabinet Committee on Economic Affairs. Mandi prices: Agmarknet.">
+      <div className="side-controls side-grow">
+        <p className="note">Most sugarcane is sold to sugar mills at the Fair and Remunerative Price (FRP) set by the Government of India,
+          so FarmStat shows the FRP instead of a forecast.</p>
+      </div>
     </SideShell>
   );
 }
