@@ -3,13 +3,12 @@ import { Info } from 'lucide-react';
 import RateBoard from './RateBoard.jsx';
 import ForecastTiles from './ForecastTiles.jsx';
 import PriceChart, { buildRows } from './PriceChart.jsx';
-import { monthLabel, months, pct, rupees } from '../format.js';
+import { cashewProduct, monthLabel, months, pct, rupees } from '../format.js';
 import { T } from '../theme.js';
 
 const STALE_DAYS = 120;   // a state this far behind the newest report is flagged as out of date
 const newest = states => states.reduce((a, b) => (a.month > b.month ? a : b)).month;
 const isStale = (row, latest) => (new Date(latest) - new Date(row.month)) / 864e5 > STALE_DAYS;
-const productLabel = p => (p === 'raw nuts' ? 'Raw nuts' : 'Kernels');
 
 export default function CashewView({ data, state, onState }) {
   const s = data.states.find(x => x.state === state);
@@ -39,7 +38,7 @@ export default function CashewView({ data, state, onState }) {
         <table className="table">
           <thead><tr><th>State</th><th>Product</th><th>Month</th><th className="r">Price</th></tr></thead>
           <tbody>{[...data.states].sort((a, b) => b.price - a.price).map(x => (
-            <tr key={x.state} className={x.state === s.state ? 'me' : ''}><td>{x.state}</td><td>{productLabel(x.product)}</td>
+            <tr key={x.state} className={x.state === s.state ? 'me' : ''}><td>{x.state}</td><td>{cashewProduct(x.product)}</td>
               <td className="num">{monthLabel(x.month)}</td><td className="r num">{rupees(x.price)}</td></tr>
           ))}</tbody>
         </table>
@@ -62,11 +61,11 @@ function CashewStart({ data, onState }) {
       <div className="kpis">
         {rows.map(x => (
           <button key={x.state} type="button" className="kpi kpi-button" onClick={() => onState(x.state)}
-            aria-label={`${x.state}: ${rupees(x.price)} for ${productLabel(x.product).toLowerCase()}, ${monthLabel(x.month)}. Show its prices`}>
+            aria-label={`${x.state}: ${rupees(x.price)} for ${cashewProduct(x.product).toLowerCase()}, ${monthLabel(x.month)}. Show its prices`}>
             <span className="kpi-label">{x.state}</span>
             <span className="kpi-value num">{rupees(x.price)}</span>
             <span className={`kpi-note${isStale(x, latest) ? ' old' : ''}`}>
-              {productLabel(x.product)}, {monthLabel(x.month)}{isStale(x, latest) ? ' (out of date)' : ''}</span>
+              {cashewProduct(x.product)}, {monthLabel(x.month)}{isStale(x, latest) ? ' (out of date)' : ''}</span>
           </button>
         ))}
       </div>

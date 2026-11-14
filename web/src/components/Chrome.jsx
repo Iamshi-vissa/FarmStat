@@ -50,7 +50,7 @@ function LiveStatus() {
 }
 
 // Sidebar frame.
-// Desktop: a slim icon rail (pages, search, mandis). Hovering or focusing it slides the panel with the state picker and
+// Desktop: a slim icon rail (the mandi panel and search; pages live in the tabs). Hovering or focusing it slides the panel with the state picker and
 // mandi list out over the page; pinning docks the panel beside the page instead. Ported from the 21st.dev "Rail Panel
 // Sidebar" by dhxwhy (hover peek with a grace period, pin to dock, Escape and click-outside to close, a sliding active
 // marker on the rail, arrow keys between rail buttons), rebuilt with FarmStat's tokens and CSS transitions.
@@ -122,7 +122,7 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
       onFocus={e => { if (!pinned && e.target.matches?.('.side-panel :focus-visible, .rail-btn[data-panel]:focus-visible')) show(); }}
       onBlur={e => { if (!pinned && !aside.current?.contains(e.relatedTarget)) hideSoon(); }}
       onKeyDown={e => { if (e.key === 'Escape' && peek && !pinned && aside.current?.contains(document.activeElement)) buttons.current[active]?.focus(); }}>
-      <nav className="rail" aria-label="FarmStat pages" onKeyDown={onRailKeys}>
+      <nav className="rail" aria-label="Mandis and search" onKeyDown={onRailKeys}>
         <span className="brand-glyph rail-brand" aria-hidden="true">₹</span>
         <div className="rail-list">
           <span className="rail-marker" ref={marker} aria-hidden="true" />

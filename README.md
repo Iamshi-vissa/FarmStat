@@ -115,7 +115,7 @@ Finding out *when a model doesn't help*, and saying so, is part of the result.
   Every row is a way in: a state opens its mandi list, a mandi opens its page
 - Pick a crop, a **state** and a **mandi** to see this week's price, the 1/2/4-week forecast and two years of history
   with the forecast range
-- **A side panel that stays out of the way:** on desktop a slim icon rail (overview, mandis, search, accuracy, about)
+- **A side panel that stays out of the way:** on desktop a slim icon rail with just two buttons, the mandi list and search (pages live in the tabs),
   sits on the left; hovering or focusing it slides out the state picker and mandi list over the page, and the pin
   button docks it. Ported from a 21st.dev rail-panel sidebar (hover peek with a grace period, Escape and click-outside
   to close, a sliding active marker, arrow keys). On phones it is a "Choose a mandi" drop-down under the header

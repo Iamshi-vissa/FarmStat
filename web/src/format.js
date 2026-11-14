@@ -27,3 +27,6 @@ export const axisDate = s => mfmt.format(new Date(s));
 // Agmarknet names often run into their brackets ("Junnar(Alephata)", "Karambakkudi(Uzhavar Sandhai )"); tidy them for display.
 // Only for showing a name: lookups and links keep the raw name.
 export const placeName = s => (s ? s.replace(/\s*\(\s*/g, ' (').replace(/\s*\)/g, ')').replace(/\s{2,}/g, ' ').trim() : s);
+
+// Cashew is reported either as raw nuts or as processed kernels (several times dearer).
+export const cashewProduct = p => (/raw/i.test(p) ? 'Raw nuts' : 'Kernels');

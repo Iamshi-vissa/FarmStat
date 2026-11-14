@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { Gauge, LayoutDashboard, Search, Store } from 'lucide-react';
+import { Info, MapPin, Search, Store } from 'lucide-react';
 import CropSwitch from './components/CropSwitch.jsx';
 import Sidebar, { CashewSidebar, SugarcaneSidebar } from './components/Sidebar.jsx';
 import MarketView, { MarketSkeleton, loadMarketChart } from './components/MarketView.jsx';
@@ -8,7 +8,7 @@ import Tabs from './components/ui/Tabs.jsx';
 import SearchButton from './components/SearchAnywhere.jsx';
 import { api } from './api.js';
 import { openSearch, openSidePanel } from './events.js';
-import { date } from './format.js';
+import { date, placeName } from './format.js';
 import { useScrollEnd } from './hooks.js';
 
 // Pages other than the mandi page load on demand, so the first screen only downloads what it needs.
@@ -119,7 +119,6 @@ export default function App() {
   const chooseState = s => { setState(s); setMarket(null); };
   const chooseMarket = m => { setMarket(m); if (m) setView(v => (v === 'compare' ? v : 'market')); };
   const openMarket = (s, m) => { setState(s); setMarket(m); setView('market'); };
-  const goOverview = () => { setMarket(null); setView('overview'); };
 
   if (error) {
     return (
@@ -135,15 +134,15 @@ export default function App() {
     ? [['overview', 'India overview'], ['market', 'Mandi'], ['compare', 'Compare mandis'], ['accuracy', 'Model accuracy'], ['about', 'About']]
     : [['overview', crop === 'Cashew' ? 'Prices by state' : 'FRP and prices'], ['accuracy', 'Model accuracy'], ['about', 'About']];
 
-  // The icon rail on the left (desktop): pages, search, and the mandi panel, which also opens on hover.
+  // The icon rail on the left (desktop) holds only what the tabs don't: the side panel (which also opens on hover) and search.
   const icon = Icon => <Icon size={20} aria-hidden="true" />;
-  const rail = [
-    { id: 'overview', label: weekly ? 'India overview' : 'Overview', icon: icon(LayoutDashboard), active: view === 'overview', onClick: goOverview },
-    ...(weekly ? [{ id: 'mandis', label: market ? `Mandi: ${market}` : 'Choose a mandi', icon: icon(Store), panel: true,
-      active: view === 'market' || view === 'compare', onClick: () => { if (market) setView('market'); } }] : []),
-    { id: 'search', label: 'Search all mandis', icon: icon(Search), onClick: openSearch },
-    { id: 'accuracy', label: 'Model accuracy', icon: icon(Gauge), active: view === 'accuracy', onClick: () => setView('accuracy') },
-  ];
+  const panelItem = weekly
+    ? { id: 'mandis', label: market ? `Mandi: ${placeName(market)}` : 'Choose a mandi', icon: icon(Store),
+      active: view === 'market' || view === 'compare', onClick: () => (market && view !== 'market' ? setView('market') : openSidePanel()) }
+    : crop === 'Cashew'
+      ? { id: 'states', label: state ? `State: ${state}` : 'Choose a state', icon: icon(MapPin), active: Boolean(state), onClick: openSidePanel }
+      : { id: 'about-frp', label: 'About sugarcane prices', icon: icon(Info), onClick: openSidePanel };
+  const rail = [{ ...panelItem, panel: true }, { id: 'search', label: 'Search all mandis', icon: icon(Search), onClick: openSearch }];
 
   let side;
   if (weekly) {

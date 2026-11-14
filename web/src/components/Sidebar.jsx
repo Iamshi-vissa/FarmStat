@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 import Sparkline from './Sparkline.jsx';
 import Delta from './Delta.jsx';
 import { SideShell } from './Chrome.jsx';
-import { monthLabel, placeName, rupees, weeks } from '../format.js';
+import { cashewProduct, monthLabel, placeName, rupees, weeks } from '../format.js';
 
 const SORTS = [
   { id: 'name', label: 'Name' },
@@ -107,10 +107,10 @@ export function CashewSidebar({ states = [], state, onState, rail }) {
     <SideShell label="Choose a state" current={state} placeholder="Choose a state" rail={rail}
       footer="Monthly state averages from Agmarknet. No mandi-level cashew history is available.">
       <nav className="mandi-list" aria-label="Cashew states">
-        {states.map(s => (
+        {[...states].sort((a, b) => b.price - a.price).map(s => (
           <button key={s.state} type="button" className="mandi-row" aria-current={s.state === state} onClick={() => onState(s.state)}>
             <span className="mandi-name">{s.state}</span><span className="mandi-price num">{rupees(s.price)}</span>
-            <span className="mandi-dist">{s.product}, {monthLabel(s.month)}</span><span />
+            <span className="mandi-dist">{cashewProduct(s.product)}, {monthLabel(s.month)}</span><span />
           </button>
         ))}
       </nav>
