@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { Gauge, Info, LayoutDashboard, Search, Store } from 'lucide-react';
+import { Gauge, LayoutDashboard, Search, Store } from 'lucide-react';
 import { useScrollEnd } from './useScrollEnd.js';
 import CropSwitch from './components/CropSwitch.jsx';
 import Sidebar from './components/Sidebar.jsx';
@@ -125,7 +125,6 @@ export default function App() {
     { id: 'search', label: 'Search all mandis', icon: <Search size={20} aria-hidden="true" />,
       onClick: () => window.dispatchEvent(new Event('farmstat:search')) },
     { id: 'accuracy', label: 'Model accuracy', icon: <Gauge size={20} aria-hidden="true" />, active: view === 'accuracy', onClick: () => setView('accuracy') },
-    { id: 'about', label: 'About, terms and risks', icon: <Info size={20} aria-hidden="true" />, active: view === 'about', onClick: () => setView('about') },
   ];
 
   let side;

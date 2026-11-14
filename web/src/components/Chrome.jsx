@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronDown, Info, Pin, PinOff } from 'lucide-react';
+import { ChevronDown, Info, Pin, PinOff, X } from 'lucide-react';
 import { api } from '../api.js';
 import { date } from '../format.js';
 
@@ -49,7 +49,8 @@ export const openSidePanel = () => window.dispatchEvent(new Event('farmstat:pane
 
 const PIN_KEY = 'farmstat-panel-pinned';
 const readPinned = () => { try { return localStorage.getItem(PIN_KEY) === '1'; } catch { return false; } };
-const PEEK_GRACE = 160;
+const PEEK_GRACE = 220;   // ms the panel stays while the pointer travels from the rail into it
+const PEEK_INTENT = 140;  // ms the pointer must rest on the rail before the panel opens (passing over it does nothing)
 const DESKTOP = '(min-width: 861px)';
 function useDesktop() {
   const [on, setOn] = useState(() => window.matchMedia(DESKTOP).matches);
@@ -82,7 +83,13 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
   const clear = () => { window.clearTimeout(timer.current); timer.current = 0; };
   const show = useCallback(() => { clear(); setPeek(true); }, []);
   const hide = useCallback(() => { clear(); setPeek(false); }, []);
-  const hideSoon = () => { clear(); timer.current = window.setTimeout(() => setPeek(false), PEEK_GRACE); };
+  const showSoon = () => { clear(); timer.current = window.setTimeout(() => setPeek(true), PEEK_INTENT); };
+  const hideSoon = () => {
+    // a native drop-down (the state picker) draws outside the page, so the pointer "leaves" while choosing: stay open
+    if (document.activeElement?.tagName === 'SELECT' && aside.current?.contains(document.activeElement)) return;
+    clear();
+    timer.current = window.setTimeout(() => setPeek(false), PEEK_GRACE);
+  };
 
   useEffect(() => { setOpen(false); setPeek(false); }, [current]);   // a choice was made: get out of the way
   useEffect(() => {
@@ -90,11 +97,13 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
     window.addEventListener('farmstat:panel', onOpen);
     return () => { window.removeEventListener('farmstat:panel', onOpen); clear(); };
   }, []);
-  useEffect(() => {   // click outside closes the peek
+  useEffect(() => {   // a click outside, or Escape from anywhere on the page, closes the peek
     if (!peek || pinned) return undefined;
     const onDown = e => { if (aside.current && !aside.current.contains(e.target)) hide(); };
+    const onKey = e => { if (e.key === 'Escape' && !document.querySelector('.cmdk')) hide(); };
     document.addEventListener('pointerdown', onDown);
-    return () => document.removeEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('pointerdown', onDown); document.removeEventListener('keydown', onKey); };
   }, [peek, pinned, hide]);
   useEffect(() => { document.documentElement.dataset.panel = pinned ? 'pinned' : 'rail'; }, [pinned]);
 
@@ -126,11 +135,11 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
   const hidden = desktop && !(pinned || peek);   // on phones the panel is the header, always there
   return (
     <aside className="side" aria-label={label} ref={aside} data-open={open} data-peek={peek && !pinned} data-pinned={pinned}
-      onPointerEnter={e => { if (e.pointerType !== 'touch' && !pinned) show(); }}
+      onPointerEnter={e => { if (e.pointerType !== 'touch' && !pinned) (peek ? show() : showSoon()); }}
       onPointerLeave={e => { if (e.pointerType !== 'touch' && !pinned) hideSoon(); }}
       onFocus={e => { if (!pinned && e.target.matches?.('.side-panel :focus-visible, .rail-btn[data-panel]:focus-visible')) show(); }}
       onBlur={e => { if (!pinned && !aside.current?.contains(e.relatedTarget)) hideSoon(); }}
-      onKeyDown={e => { if (e.key === 'Escape' && peek && !pinned) { hide(); buttons.current[active]?.focus(); } }}>
+      onKeyDown={e => { if (e.key === 'Escape' && peek && !pinned && aside.current?.contains(document.activeElement)) buttons.current[active]?.focus(); }}>
       <nav className="rail" aria-label="FarmStat pages" onKeyDown={onRailKeys}>
         <span className="brand-glyph rail-brand" aria-hidden="true">₹</span>
         <div className="rail-list" ref={railList}>
@@ -153,6 +162,11 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
       <div className="side-panel" aria-hidden={hidden ? 'true' : undefined} inert={hidden}>
         <div className="side-head">
           <Brand />
+          {!pinned && (
+            <button type="button" className="side-close" onClick={hide} aria-label="Close the panel" title="Close (Esc)">
+              <X size={18} aria-hidden="true" />
+            </button>
+          )}
           <button type="button" className="side-toggle" aria-expanded={open} onClick={() => setOpen(o => !o)}>
             <span>{current || placeholder || 'Choose'}</span><ChevronDown size={16} aria-hidden="true" />
           </button>

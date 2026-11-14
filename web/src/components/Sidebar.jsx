@@ -47,7 +47,7 @@ export default function Sidebar({ crop, states, state, onState, mandis, market, 
       <div className="side-controls">
         <label className="field">
           <span>State</span>
-          <select className="select" value={state ?? ''} onChange={e => onState(e.target.value || null)}>
+          <select className="select" value={state ?? ''} onChange={e => { onState(e.target.value || null); e.target.blur(); }}>
             <option value="">Choose a state</option>
             {states.map(s => (
               <option key={s.name} value={s.name}>{s.name} ({s.count} {unit})</option>

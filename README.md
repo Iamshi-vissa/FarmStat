@@ -136,7 +136,7 @@ An analytical web interface built with React, using [React Bits](https://reactbi
 FastAPI service that serves the models.
 
 - **Mandi rate board:** the current price on split-flap tiles (React Bits *SplitFlapText*) over a contour-map
-  background (*Topography*) on a forest-green board, like the price boards in a mandi
+  background (pre-rendered once with React Bits *Topography*, served as a 32 KB image) on a forest-green board, like the price boards in a mandi
 - **Advice slip (parchi):** the week's sell / hold call on an opaque paper slip pinned to the board, with animated paper
   grain (*Noise*), a light that follows the pointer, a stamped verdict and the chance of a 5%+ rise
 - **Crop switcher** with a sliding forest-green thumb, **forecast tiles** with a range bar for each horizon
@@ -293,7 +293,7 @@ flowchart TB
 | Models | scikit-learn (HistGradientBoosting, quantile loss), joblib |
 | Training | Jupyter, pandas, NumPy, XGBoost, matplotlib, seaborn |
 | API | FastAPI, Uvicorn |
-| Web app | React 19, Vite, Recharts, React Bits (SplitFlapText, Topography, Noise, LineSidebar, SpotlightCard); Bricolage Grotesque, Archivo, Big Shoulders Display, Newsreader |
+| Web app | React 19, Vite, Recharts, React Bits (SplitFlapText, Noise, SpotlightCard; Topography pre-rendered to an image); Bricolage Grotesque, Archivo, Big Shoulders Display, Newsreader |
 | Simple app | Streamlit, Plotly |
 | Live data | data.gov.in API, Supabase (Postgres, Edge Functions, pg_cron, pg_net), GitHub Actions |
 | Hosting | Vercel (FastAPI, Python 3.12) |

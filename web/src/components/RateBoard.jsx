@@ -1,4 +1,5 @@
-import { Suspense, lazy, memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
+import contours from '../assets/board-contours.webp';
 import SplitFlapText from './reactbits/SplitFlapText.jsx';
 import AdviceSlip from './AdviceSlip.jsx';
 import { date, plain } from '../format.js';
@@ -37,53 +38,19 @@ export default function RateBoard({ title, where, priceLabel, price, advice, sli
   );
 }
 
-// The contour map is decoration. React Bits Topography draws it once with WebGL after the page has painted; the
-// result is kept as a still image and the WebGL canvas is closed, so nothing keeps running or slowing repaints.
-// Skipped when the visitor asks for reduced motion or less data.
-let contourImage = null;   // shared by every board in this visit
-const Topography = lazy(() => import('./reactbits/Topography.jsx'));   // only downloaded when it's time to draw
-
+// The contour map is decoration: a pre-rendered image (drawn once with React Bits Topography) used as a mask and
+// tinted with the contour colour, so no WebGL runs in the visitor's browser and nothing blocks the page.
 const BoardBackground = memo(function BoardBackground() {
-  const [img, setImg] = useState(contourImage);
-  const [drawing, setDrawing] = useState(false);
-  const ref = useRef(null);
-
+  const [on, setOn] = useState(false);
   useEffect(() => {
-    if (img) return undefined;
-    const skip = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData;
-    if (skip) return undefined;
-    const idle = window.requestIdleCallback ?? (cb => setTimeout(cb, 200));
-    let id = 0;
-    const t = setTimeout(() => { id = idle(() => setDrawing(true), { timeout: 2000 }); }, 1200);
-    return () => { clearTimeout(t); (window.cancelIdleCallback ?? clearTimeout)(id); };
-  }, [img]);
-
-  useEffect(() => {   // once drawn, keep a still image and close WebGL
-    if (!drawing) return undefined;
-    let tries = 0;
-    const iv = setInterval(() => {
-      const canvas = ref.current?.querySelector('canvas');
-      tries += 1;
-      if (!canvas) return;
-      let url = '';
-      try { url = canvas.toDataURL('image/webp', 0.85); } catch { /* unavailable */ }
-      if (url.length > 8000 || tries > 12) {
-        clearInterval(iv);
-        if (url.length > 8000) { contourImage = url; setImg(url); }
-        setDrawing(false);
-      }
-    }, 300);
-    return () => clearInterval(iv);
-  }, [drawing]);
-
-  return (
-    <div className={`board-bg${img ? ' on' : ''}`} aria-hidden="true" ref={ref}
-      style={img ? { backgroundImage: `url(${img})` } : undefined}>
-      {drawing && <Suspense fallback={null}><Topography dpr={1} color={T.contour} lineCount={16} lineWidth={1} elevation={0.8} speed={0} tilt={38}
-        glow={0.25} fog={0.5} morph={0.12} mouseInteraction={false} clickEffect="none" intro={false} brightness={0.8}
-        style={{ opacity: 0 }} /></Suspense>}
-    </div>
-  );
+    if (navigator.connection?.saveData) return undefined;
+    let live = true;
+    const img = new Image();
+    img.onload = () => { if (live) setOn(true); };
+    img.src = contours;
+    return () => { live = false; };
+  }, []);
+  return <div className={`board-bg${on ? ' on' : ''}`} aria-hidden="true" />;
 });
 
 export const priceWeek = w => `week of ${date(w)}`;

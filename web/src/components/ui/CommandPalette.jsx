@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 // Search-anywhere palette (Ctrl/⌘ K). Ported from the 21st.dev "Command Palette" by ddoemonn: the fuzzy ranking
 // (prefix and word-boundary bonuses, streaks), arrow/Home/End/Enter/Escape keys, pointer hover that ignores scroll,
@@ -119,7 +119,11 @@ export default function CommandPalette({ open, items, onSelect, onClose, placeho
             aria-autocomplete="list" aria-activedescendant={activeId ? `${uid}-${activeId}` : undefined}
             autoComplete="off" spellCheck={false} value={query} placeholder={placeholder}
             onChange={e => setQuery(e.target.value)} onKeyDown={onKeyDown} />
-          <kbd>Esc</kbd>
+          {query && (
+            <button type="button" className="cmdk-clear" aria-label="Clear the search" title="Clear"
+              onClick={() => { setQuery(''); inputRef.current?.focus(); }}><X size={15} aria-hidden="true" /></button>
+          )}
+          <button type="button" className="cmdk-cancel" onClick={onClose}>Cancel</button>
         </div>
         <ul ref={listRef} id={`${uid}-list`} role="listbox" aria-label="Results" className="cmdk-list"
           onMouseDown={e => e.preventDefault()}>
