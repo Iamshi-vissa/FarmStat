@@ -1,16 +1,15 @@
 import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import RateBoard from './RateBoard.jsx';
 import { axisDate, monthLabel, rupees } from '../format.js';
+import { niceTicks } from '../stats.js';
 import { T } from '../theme.js';
 
 export default function SugarcaneView({ data }) {
   const c = data.current;
   const frpAt = t => [...data.frp].reverse().find(f => new Date(f.start).getTime() <= t)?.price ?? null;
   const rows = data.chhattisgarh.map(r => { const t = new Date(r.month).getTime(); return { t, price: r.price, frp: frpAt(t) }; });
-  // round ₹50 steps that hold every price and FRP, so the axis reads 150, 200, 250… instead of odd values
   const values = rows.flatMap(r => [r.price, r.frp]).filter(v => v != null);
-  const lo = Math.floor(Math.min(...values) / 50) * 50, hi = Math.ceil(Math.max(...values) / 50) * 50;
-  const ticks = Array.from({ length: (hi - lo) / 50 + 1 }, (_, i) => lo + i * 50);
+  const { domain, ticks } = niceTicks(Math.min(...values), Math.max(...values), 4);   // round steps (₹50), not ₹215, ₹280
   const seasonStart = c.season.slice(0, 4);   // "2026-27" starts on 1 October 2026
   return (
     <>
@@ -28,7 +27,7 @@ export default function SugarcaneView({ data }) {
               <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={axisDate}
                 tick={{ fontSize: 12, fill: T.ink3 }} tickLine={false} minTickGap={40} />
               <YAxis tick={{ fontSize: 12, fill: T.ink3 }} tickLine={false} axisLine={false} tickFormatter={v => `₹${v}`} width={52}
-                domain={[lo, hi]} ticks={ticks} />
+                domain={domain} ticks={ticks} />
               <Tooltip labelFormatter={t => monthLabel(t)} formatter={(v, n) => [rupees(v), n === 'frp' ? 'FRP' : 'Mandi average']} />
               <Line dataKey="price" stroke={T.ink} strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: T.panel, strokeWidth: 2 }} isAnimationActive={false} />
               <Line dataKey="frp" stroke={T.forecast} strokeWidth={2} type="stepAfter" dot={false} isAnimationActive={false} />

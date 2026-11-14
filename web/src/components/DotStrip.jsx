@@ -1,7 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { niceTicks } from './PriceChart.jsx';
 import { compactRupees, placeName, rupees } from '../format.js';
-import { quantile } from '../stats.js';
+import { niceTicks, quantile } from '../stats.js';
 import { T } from '../theme.js';
 
 const R = 5, PAD = { l: 12, r: 12, t: 50, b: 28 };

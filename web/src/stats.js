@@ -93,3 +93,15 @@ export function priceStats(history, latestWeek, price) {
     currentMonth: MONTHS[new Date(end).getMonth()]
   };
 }
+
+// Round, evenly spaced y-ticks (1 / 2 / 2.5 / 5 × 10^k)
+export function niceTicks(lo, hi, count = 5) {
+  if (!(hi > lo)) return { domain: [lo * 0.9, hi * 1.1 || 1], ticks: undefined };
+  const raw = (hi - lo) / count;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw);
+  const start = Math.floor(lo / step) * step, end = Math.ceil(hi / step) * step;
+  const ticks = [];
+  for (let v = start; v <= end + step / 2; v += step) ticks.push(Math.round(v));
+  return { domain: [start, end], ticks };
+}

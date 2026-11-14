@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts';
 import { compactRupees, date, monthLabel, pct, rupees } from '../format.js';
+import { niceTicks } from '../stats.js';
 import { T } from '../theme.js';
 
 // Chart tokens (validated pair: ink for actual price, blue for forecast; grey for context)
@@ -16,20 +17,8 @@ const Y_WIDTH_COMPACT = 50;
 const DAY = 864e5;
 const ts = s => new Date(s).getTime();
 
-// Round, evenly spaced y-ticks (1 / 2 / 2.5 / 5 × 10^k)
-export function niceTicks(lo, hi, count = 5) {
-  if (!(hi > lo)) return { domain: [lo * 0.9, hi * 1.1 || 1], ticks: undefined };
-  const raw = (hi - lo) / count;
-  const mag = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw);
-  const start = Math.floor(lo / step) * step, end = Math.ceil(hi / step) * step;
-  const ticks = [];
-  for (let v = start; v <= end + step / 2; v += step) ticks.push(Math.round(v));
-  return { domain: [start, end], ticks };
-}
-
 // One tick per month (or every 2/3/6/12 months on long ranges), labelled "Mar", with the year on January and the first tick.
-export function monthTicks(t0, t1, maxTicks = 8) {
+function monthTicks(t0, t1, maxTicks = 8) {
   const start = new Date(t0); start.setDate(1); start.setHours(0, 0, 0, 0);
   if (start.getTime() < t0) start.setMonth(start.getMonth() + 1);
   const all = [];
@@ -41,14 +30,14 @@ export function monthTicks(t0, t1, maxTicks = 8) {
   return ticks;
 }
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-export const monthTickFor = ticks => (t, i) => {
+const monthTickFor = ticks => (t, i) => {
   const d = new Date(t);
   if (ticks.yearly) return String(d.getFullYear());
   return d.getMonth() === 0 || i === 0 ? `${MONTHS[d.getMonth()]} ${d.getFullYear()}` : MONTHS[d.getMonth()];
 };
 
 // One number style per axis: all in lakh, all in thousands, or all in full.
-export const axisRupeesFor = ticks => {
+const axisRupeesFor = ticks => {
   const max = Math.max(...(ticks ?? [0]));
   if (max >= 100000) return v => `₹${(v / 100000).toLocaleString('en-IN', { maximumFractionDigits: 2 })}L`;
   if (max >= 10000) return v => `₹${(v / 1000).toLocaleString('en-IN', { maximumFractionDigits: 1 })}k`;

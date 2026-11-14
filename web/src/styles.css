@@ -415,7 +415,6 @@ kbd { font: inherit; font-size: 0.6875rem; font-weight: 600; padding: 1px 5px; b
 .table td.num, .table td.r { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .table tr.me td { background: var(--select); font-weight: 600; }
 .table-wrap { max-height: 460px; overflow: auto; }
-.scroll-x { overflow-x: auto; }
 
 /* ── stat tiles (accuracy) ─────────────────────────────────────────── */
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }

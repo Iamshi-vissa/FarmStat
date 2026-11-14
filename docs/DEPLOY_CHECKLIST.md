@@ -46,9 +46,10 @@ The live-data pipeline (Supabase) and the scheduled GitHub jobs have their own r
 - [ ] **Smoke test the live site** (2 minutes):
   1. The home page opens on the India overview with no mandi selected.
   2. Hovering the left rail opens the mandi panel; choosing a state and a mandi opens its page.
-  3. Ctrl/⌘ K finds a mandi ("kolar tom") and opens it.
-  4. `/api/live/status` returns `available: true` with a recent `latest_price_date`.
-  5. `/api/overview?crop=Onion` and `/api/series?crop=Onion&state=Maharashtra&market=Lasalgaon` return 200.
+  3. Back returns to the previous FarmStat page, and on a phone the "Choose a mandi" drop-down closes when you tap outside it.
+  4. Ctrl/⌘ K finds a mandi ("kolar tom") and opens it.
+  5. `/api/live/status` returns `available: true` with a recent `latest_price_date`.
+  6. `/api/overview?crop=Onion` and `/api/series?crop=Onion&state=Maharashtra&market=Lasalgaon` return 200.
 - [ ] First load of the overview takes under about 2 s on a normal connection. A cold start (first request after an
   idle spell) takes longer, but under 5 s.
 

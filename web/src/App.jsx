@@ -39,6 +39,7 @@ export default function App() {
   const [mandis, setMandis] = useState([]);                         // the chosen state's mandis for this crop
   const [extra, setExtra] = useState({});                           // cashew / sugarcane payloads
   const tabsRef = useRef(null);
+  const userMove = useRef(false);   // set by the visitor's clicks: the next address change gets its own history entry
   useScrollEnd(tabsRef);
 
   // First paint: fetch meta and, alongside it, the first screen's data and code. The chart code follows when idle.
@@ -52,7 +53,8 @@ export default function App() {
     (window.requestIdleCallback ?? (f => setTimeout(f, 1500)))(() => loadMarketChart());
   }, [init]);
 
-  // Follow links that only change the #… part of the address (policy links, the About page's sections).
+  // Links that set part of the address (#view=about&section=risks) change just those parts. Back and Forward return to
+  // an address FarmStat wrote itself, so they restore all of it, including clearing a state or mandi that isn't there.
   useEffect(() => {
     const onHash = () => {
       const h = readHash();
@@ -62,8 +64,18 @@ export default function App() {
       if (h.view) setView(h.view);
       setSection(h.section || null);
     };
+    const onPop = e => {
+      if (!e.state?.farmstat) return;   // a link's own entry: hashchange handles it
+      const h = readHash();
+      setCrop(h.crop || DEFAULT_CROP);
+      setState(h.state || null);
+      setMarket(h.mandi || null);
+      setView(h.view || (h.mandi ? 'market' : 'overview'));
+      setSection(h.section || null);
+    };
     window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
+    window.addEventListener('popstate', onPop);
+    return () => { window.removeEventListener('hashchange', onHash); window.removeEventListener('popstate', onPop); };
   }, []);
 
   const cropMeta = useMemo(() => meta?.crops.find(c => c.id === crop), [meta, crop]);
@@ -104,21 +116,35 @@ export default function App() {
     return () => { live = false; };
   }, [crop, state, cropMeta]); // eslint-disable-line react-hooks/exhaustive-deps -- `market` is checked, not a trigger
 
-  // Keep the address in step, so any screen can be bookmarked or shared.
+  // Keep the address in step, so any screen can be bookmarked or shared. The visitor's own moves (a tab, a crop, a mandi,
+  // a search result) add a history entry, so Back returns to the last page instead of leaving the site; the app's own
+  // corrections (a mandi that doesn't sell this crop) only replace the current entry, so Back can't loop.
   useEffect(() => {
+    if (!meta) return;   // until meta arrives the choices may still be corrected
     const p = new URLSearchParams({ crop, view });
     if (state) p.set('state', state);
     if (market && weekly) p.set('mandi', market);
     if (view === 'about' && section) p.set('section', section);
-    window.history.replaceState(null, '', `#${p}`);
-  }, [crop, state, market, view, weekly, section]);
+    const next = `#${p}`;
+    const push = userMove.current && window.history.state?.farmstat;
+    userMove.current = false;
+    if (next === window.location.hash && window.history.state?.farmstat) return;
+    window.history[push ? 'pushState' : 'replaceState']({ farmstat: true }, '', next);
+  }, [meta, crop, state, market, view, weekly, section]);
 
   // Start each page at the top, unless a link points into the About page.
-  useEffect(() => { if (!section) window.scrollTo(0, 0); }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!(view === 'about' && section)) window.scrollTo(0, 0); }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const move = fn => (...args) => {
+    userMove.current = true;
+    fn(...args);
+    setTimeout(() => { userMove.current = false; }, 0);   // a click that changed nothing mustn't mark a later change
+  };
   const chooseState = s => { setState(s); setMarket(null); };
-  const chooseMarket = m => { setMarket(m); if (m) setView(v => (v === 'compare' ? v : 'market')); };
-  const openMarket = (s, m) => { setState(s); setMarket(m); setView('market'); };
+  const chooseMarket = move(m => { setMarket(m); if (m) setView(v => (v === 'compare' ? v : 'market')); });
+  const openMarket = move((s, m) => { setState(s); setMarket(m); setView('market'); });
+  const goTo = move(setView);
+  const pickCrop = move(setCrop);
 
   if (error) {
     return (
@@ -138,7 +164,7 @@ export default function App() {
   const icon = Icon => <Icon size={20} aria-hidden="true" />;
   const panelItem = weekly
     ? { id: 'mandis', label: market ? `Mandi: ${placeName(market)}` : 'Choose a mandi', icon: icon(Store),
-      active: view === 'market' || view === 'compare', onClick: () => (market && view !== 'market' ? setView('market') : openSidePanel()) }
+      active: view === 'market' || view === 'compare', onClick: () => (market && view !== 'market' ? goTo('market') : openSidePanel()) }
     : crop === 'Cashew'
       ? { id: 'states', label: state ? `State: ${state}` : 'Choose a state', icon: icon(MapPin), active: Boolean(state), onClick: openSidePanel }
       : { id: 'about-frp', label: 'About sugarcane prices', icon: icon(Info), onClick: openSidePanel };
@@ -184,7 +210,7 @@ export default function App() {
 
   // The About page stands on its own: no crop switcher, side panel, search or notice, only the tabs to go back.
   const plain = view === 'about';
-  const pageTabs = <Tabs items={tabs.map(([value, label]) => ({ value, label }))} value={view} onChange={setView} label="Page"
+  const pageTabs = <Tabs items={tabs.map(([value, label]) => ({ value, label }))} value={view} onChange={goTo} label="Page"
     className="tabs" tabRef={tabsRef} />;
 
   return (
@@ -196,12 +222,12 @@ export default function App() {
           <div className="topbar topbar-plain"><Brand />{pageTabs}</div>
         ) : (
           <div className="topbar">
-            <CropSwitch items={meta.crops.map(c => ({ value: c.id, label: c.id }))} value={crop} onChange={setCrop} />
+            <CropSwitch items={meta.crops.map(c => ({ value: c.id, label: c.id }))} value={crop} onChange={pickCrop} />
             {pageTabs}
-            <SearchButton crops={meta.crops} onPick={pick => {
+            <SearchButton crops={meta.crops} onPick={move(pick => {
               if (pick.crop) { setCrop(pick.crop); setState(pick.state ?? null); setMarket(pick.market ?? null); }
               setView(pick.view);
-            }} />
+            })} />
           </div>
         )}
         {!plain && <Notice />}

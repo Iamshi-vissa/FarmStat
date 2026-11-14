@@ -120,7 +120,7 @@ Finding out *when a model doesn't help*, and saying so, is part of the result.
   picker and mandi list; passing over it does nothing. The panel closes when the pointer leaves, on a click outside,
   with <kbd>Esc</kbd> or with its close button, and the pin button docks it beside the page. For cashew the panel lists
   states, and for sugarcane it explains the FRP. Ported from a 21st.dev rail-panel sidebar. On phones it is a
-  "Choose a mandi" drop-down under the header
+  "Choose a mandi" drop-down under the header that closes when you pick a mandi or tap anywhere else
 - Sell / hold advice that subtracts storage losses (onion 4%, potato 3%, tomato 15% per 4 weeks)
 - Never advises holding tomatoes for more than a week, because they spoil
 - Shows the money involved for your quantity in quintals
@@ -189,7 +189,9 @@ FastAPI service that serves the models.
   their panel
 - **Small things:** a one-time notice that prices are estimates, links to the terms and risks from every page,
   <kbd>/</kbd> to search mandis, loading skeletons, and a skip link for keyboard users
-- **Links you can share:** the crop, state, mandi, tab and About section are kept in the address bar
+- **Links you can share, and a Back button that works:** the crop, state, mandi, tab and About section are kept in the
+  address bar. Each tab, crop or mandi you open is a step in the browser history, so Back returns to the previous page
+  instead of leaving FarmStat; the app's own corrections (a mandi that doesn't sell the new crop) don't add steps
 
 The original Streamlit app (`streamlit_app.py`) still works as a simpler alternative.
 
@@ -367,7 +369,7 @@ How the web code is organised:
 | `hooks.js` | `useMedia`, `useNarrow`, `useDesktop`, `useScrollEnd`, `useAppEvent` |
 | `events.js` | `openSearch()` and `openSidePanel()`, callable from any component |
 | `storage.js` | Settings kept in the browser (pinned panel, notice seen) |
-| `api.js`, `format.js`, `stats.js`, `theme.js` | API calls, number and name formatting, small statistics, chart colours |
+| `api.js`, `format.js`, `stats.js`, `theme.js` | API calls, number and name formatting, statistics and round axis ticks, chart colours |
 | `styles.css` | Design tokens and all styles. Pages are a `.page` stack, so blocks don't set their own outer margins |
 
 ### RETRAIN THE MODEL

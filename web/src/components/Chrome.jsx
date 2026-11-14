@@ -20,7 +20,7 @@ export function Brand() {
   );
 }
 
-export function SideLinks() {
+function SideLinks() {
   return (
     <nav className="side-links" aria-label="Policies">
       <a href="#view=about&section=terms">Terms</a>
@@ -79,14 +79,17 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
   useEffect(() => { setOpen(false); setPeek(false); }, [current]);   // a choice was made: get out of the way
   useAppEvent(PANEL, useCallback(() => { setOpen(true); setPeek(true); }, []));
   useEffect(() => () => window.clearTimeout(timer.current), []);
-  useEffect(() => {   // a click outside, or Escape from anywhere on the page, closes the peek
-    if (!peek || pinned) return undefined;
-    const onDown = e => { if (aside.current && !aside.current.contains(e.target)) hide(); };
-    const onKey = e => { if (e.key === 'Escape' && !document.querySelector('.cmdk')) hide(); };
+  // A tap or click outside, or Escape from anywhere on the page, closes the desktop peek and the phone drop-down.
+  const floating = desktop ? peek && !pinned : open;
+  useEffect(() => {
+    if (!floating) return undefined;
+    const close = () => { hide(); setOpen(false); };
+    const onDown = e => { if (aside.current && !aside.current.contains(e.target)) close(); };
+    const onKey = e => { if (e.key === 'Escape' && !document.querySelector('.cmdk')) close(); };
     document.addEventListener('pointerdown', onDown);
     document.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('pointerdown', onDown); document.removeEventListener('keydown', onKey); };
-  }, [peek, pinned, hide]);
+  }, [floating, hide]);
   useEffect(() => { document.documentElement.dataset.panel = pinned ? 'pinned' : 'rail'; }, [pinned]);
 
   const togglePin = () => {

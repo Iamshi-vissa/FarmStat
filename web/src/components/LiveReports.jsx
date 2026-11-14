@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Area, ComposedChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Radio } from 'lucide-react';
 import Delta from './Delta.jsx';
-import { niceTicks } from './PriceChart.jsx';
+import { niceTicks } from '../stats.js';
 import { api } from '../api.js';
 import { compactRupees, date, placeName, rupees } from '../format.js';
 import { T } from '../theme.js';

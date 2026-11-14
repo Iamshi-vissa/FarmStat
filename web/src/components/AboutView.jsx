@@ -55,20 +55,24 @@ export default function AboutView({ meta, section, onSection }) {
     requestAnimationFrame(() => document.getElementById(section)?.scrollIntoView({ block: 'start' }));
   }, [section]);
 
-  // highlight the section being read
+  // highlight the section being read: the last one whose heading has passed the top third of the screen (or the last
+  // section once the page is scrolled to the bottom, since short closing sections never reach the top)
   useEffect(() => {
-    const els = SECTIONS.map(([id]) => document.getElementById(id)).filter(Boolean);
-    const io = new IntersectionObserver(entries => {
-      const top = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-      if (!top) return;
-      const i = SECTIONS.findIndex(([id]) => id === top.target.id);
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const line = window.innerHeight * 0.3;
+      const atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+      let i = 0;
+      SECTIONS.forEach(([id], k) => { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top <= line) i = k; });
+      if (atEnd) i = SECTIONS.length - 1;
       setActive(i);
-      spied.current = SECTIONS[i][0];
-      onSection?.(SECTIONS[i][0]);
-    }, { rootMargin: '-10% 0px -70% 0px' });
-    els.forEach(el => io.observe(el));
-    return () => io.disconnect();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      if (spied.current !== SECTIONS[i][0]) { spied.current = SECTIONS[i][0]; onSection?.(SECTIONS[i][0]); }
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(frame); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- onSection is App's state setter, which never changes
 
   const go = i => {
     setActive(i);
