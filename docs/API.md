@@ -7,7 +7,7 @@ interactive docs are at `/docs`. On Vercel the same app is served from the site'
 - **Prices:** ₹ per quintal. Weeks are the Monday that starts them (`2026-07-20`).
 - **Caching:** `/api/live*` responses may be cached for 10 minutes, other `/api/*` responses for 1 hour.
 - **Compression:** responses over 800 bytes are gzipped when the client accepts it.
-- **Errors:** `404 {"detail": "..."}` for an unknown crop, state or mandi; `422` for a bad query parameter.
+- **Errors:** `404 {"detail": "..."}` for an unknown crop, state, mandi or endpoint; `422` for a bad query parameter.
 
 ## ENDPOINTS
 
@@ -16,16 +16,13 @@ interactive docs are at `/docs`. On Vercel the same app is served from the site'
 | `GET /api/meta` | Crops, how many series each has per state, data dates, horizons, model version |
 | `GET /api/mandis?crop=&state=` | Every active mandi for a weekly crop in one state, with forecasts, advice and a 12-week sparkline |
 | `GET /api/series?crop=&state=&market=&weeks=104` | One mandi's history (8 to 520 weeks) and its 1/2/4-week forecast |
-| `GET /api/national?crop=&variety=` | State medians and the highest-paying mandis in India; `variety` (optional, arecanut) matches the `(Variety)` part of series names |
 | `GET /api/overview?crop=` | The crop across India: median price, 26-week trend, change on last week and last year, calls by type, prices by state, biggest expected rises and falls, top prices |
 | `GET /api/index` | Every active series in one compact list, for search |
-| `GET /api/cashew` | Cashew monthly state prices and forecasts |
-| `GET /api/sugarcane` | Sugarcane FRP and mandi prices |
-| `GET /api/accuracy` | Test results, plus `validation` from `scripts/evaluate.py` when it has been run |
+| `GET /api/accuracy` | The independent walk-forward test from `scripts/evaluate.py` (per horizon: error, "no change" error, skill with 95% interval, Diebold–Mariano p-value, direction, range coverage before and after calibration; by crop and mandi type; by year; rise-warning reliability), plus the farmer back-test and arecanut range coverage |
 | `GET /api/live?crop=&state=&market=` | The mandi's daily reports: the last 45 report days among its 400 most recent rows |
 | `GET /api/live/status` | Last fetch, last retrain and latest price date in the live feed |
 
-Weekly crops are `Onion`, `Tomato`, `Potato` and `Arecanut`. Arecanut series are named `Market (Variety)`, for example
+The crops are `Onion`, `Tomato`, `Potato` and `Arecanut` (cashew and sugarcane were removed in November 2026). Arecanut series are named `Market (Variety)`, for example
 `Sirsi (Rashi)`.
 
 ## EXAMPLES

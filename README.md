@@ -1,6 +1,6 @@
 # FARMSTAT
 
-Forecasts onion, tomato and potato prices in mandis across 24 Indian states, 1, 2 and 4 weeks ahead, tells the farmer whether to sell now or hold, and also covers arecanut, cashew and sugarcane.
+Forecasts onion, tomato and potato prices in mandis across 24 Indian states, 1, 2 and 4 weeks ahead, tells the farmer whether to sell now or hold, and shows arecanut prices with their usual range.
 
 <p align="center">
   <img src="docs/web-overview.png" width="860" alt="FarmStat first screen: onion across India, with the national rate board, the calls slip, KPI cards and prices by state, beside the two-button side rail">
@@ -24,14 +24,12 @@ weekly reports from about 980 mandis in 24 states. For each crop and mandi it gi
 - a **likely price range**, not just one number
 - the **chance of a 5%+ price rise** in the next two weeks
 - simple **sell now / hold** advice that accounts for storage losses
-- a **comparison of mandis in the same state and across India**
+- a **comparison of the mandis in a state**
 
 | Crop | Coverage | What FarmStat shows |
 |---|---|---|
 | Onion, tomato, potato | ~980 mandis, 24 states, weekly, 2003–2026 | Forecast 1/2/4 weeks ahead + range, rise chance, sell / hold advice |
 | Arecanut | 47 mandi-variety series in Karnataka and Kerala (Sirsi, Shimoga, Yellapur, Kasargod…), weekly, 2021–2026 | Today's price with the usual range of movement (no model beat "no change"), variety-wise mandi comparison |
-| Cashew | 5 states, monthly state average, 2019–2026 | Rough-guide forecast 1/2/3 months ahead + range from past errors, seasonal pattern, state comparison |
-| Sugarcane | Mostly sold to mills at the government FRP | FRP information (₹365/quintal for 2026–27) and the mandi price history |
 
 
 ## RESULTS
@@ -95,13 +93,11 @@ test, about 168,000 mandi-weeks per horizon) and adds the checks a sceptic would
   <img src="docs/eval/by_year_reliability.png" width="620" alt="Skill by year and rise-warning reliability">
 </p>
 
-### ARECANUT, CASHEW AND SUGARCANE
+### ARECANUT
 
 | Crop | Test | Result |
 |---|---|---|
 | Arecanut | Main model, arecanut-only model and "no change", 2023–2026, retrained yearly | Neither model beat "no change" at any horizon (0.6–11% worse); weekly arecanut prices move only about 2% and behave like a random walk. Shown as today's price with the usual range, which held the real price **77–79%** of the time |
-| Cashew | Naive, Ridge and gradient boosting on monthly state data, chosen on 2022–23, tested on 2024–26 | Gradient boosting chosen (11.5% vs 11.7% average error on validation). On the test it **roughly ties with "no change"**: 13.7% vs 13.7% at 1 month, 22.3% vs 22.0% at 2, 25.0% vs 26.4% at 3. Shown as a rough guide |
-| Sugarcane | — | Not forecast: mills pay the government FRP, and the mandi data is too thin |
 
 Finding out *when a model doesn't help*, and saying so, is part of the result.
 
@@ -118,23 +114,18 @@ Finding out *when a model doesn't help*, and saying so, is part of the result.
 - **A side panel that stays out of the way:** on desktop a slim rail on the left holds just two buttons: the side panel
   and search (pages are switched with the tabs at the top). Resting the pointer on the rail slides out the state
   picker and mandi list; passing over it does nothing. The panel closes when the pointer leaves, on a click outside,
-  with <kbd>Esc</kbd> or with its close button, and the pin button docks it beside the page. For cashew the panel lists
-  states, and for sugarcane it explains the FRP. Ported from a 21st.dev rail-panel sidebar. On phones it is a
+  with <kbd>Esc</kbd> or with its close button, and the pin button docks it beside the page. Ported from a 21st.dev
+  rail-panel sidebar. On phones it is a
   "Choose a mandi" drop-down under the header that closes when you pick a mandi or tap anywhere else
 - Sell / hold advice that subtracts storage losses (onion 4%, potato 3%, tomato 15% per 4 weeks)
 - Never advises holding tomatoes for more than a week, because they spoil
-- Shows the money involved for your quantity in quintals
 - Arrivals chart for every mandi
-- **Compare tab:** the spread of prices across the chosen state's mandis (select a dot to highlight a mandi), a sortable
-  table of every mandi whose names open that mandi's page, the median price in each state with the chosen state
-  darker, and the highest-paying mandis in India. With no mandi chosen it names the top-paying mandi and the state median
+- **Compare tab:** the spread of prices across the chosen state's mandis (select a dot to highlight a mandi) and a
+  sortable table of every mandi, whose names open that mandi's page. With no mandi chosen it names the top-paying mandi
+  and the state median
 - Warning on mandis with less than 3 years of history
 - Accuracy tab with the test results, so users can see how far to trust the forecasts
 - **Arecanut:** every mandi and variety (Rashi, Chali, Bette…), compared only with the same variety
-- **Cashew page:** opens on every state's latest price, the seasonal pattern and a note that kernels cost several times
-  more than raw nuts; states whose data is out of date are flagged. A state adds its price history and a rough-guide
-  forecast with range
-- **Sugarcane page:** current FRP with the recovery premium rules, and the mandi price against the FRP
 - **Readable mandi names:** Agmarknet names like `Junnar(Alephata)` are shown as "Junnar (Alephata)"; links and
   searches keep the original name
 
@@ -145,10 +136,9 @@ FastAPI service that serves the models.
 
 - **Mandi rate board:** the current price on split-flap tiles (React Bits *SplitFlapText*) over a contour-map
   background (pre-rendered once with React Bits *Topography*, served as a 32 KB image) on a forest-green board, like the price boards in a mandi
-- **Advice slip (parchi):** the week's sell / hold call on an opaque paper slip pinned to the board, with animated paper
-  grain (*Noise*), a light that follows the pointer, a stamped verdict and the chance of a 5%+ rise
-- **Crop switcher** with a sliding forest-green thumb, **forecast tiles** with a range bar for each horizon
-  (*SpotlightCard*), and accuracy figures that count up when they scroll into view
+- **Advice slip (parchi):** the week's sell / hold call on a paper slip pinned to the board, with a stamped verdict and
+  the chance of a 5%+ rise
+- **Crop switcher** with a sliding forest-green thumb, and **forecast tiles** with a range bar for each horizon
 - **Search anywhere** (<kbd>Ctrl</kbd>/<kbd>⌘</kbd> <kbd>K</kbd>): one box that finds any of the ~1,400 mandi series in
   India by mandi, district, state or crop, every word matched (`kolar tom` = tomato mandis in Kolar), plus pages; ported
   from a [21st.dev](https://21st.dev) command-palette component, restyled with FarmStat's tokens and animated with CSS.
@@ -162,18 +152,19 @@ FastAPI service that serves the models.
   prices, round axis values, 3M / 6M / 1Y / 2Y / 5Y ranges, an optional "same weeks last year" line, gaps in reporting
   shaded and labelled instead of bridged, and a table view of the same numbers. The range and display controls sit on
   one row and the legend on its own quieter row below
-- **Live daily reports:** for every mandi in the live feed, the latest report and its date, that day's lowest-to-highest
-  lot, the change since the previous report, and a chart of the last 45 days; a "Live" chip on the rate board and the
-  feed's freshness in the sidebar
-- **Price statistics:** 52-week range and where today sits, change vs the same week last year, typical weekly move, how
-  prices moved in the same 4 weeks of past years, the seasonal pattern by month, and the distribution of the last 3 years
+- **Latest daily report:** for every mandi in the live feed, the latest report and its date, that day's
+  lowest-to-highest lot and the change since the previous report; a "Live" chip on the rate board and the feed's
+  freshness in the sidebar
+- **How this week compares:** 52-week range and where today sits, change vs the same week last year, typical weekly
+  move, and how prices moved in the same 4 weeks of past years
 - **Arrivals chart** under the price chart on the same time axis, with hover synced between the two and heavier-than-usual
   weeks shaded darker
-- **More charts:** state medians, cashew seasonality, and sugarcane price vs FRP (axis in round ₹50 steps), all with
-  hover tooltips
-- **About page:** overview, method, how to read the advice, data and updates, accuracy, a risk table, terms of use,
-  disclaimer, privacy, licences and contact, with a section rail (*LineSidebar*) that follows your reading. It stands
-  on its own: the crop switcher, side panel, search and notice are hidden there, and the tabs lead back into the app
+- **Model accuracy page:** one story from the independent test: does it beat "no change" (error, 95% interval and the
+  chance it's luck), do the likely ranges hold before and after calibration, where it works best by crop and mandi
+  type, whether the rise warning's chances are honest, and year by year
+- **About page:** overview, method, how to read the advice, data and updates, a risk table, terms and disclaimer,
+  privacy, licences and contact, with a section rail (*LineSidebar*) that follows your reading. It stands on its own:
+  the crop switcher, side panel, search and notice are hidden there, and the tabs lead back into the app
 - **Colour:** forest-green and neutral ramps graded in OKLCH, so each step looks evenly lighter or darker; every text
   colour passes WCAG AA, and the chart pair (blue forecast, orange fall) is checked for colour-blind separation
 - **Type, one face per job:** Bricolage Grotesque for headlines, Archivo for the interface and tables, Big Shoulders Display
@@ -191,9 +182,10 @@ FastAPI service that serves the models.
   <kbd>/</kbd> to search mandis, loading skeletons, and a skip link for keyboard users
 - **Links you can share, and a Back button that works:** the crop, state, mandi, tab and About section are kept in the
   address bar. Each tab, crop or mandi you open is a step in the browser history, so Back returns to the previous page
-  instead of leaving FarmStat; the app's own corrections (a mandi that doesn't sell the new crop) don't add steps
-
-The original Streamlit app (`streamlit_app.py`) still works as a simpler alternative.
+  instead of leaving FarmStat; the app's own corrections (a mandi that doesn't sell the new crop) don't add steps.
+  An old or broken link (a crop FarmStat no longer covers, an unknown mandi) opens the India overview instead of failing
+- **Tested in a browser on every push:** a Playwright suite opens every page at desktop and phone size and checks
+  navigation, the side panel, search, Back and Forward, and that nothing errors (`tests/e2e`)
 
 ## HOW THE MODEL WAS BUILT
 
@@ -211,11 +203,9 @@ Everything is in [`notebooks/FarmStat_Training.ipynb`](notebooks/FarmStat_Traini
 | K-Means | 4 market regimes (calm, choppy, spike, crash) chosen with elbow + silhouette | Clustering |
 | Classifier | Logistic Regression, Random Forest, Gradient Boosting for "5%+ rise in 2 weeks"; confusion matrix, ROC, calibration | Classification |
 | Shrinkage | Forecasts pulled towards "no change" by a factor tuned on 2019–2022 | Regularisation |
-| Ranges | Quantile gradient boosting (10th / 50th / 90th percentile) with coverage check | Uncertainty |
+| Ranges | Quantile gradient boosting (10th / 50th / 90th percentile) with coverage check, then split-conformal calibration (`scripts/calibrate_ranges.py`) | Uncertainty, conformal prediction |
 | Evaluation | MAE, MAPE, skill vs naive, direction accuracy; by crop, mandi type, year and state; two case studies (Kolar tomato 2023, Lasalgaon onion export ban); farmer back-test; permutation importance | Metrics |
 | Arecanut | Main model vs arecanut-only model vs naive with yearly retraining; empirical range from past moves with coverage check | Model selection, honest negatives |
-| Cashew | Naive vs Ridge vs gradient boosting on monthly state data, monthly retraining, split-conformal ranges | Small-data modelling, conformal prediction |
-| Sugarcane | FRP vs mandi price chart | Domain knowledge |
 
 **Final model:** Histogram Gradient Boosting with quantile loss (3 horizons × 3 quantiles), plus a gradient-boosting
 classifier for price rises, re-trained on all data up to July 2026.
@@ -250,7 +240,7 @@ flowchart LR
 ```
 
 - **Collecting:** the `ingest-mandi` Edge Function (`supabase/functions/ingest-mandi`) pulls today's onion, tomato,
-  potato, arecanut, cashew and sugarcane prices from the *Current Daily Price* resource at 16:00, 19:00 and 22:00 IST,
+  potato and arecanut prices from the *Current Daily Price* resource at 16:00, 19:00 and 22:00 IST,
   and back-fills past days from the *Variety-wise Daily Market Prices* resource, newest first, until the gap since the
   history panel is closed (`backfill_queue`). Each run is logged in `ingest_runs`.
 - **Forecasting:** every evening a GitHub Actions job reads the stored prices (public, read-only key), turns them into
@@ -285,7 +275,7 @@ flowchart TB
     M[Saved models] --> J
     J --> FC[Expected price + likely range for 1, 2, 4 weeks<br/>chance of 5%+ rise, sell / hold after storage losses]
     FC --> S[(models/web_snapshot.json.gz)]
-    S --> API[FastAPI: api/service.py<br/>/api/meta, overview, mandis, series, national, index, accuracy]
+    S --> API[FastAPI: api/service.py<br/>/api/meta, overview, mandis, series, index, accuracy]
     L[(Supabase daily_prices)] --> API2[/api/live/]
     API --> APP[React web app]
     API2 --> APP
@@ -301,8 +291,7 @@ flowchart TB
   <img src="https://img.shields.io/badge/FastAPI-000000?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/React-000000?style=flat-square&logo=react&logoColor=white" alt="React">
   <img src="https://img.shields.io/badge/Vite-000000?style=flat-square&logo=vite&logoColor=white" alt="Vite">
-  <img src="https://img.shields.io/badge/Streamlit-000000?style=flat-square&logo=streamlit&logoColor=white" alt="Streamlit">
-  <img src="https://img.shields.io/badge/Plotly-000000?style=flat-square&logo=plotly&logoColor=white" alt="Plotly">
+  <img src="https://img.shields.io/badge/Playwright-000000?style=flat-square&logo=playwright&logoColor=white" alt="Playwright">
   <img src="https://img.shields.io/badge/Jupyter-000000?style=flat-square&logo=jupyter&logoColor=white" alt="Jupyter">
 </p>
 
@@ -311,11 +300,10 @@ flowchart TB
 | Models | scikit-learn (HistGradientBoosting, quantile loss), joblib |
 | Training | Jupyter, pandas, NumPy, XGBoost, matplotlib, seaborn |
 | API | FastAPI, Uvicorn |
-| Web app | React 19, Vite, Recharts, React Bits (SplitFlapText, Noise, SpotlightCard; Topography pre-rendered to an image); Bricolage Grotesque, Archivo, Big Shoulders Display, Newsreader |
-| Simple app | Streamlit, Plotly |
+| Web app | React 19, Vite, Recharts, React Bits (SplitFlapText, LineSidebar; Topography pre-rendered to an image); Bricolage Grotesque, Archivo, Big Shoulders Display, Newsreader |
 | Live data | data.gov.in API, Supabase (Postgres, Edge Functions, pg_cron, pg_net), GitHub Actions |
 | Hosting | Vercel (FastAPI, Python 3.12) |
-| Checks | pytest, Ruff, ESLint (React and hooks rules, zero warnings), GitHub Actions CI |
+| Checks | pytest, Ruff, ESLint (React and hooks rules, zero warnings), Playwright browser tests, GitHub Actions CI |
 
 ## GETTING STARTED
 
@@ -334,11 +322,9 @@ Open <http://localhost:8000>. The data, the trained models and the built web app
 needed. API documentation is at <http://localhost:8000/docs>.
 
 The web app reads the latest forecasts from `models/web_snapshot.json.gz`, so it starts in a few seconds and only
-needs the packages in `requirements.txt` (no scikit-learn). `requirements-full.txt` adds scikit-learn, Streamlit and
+needs the packages in `requirements.txt` (no scikit-learn). `requirements-full.txt` adds scikit-learn and
 pytest for everything else. If the data or models change, the app rebuilds the snapshot on its first start (about a
 minute, needs scikit-learn).
-
-To use the simpler Streamlit app instead: `streamlit run streamlit_app.py`, then open <http://localhost:8501>.
 
 On Windows with more than one Python installed, use `py -3.12 -m venv .venv` to be sure you get the right one.
 
@@ -362,8 +348,8 @@ How the web code is organised:
 | Where | What goes there |
 |---|---|
 | `App.jsx` | Crop, state, mandi and page choice, the address bar, and one `page()` switch that picks the view |
-| `components/*View.jsx` | One file per page (overview, mandi, compare, accuracy, cashew, sugarcane, about) |
-| `components/Sidebar.jsx`, `Chrome.jsx` | The side panels for each crop, and the rail, hover panel and notice they sit in |
+| `components/*View.jsx` | One file per page (overview, mandi, compare, accuracy, about) |
+| `components/Sidebar.jsx`, `Chrome.jsx` | The state and mandi panel, and the rail, hover panel and notice it sits in |
 | `components/ui/` | Ported 21st.dev components (command palette, tabs) |
 | `components/reactbits/` | React Bits components |
 | `hooks.js` | `useMedia`, `useNarrow`, `useDesktop`, `useScrollEnd`, `useAppEvent` |
@@ -376,14 +362,25 @@ How the web code is organised:
 
 ```bash
 pip install -r requirements-train.txt
-jupyter notebook notebooks/FarmStat_Training.ipynb    # Run All, about 30 minutes
+jupyter notebook notebooks/FarmStat_Training.ipynb    # Run All, about 30 minutes: model choice, tuning, final models
 python scripts/build_snapshot.py                       # refresh the forecasts the web app shows
+```
+
+To refit the final models with the tuned settings (as the weekly job does) and re-run the independent test:
+
+```bash
+python scripts/retrain.py --force       # refit on all data; --force skips the champion / challenger check
+python scripts/evaluate.py              # walk-forward test 2023-2026 -> reports/ (about 25 minutes, resumable)
+python scripts/calibrate_ranges.py      # range calibration from the back-tests -> models/range_calibration.json
+python scripts/build_snapshot.py
 ```
 
 ### RUN THE TESTS
 
 ```bash
-pytest
+pytest                                                   # data, features, forecasts and the API
+FARMSTAT_E2E=1 python -m pytest tests/e2e -q             # the web app in a browser (pip install playwright;
+                                                         # playwright install chromium)
 ```
 
 The tests check all-India coverage, that typos are removed while real spikes are kept, that inputs use only past data
@@ -391,7 +388,7 @@ The tests check all-India coverage, that typos are removed while real spikes are
 
 ### UPDATE THE DATA
 
-`scripts/prepare_data.py` rebuilds both data files from the three source extracts (see [Data](#data)). Then run
+`scripts/prepare_data.py` rebuilds the data file from the two source extracts (see [Data](#data)). Then run
 `python scripts/build_snapshot.py` and commit the new `models/web_snapshot.json.gz`.
 
 ### DEPLOY
@@ -417,15 +414,13 @@ api/livefeed.py                     read-only live daily prices and feed status 
 web/src/                            React app (see "Change the web app" for its layout)
 web/eslint.config.js                ESLint rules for the web app
 web/dist/                           built web app
-streamlit_app.py                    Streamlit app (simpler alternative)
 src/farmstat/data.py                load and clean the weekly prices
 src/farmstat/features.py            38 leakage-free inputs and the 1/2/4-week targets
 src/farmstat/forecast.py            loads the models, forecasts, shrinkage, sell/hold advice
-src/farmstat/monthly.py             cashew / sugarcane monthly state data, features, forecaster
 src/farmstat/live.py                data.gov.in client, Supabase read/write, daily -> weekly rows
 src/farmstat/calibration.py         split-conformal range calibration used by the forecasts
 supabase/functions/ingest-mandi/    Edge Function that collects daily prices into Supabase
-.github/workflows/                  CI (lint, tests, web build check), daily forecast refresh, weekly retraining
+.github/workflows/                  CI (lint, tests, web build check, browser tests), daily forecast refresh, weekly retraining
 scripts/ingest_live.py              daily job: live weekly rows + refreshed forecasts
 scripts/retrain.py                  weekly job: retrain, champion vs challenger
 scripts/evaluate.py                 independent validation: walk-forward, Diebold-Mariano, bootstrap, conformal, reliability
@@ -433,19 +428,17 @@ scripts/calibrate_ranges.py         learns the range calibration from the back-t
 reports/                            evaluation.json and model_evaluation.md written by scripts/evaluate.py
 docs/FarmStat_presentation.pptx     10-slide project presentation (generator: docs/deck/build_presentation.js)
 models/farmstat_model.joblib        trained weekly models (+ arecanut ranges)
-models/cashew_model.joblib          cashew monthly model and its error ranges
 models/metrics.json                 test results
 models/range_calibration.json       how far to move each end of the forecast ranges (from scripts/calibrate_ranges.py)
 models/web_snapshot.json.gz         latest forecasts, advice and test results the web app shows
 notebooks/FarmStat_Training.ipynb   full training and validation (with outputs)
 figures/                            charts from the notebook
 data/mandi_weekly.csv.gz            635,658 weekly reports: onion, tomato, potato, arecanut
-data/state_monthly.csv.gz           monthly state prices: cashew, sugarcane
 data/live_weekly.csv.gz             weekly rows built from the live feed (written by the daily job)
 scripts/prepare_data.py             builds the data file from the source panel
 scripts/build_snapshot.py           runs the models and saves models/web_snapshot.json.gz
 vercel.json, .vercelignore          Vercel deployment settings
-tests/                              pytest tests
+tests/                              pytest tests (tests/e2e: browser tests, run with FARMSTAT_E2E=1)
 ```
 
 ## DATA
@@ -454,9 +447,7 @@ tests/                              pytest tests
 |---|---|---|
 | Weekly modal price (arrival-weighted) and arrivals | [Agmarknet](https://agmarknet.gov.in), via the [TOP Digital Twin](https://github.com/masroor01/TOP-Digital-Twin) weekly panel | Onion, tomato, potato · 24 states · ~980 mandis · Jan 2003 – Jul 2026 · real (non-imputed) weeks only |
 | Daily arecanut prices by mandi and variety | Agmarknet, via [Malabar Mandi Prices](https://github.com/achuthpv/malabar-mandi-prices) | Karnataka and Kerala · Jul 2021 – Jul 2026, aggregated to weekly |
-| Monthly state weighted-average price and arrivals | Agmarknet, via [India Mandi Arrivals](https://github.com/herrrickshaw/india-mandi-arrivals) | Cashew and sugarcane · Jan 2019 – Oct 2026 |
-| Sugarcane FRP | Cabinet Committee on Economic Affairs decisions | 2019–20 to 2026–27 seasons |
-| Live daily prices (min, max, modal) | [data.gov.in](https://data.gov.in) API: *Current Daily Price of Various Commodities* and *Variety-wise Daily Market Prices* | All six crops · from 21 Jul 2026, updated three times a day |
+| Live daily prices (min, max, modal) | [data.gov.in](https://data.gov.in) API: *Current Daily Price of Various Commodities* and *Variety-wise Daily Market Prices* | Onion, tomato, potato, arecanut · from 21 Jul 2026, updated three times a day |
 
 All price data is from Agmarknet, Directorate of Marketing & Inspection, Government of India, used under the
 Open Government Data License – India.
@@ -477,9 +468,9 @@ Open Government Data License – India.
 - **Weather is not used.** Rainfall data for every mandi's district would be a natural next input.
 - **Arecanut has no forecast,** only today's price with the usual range: with five years of data no model beat
   "no change". Arrival quantities aren't in the arecanut source and could help.
-- **Cashew is monthly and state-level only,** with five usable states. Its forecast only ties with "no change", and
-  Maharashtra reports processed kernels, not raw nuts.
-- **Sugarcane is information only,** because most of it is sold to mills at the government FRP.
+- **Cashew and sugarcane were dropped** in November 2026. Cashew has only monthly state averages for five states and
+  its best model only tied with "no change"; sugarcane is mostly sold to mills at the government FRP, so a mandi
+  forecast doesn't help. Both are in the git history.
 
 ## LICENSE
 

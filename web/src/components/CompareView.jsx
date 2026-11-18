@@ -1,12 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowDownUp } from 'lucide-react';
-import { Bar, BarChart, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import Delta from './Delta.jsx';
 import DotStrip from './DotStrip.jsx';
-import { api } from '../api.js';
 import { quantile } from '../stats.js';
-import { compactRupees, date, pct0, placeName, rupees, weeks } from '../format.js';
-import { T } from '../theme.js';
+import { date, pct0, placeName, rupees, weeks } from '../format.js';
 
 const varietyOf = m => (m.includes('(') ? m.slice(m.lastIndexOf('(') + 1, -1) : null);
 
@@ -21,9 +18,7 @@ function SortTh({ id, label, sort, setSort, right, className = '' }) {
 
 export default function CompareView({ crop, state, market, mandis, onMarket, onOpen }) {
   const variety = crop === 'Arecanut' ? varietyOf(market) : null;
-  const [nat, setNat] = useState(null);
   const [sort, setSort] = useState({ id: 'price', desc: true });
-  useEffect(() => { api('national', { crop, variety }).then(setNat).catch(() => setNat(null)); }, [crop, variety]);
 
   const naive = mandis.every(m => m.naive);
   const h = mandis[0]?.horizon ?? 2;
@@ -107,36 +102,6 @@ export default function CompareView({ crop, state, market, mandis, onMarket, onO
         </div>
       </section>
 
-      {nat && (
-        <div className="grid-2">
-          <section className="panel">
-            <div className="panel-head"><div><h2>Median price by state</h2>
-              <p className="sub">Mandis reporting in the last 2 weeks of data, ₹ per quintal. {state} is darker.</p></div></div>
-            <ResponsiveContainer width="100%" height={Math.max(160, nat.states.length * 30 + 20)}>
-              <BarChart data={nat.states} layout="vertical" margin={{ top: 0, right: 64, bottom: 0, left: 8 }} barCategoryGap={6}>
-                <XAxis type="number" hide />
-                <YAxis type="category" dataKey="state" width={130} tick={{ fontSize: 12, fill: T.ink2 }} tickLine={false} axisLine={false} />
-                <Tooltip cursor={{ fill: 'rgba(22,24,19,0.05)' }} formatter={(v, _n, p) => [`${rupees(v)} (${p.payload.mandis} mandis)`, 'Median']} />
-                <Bar dataKey="median" radius={[0, 4, 4, 0]} maxBarSize={18} isAnimationActive={false}>
-                  {nat.states.map(s => <Cell key={s.state} fill={s.state === state ? T.forest : T.forestLight} />)}
-                  <LabelList dataKey="median" position="right" formatter={compactRupees} fontSize={12} fill={T.ink} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </section>
-          <section className="panel">
-            <div className="panel-head"><div><h2>Highest-paying mandis in India</h2>
-              <p className="sub">Latest reports, last 2 weeks of data.</p></div></div>
-            <table className="table">
-              <thead><tr><th>Mandi</th><th>State</th><th className="r">Price</th></tr></thead>
-              <tbody>{nat.top.map(t => (
-                <tr key={`${t.state}-${t.market}`}><td>{placeName(t.market)}<div className="mandi-dist">{t.district}</div></td>
-                  <td>{t.state}</td><td className="r num">{rupees(t.price)}</td></tr>
-              ))}</tbody>
-            </table>
-          </section>
-        </div>
-      )}
     </>
   );
 }

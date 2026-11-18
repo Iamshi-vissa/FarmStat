@@ -35,8 +35,7 @@ export default function SearchButton({ crops, onPick }) {
 
   const items = useMemo(() => {
     const cropItems = crops.map(c => ({ id: `c-${c.id}`, label: c.id, group: 'Crops', crop: c.id,
-      hint: c.kind === 'weekly' ? `${c.series.toLocaleString('en-IN')} mandi series` : c.kind === 'monthly' ? 'Monthly state prices' : 'Government price (FRP)',
-      view: c.kind === 'weekly' ? 'market' : 'overview' }));
+      hint: `${c.series.toLocaleString('en-IN')} mandi series across India`, view: 'overview' }));
     const mandis = (rows ?? []).map(([crop, state, market, district, price]) => ({
       id: `m-${crop}-${state}-${market}`, label: placeName(market), hint: `${district}, ${state}`, group: `${crop} mandis`,
       aside: rupees(price), keywords: `${market} ${district} ${state} ${crop}`, crop, state, market, view: 'market' }));

@@ -16,17 +16,10 @@ export const pct = (v, digits = 1) => {
 };
 export const pct0 = v => (v == null ? '–' : `${Math.round(v * 100)}%`);
 export const weeks = h => `${h} week${h > 1 ? 's' : ''}`;
-export const months = h => `${h} month${h > 1 ? 's' : ''}`;
 
 const dfmt = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-const mfmt = new Intl.DateTimeFormat('en-IN', { month: 'short', year: 'numeric' });
 export const date = s => (s ? dfmt.format(new Date(s)) : '–');
-export const monthLabel = s => (s ? mfmt.format(new Date(s)) : '–');
-export const axisDate = s => mfmt.format(new Date(s));
 
 // Agmarknet names often run into their brackets ("Junnar(Alephata)", "Karambakkudi(Uzhavar Sandhai )"); tidy them for display.
 // Only for showing a name: lookups and links keep the raw name.
 export const placeName = s => (s ? s.replace(/\s*\(\s*/g, ' (').replace(/\s*\)/g, ')').replace(/\s{2,}/g, ' ').trim() : s);
-
-// Cashew is reported either as raw nuts or as processed kernels (several times dearer).
-export const cashewProduct = p => (/raw/i.test(p) ? 'Raw nuts' : 'Kernels');

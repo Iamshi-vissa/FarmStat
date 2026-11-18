@@ -85,9 +85,8 @@ sub(s, `${mx.n_rows.toLocaleString('en-US')} weekly rows from ${mx.n_series.toLo
 const rows = [
   ['Source', 'What it gives', 'Coverage'],
   ['Agmarknet weekly panel', 'Modal price and arrivals per mandi', 'Onion, tomato, potato, 2003 to 2026'],
-  ['Agmarknet monthly', 'State average prices', 'Cashew, 5 states, 2019 to 2026'],
-  ['Government (CCEA)', 'Fair and Remunerative Price', 'Sugarcane, yearly'],
-  ['data.gov.in daily feeds', 'Min, max, modal price per day', 'All six crops, live since Nov 2026'],
+  ['Agmarknet daily, by variety', 'Modal price per mandi and variety', 'Arecanut, Karnataka and Kerala, 2021 to 2026'],
+  ['data.gov.in daily feeds', 'Min, max, modal price per day', 'All four crops, three times a day'],
 ].map((r, i) => r.map(t => ({ text: t, options: i === 0 ? { bold: true, color: 'FFFFFF', fill: { color: HEX.forest9 } } : { color: HEX.ink } })));
 s.addTable(rows, { x: 0.5, y: 1.6, w: 9, colW: [2.4, 3.3, 3.3], fontSize: 13, border: { type: 'solid', pt: 0.5, color: HEX.grid }, rowH: 0.42, objectName: 'sources-table' });
 card(s, 0.5, 3.95, 9, 0.95, 'cleaning-card');
@@ -115,7 +114,7 @@ steps.forEach(([head, body], i) => {
   s.addText(body, { x: x + 0.12, y: 2.42, w: bw - 0.24, h: 1.8, fontSize: 12, color: last ? 'BFE6C8' : HEX.ink2, margin: 0, valign: 'top', isTextBox: true, objectName: `step-${i + 1}-body` });
   if (!last) s.addShape(pres.shapes.ISOSCELES_TRIANGLE, { x: x + bw - 0.005, y: 2.97, w: 0.14, h: 0.12, rotate: 90, fill: { color: HEX.grey }, line: { color: HEX.grey }, objectName: `arrow-${i + 1}`, flipH: false });
 });
-s.addText('Tuned: learning rate 0.03, 15 leaves per tree, at least 1,000 rows per leaf. Arecanut, cashew and sugarcane get no forecast model where none beat "no change".',
+s.addText('Tuned: learning rate 0.03, 15 leaves per tree, at least 1,000 rows per leaf. Arecanut gets no forecast: no model beat "no change" for it.',
   { x: 0.5, y: 4.5, w: 9, h: 0.55, fontSize: 12, color: HEX.ink2, margin: 0, isTextBox: true, objectName: 'tuning-note' });
 
 // 5. Validation design ------------------------------------------------------------------------------------------

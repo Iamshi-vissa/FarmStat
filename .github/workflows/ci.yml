@@ -2,6 +2,7 @@
 #  - Python: lint (ruff) and the tests
 #  - Web app: the built files in web/dist match the source. Vercel serves web/dist as committed (it doesn't run
 #    the Vite build), so a source change pushed without rebuilding would never reach the live site.
+#  - Browser: the app in a real Chromium (every page, navigation, the side panel, search, phone layout, no errors).
 name: CI
 
 on:
@@ -24,7 +25,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-full.txt
       - run: pip install -r requirements-full.txt ruff
-      - run: ruff check --select F,E9,B,UP,SIM,PERF --target-version py311 api src scripts tests streamlit_app.py index.py
+      - run: ruff check --select F,E9,B,UP,SIM,PERF --target-version py311 api src scripts tests index.py
       - run: python -m pytest -q tests
 
   web-dist:
@@ -50,3 +51,19 @@ jobs:
             echo "::error::web/dist doesn't match web/src. Run 'npm run build' in web/ and commit web/dist."
             exit 1
           fi
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-full.txt
+      - run: pip install -r requirements-full.txt playwright
+      - run: python -m playwright install --with-deps chromium
+      - run: python -m pytest -q tests/e2e
+        env:
+          FARMSTAT_E2E: "1"

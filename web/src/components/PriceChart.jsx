@@ -3,7 +3,7 @@ import {
   Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts';
-import { compactRupees, date, monthLabel, pct, rupees } from '../format.js';
+import { compactRupees, date, pct, rupees } from '../format.js';
 import { niceTicks } from '../stats.js';
 import { T } from '../theme.js';
 
@@ -71,10 +71,10 @@ function TopLabel({ viewBox, lines }) {
   );
 }
 
-function Tip({ active, payload, period, naive }) {
+function Tip({ active, payload, naive }) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
-  const when = period === 'month' ? monthLabel(d.t) : `Week of ${date(d.t)}`;
+  const when = `Week of ${date(d.t)}`;
   const Row = ({ color, dash, value, label }) => (
     <div className="tip-row">
       <svg width="14" height="8" aria-hidden="true"><line x1="0" y1="4" x2="14" y2="4" stroke={color} strokeWidth="2" strokeDasharray={dash} /></svg>
@@ -88,26 +88,27 @@ function Tip({ active, payload, period, naive }) {
       {d.p50 != null && !d.isNow && !naive && <Row color={C.fc} dash="4 3" value={rupees(d.p50)} label="forecast" />}
       {d.band && !d.isNow && <Row color="rgba(42,120,214,0.35)" value={`${rupees(d.band[0])} – ${rupees(d.band[1])}`} label={naive ? 'usual range' : 'likely range'} />}
       {d.lastYear != null && <Row color={C.ctx} value={rupees(d.lastYear)} label="a year earlier" />}
-      {d.season && <Row color="rgba(163,166,158,0.6)" value={`${rupees(d.season[0])} – ${rupees(d.season[1])}`} label={`usual in ${seasonWord(d.t, period)}`} />}
+      {d.season && <Row color="rgba(163,166,158,0.6)" value={`${rupees(d.season[0])} – ${rupees(d.season[1])}`} label={`usual in ${seasonWord(d.t)}`} />}
     </div>
   );
 }
 
-const seasonWord = (t, period) => period === 'month' ? 'this month'
-  : `${['early', 'mid', 'late'][Math.min(2, Math.floor((new Date(t).getDate() - 1) / 10))]} ${new Date(t).toLocaleString('en-IN', { month: 'short' })}`;
+const seasonWord = t => `${['early', 'mid', 'late'][Math.min(2, Math.floor((new Date(t).getDate() - 1) / 10))]} ${new Date(t).toLocaleString('en-IN', { month: 'short' })}`;
 
 // Seasonal context: for each date, the 10th-90th percentile of prices in the same weeks (±1) of the previous
 // 5 years. Needs at least 3 such weeks.
-function seasonalBands(rows, full, dateKey, period) {
+const weekOfYear = d => Math.floor((d - new Date(d.getFullYear(), 0, 1)) / (7 * DAY));
+
+function seasonalBands(rows, full) {
   const pts = full.filter(h => h.price != null).map(h => {
-    const d = new Date(h[dateKey]);
-    return { y: d.getFullYear(), k: period === 'month' ? d.getMonth() : Math.floor((d - new Date(d.getFullYear(), 0, 1)) / (7 * DAY)), p: h.price };
+    const d = new Date(h.week);
+    return { y: d.getFullYear(), k: weekOfYear(d), p: h.price };
   });
-  const span = period === 'month' ? 0 : 1, wrap = period === 'month' ? 12 : 52;
+  const span = 1, wrap = 52;
   const cache = new Map();
   rows.forEach(r => {
     const d = new Date(r.t), y = d.getFullYear();
-    const k = period === 'month' ? d.getMonth() : Math.floor((d - new Date(y, 0, 1)) / (7 * DAY));
+    const k = weekOfYear(d);
     const key = `${y}-${k}`;
     if (!cache.has(key)) {
       const near = pts.filter(x => x.y < y && x.y >= y - 5 && Math.min(Math.abs(x.k - k), wrap - Math.abs(x.k - k)) <= span)
@@ -119,39 +120,35 @@ function seasonalBands(rows, full, dateKey, period) {
   });
 }
 
-export function buildRows({ history, full = history, forecast, dateKey = 'week', showLastYear, showSeason }) {
-  const period = dateKey === 'month' ? 'month' : 'week';
-  const byT = new Map(full.map(h => [ts(h[dateKey]), h.price]));
-  const shift = t => {   // same period one year earlier
-    if (period === 'month') { const d = new Date(t); d.setFullYear(d.getFullYear() - 1); return d.getTime(); }
-    return t - 364 * DAY;
-  };
+export function buildRows({ history, full = history, forecast, showLastYear, showSeason }) {
+  const byT = new Map(full.map(h => [ts(h.week), h.price]));
+  const shift = t => t - 364 * DAY;   // the same week one year earlier
   const rows = history.map((h, i) => {
-    const t = ts(h[dateKey]);
+    const t = ts(h.week);
     const prev = history[i - 1]?.price;
     return { t, price: h.price, wow: prev ? h.price / prev - 1 : null, arrivals: h.arrivals_t ?? null };
   });
   forecast.forEach(f => {
-    const t = ts(f[dateKey]);
+    const t = ts(f.week);
     let row = rows.find(r => r.t === t);
     if (!row) { row = { t, future: true }; rows.push(row); }
     Object.assign(row, { p50: f.p50, band: [f.p10, f.p90], isNow: f.h === 0 });
   });
   if (showLastYear) rows.forEach(r => { r.lastYear = byT.get(shift(r.t)) ?? null; });
-  // break the line where reports stop for more than 3 weeks (or 2 months), instead of drawing a straight bridge
-  const maxGap = (period === 'month' ? 62 : 21) * DAY;
+  // break the line where reports stop for more than 3 weeks, instead of drawing a straight bridge
+  const maxGap = 21 * DAY;
   const real = rows.filter(r => r.price != null).sort((a, b) => a.t - b.t);
   for (let i = 1; i < real.length; i++) {
     if (real[i].t - real[i - 1].t > maxGap) rows.push({ t: (real[i].t + real[i - 1].t) / 2, gap: [real[i - 1].t, real[i].t] });
   }
   rows.sort((a, b) => a.t - b.t);
-  if (showSeason) seasonalBands(rows, full, dateKey, period);
-  return { rows, period };
+  if (showSeason) seasonalBands(rows, full);
+  return { rows };
 }
 
 // Price history (ink + soft wash), forecast median (blue dashed), likely range (blue band) in a shaded forecast zone,
 // optional "same weeks last year" context line, and direct labels for today's price and the furthest forecast.
-export default function PriceChart({ rows, period = 'week', naive = false, height = 340, syncId, horizonLabel, compact = false }) {
+export default function PriceChart({ rows, naive = false, height = 340, syncId, horizonLabel, compact = false }) {
   const now = rows.find(r => r.isNow);
   const last = rows[rows.length - 1];
   const { domain, ticks } = useMemo(() => {
@@ -159,7 +156,7 @@ export default function PriceChart({ rows, period = 'week', naive = false, heigh
     return niceTicks(Math.min(...vals), Math.max(...vals));
   }, [rows]);
   const xDomain = [rows[0]?.t, last?.t];
-  const xt = monthTicks(...xDomain, compact ? 4 : period === 'month' ? 6 : 8);
+  const xt = monthTicks(...xDomain, compact ? 4 : 8);
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -183,7 +180,7 @@ export default function PriceChart({ rows, period = 'week', naive = false, heigh
           tick={AXIS} tickLine={false} axisLine={{ stroke: C.grid }} interval={0} />
         <YAxis domain={domain} ticks={ticks} tickFormatter={axisRupeesFor(ticks)} tick={AXIS} tickLine={false} axisLine={false}
           width={compact ? Y_WIDTH_COMPACT : Y_WIDTH} allowDataOverflow />
-        <Tooltip content={<Tip period={period} naive={naive} />} cursor={{ stroke: C.axis, strokeWidth: 1 }} isAnimationActive={false} />
+        <Tooltip content={<Tip naive={naive} />} cursor={{ stroke: C.axis, strokeWidth: 1 }} isAnimationActive={false} />
         <Area dataKey="season" stroke={C.ctx} strokeOpacity={0.35} strokeDasharray="2 3" fill={C.ctx} fillOpacity={0.14}
           isAnimationActive={false} connectNulls activeDot={false} />
         <Area dataKey="price" stroke="none" fill="url(#priceWash)" isAnimationActive={false} connectNulls={false} activeDot={false} />
@@ -197,7 +194,7 @@ export default function PriceChart({ rows, period = 'week', naive = false, heigh
         )}
         {now && (
           <ReferenceLine x={now.t} stroke={C.axis} strokeWidth={1}
-            label={<TopLabel lines={[rupees(now.price), compact ? '' : period === 'month' ? 'latest month' : 'latest week']} />} />
+            label={<TopLabel lines={[rupees(now.price), compact ? '' : 'latest week']} />} />
         )}
         {now && <ReferenceDot x={now.t} y={now.price} r={5} fill={C.ink} stroke={C.surface} strokeWidth={2} ifOverflow="visible" />}
         {last && last.future && (
@@ -247,16 +244,16 @@ export function ArrivalsChart({ rows, syncId, height = 130, compact = false }) {
 }
 
 // The same numbers as a table, for screen readers and anyone who prefers rows to lines.
-export function ChartTable({ rows, naive, period }) {
+export function ChartTable({ rows, naive }) {
   const list = rows.filter(r => !r.gap).reverse().slice(0, 30);
   return (
     <div className="table-wrap" style={{ maxHeight: 340 }}>
       <table className="table">
-        <thead><tr><th>{period === 'month' ? 'Month' : 'Week of'}</th><th className="r">Price</th><th className="r">Change</th>
+        <thead><tr><th>Week of</th><th className="r">Price</th><th className="r">Change</th>
           <th className="r">{naive ? 'Usual range' : 'Forecast (likely range)'}</th>{rows.some(r => r.season) && <th className="r">Usual for the season</th>}{rows.some(r => r.arrivals != null) && <th className="r">Arrivals</th>}</tr></thead>
         <tbody>{list.map(r => (
           <tr key={r.t}>
-            <td className="num">{period === 'month' ? monthLabel(r.t) : date(r.t)}</td>
+            <td className="num">{date(r.t)}</td>
             <td className="r num">{r.price != null ? rupees(r.price) : '–'}</td>
             <td className="r num">{r.wow != null ? pct(r.wow) : '–'}</td>
             <td className="r num">{r.band && !r.isNow ? `${naive ? '' : `${rupees(r.p50)} (`}${rupees(r.band[0])} – ${rupees(r.band[1])}${naive ? '' : ')'}` : '–'}</td>

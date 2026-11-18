@@ -6,14 +6,11 @@ Build the data files used by FarmStat.
      (https://github.com/masroor01/TOP-Digital-Twin, data/agmarknet_weekly/longhistory/)
    * arecanut: daily Agmarknet rows from Malabar Mandi Prices
      (https://github.com/achuthpv/malabar-mandi-prices, data/prices/arecanut/*.csv)
-2. data/state_monthly.csv.gz - monthly state prices for cashew and sugarcane
-   * `state_monthly.csv.gz` from India Mandi Arrivals
-     (https://github.com/herrrickshaw/india-mandi-arrivals, data/agmarknet/)
 
-All three are compiled from Agmarknet (Government of India, Open Government Data License - India).
+Both are compiled from Agmarknet (Government of India, Open Government Data License - India).
 
 Usage:
-    python scripts/prepare_data.py TOP_PANEL.csv ARECANUT_DIR STATE_MONTHLY.csv.gz
+    python scripts/prepare_data.py TOP_PANEL.csv ARECANUT_DIR
 """
 
 import sys
@@ -56,23 +53,12 @@ def arecanut(folder: str) -> pd.DataFrame:
     return w.assign(crop="Arecanut", arrivals_t=float("nan"))       # this source has no arrival quantities
 
 
-def state_monthly(src: str) -> pd.DataFrame:
-    s = pd.read_csv(src)
-    s = s[s["commodity_id"].isin([33, 122])].copy()                 # 33 = Cashewnuts, 122 = Sugarcane
-    s["crop"] = s["commodity_id"].map({33: "Cashew", 122: "Sugarcane"})
-    s["state"] = s["state"].replace(FIX_STATE)
-    return s.rename(columns={"price_rs_qtl": "price"})[["crop", "state", "month", "price", "arrivals_t"]]
-
-
-def main(top_src: str, arecanut_dir: str, monthly_src: str) -> None:
+def main(top_src: str, arecanut_dir: str) -> None:
     w = pd.concat([top_crops(top_src), arecanut(arecanut_dir)])[COLS]
     w["price"], w["arrivals_t"] = w["price"].round(1), w["arrivals_t"].round(2)
     w.sort_values(["crop", "state", "market", "week"]).to_csv(DATA / "mandi_weekly.csv.gz", index=False, compression="gzip")
     print(f"mandi_weekly: {len(w):,} rows, {w.groupby(['crop', 'state', 'market']).ngroups} series")
-    m = state_monthly(monthly_src).sort_values(["crop", "state", "month"])
-    m.to_csv(DATA / "state_monthly.csv.gz", index=False, compression="gzip")
-    print(f"state_monthly: {len(m):,} rows")
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:4])
+    main(*sys.argv[1:3])

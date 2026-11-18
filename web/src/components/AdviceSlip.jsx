@@ -1,26 +1,15 @@
-import { useRef } from 'react';
-import Noise from './reactbits/Noise.jsx';
 import { pct0 } from '../format.js';
 
-const STAMP = { Hold: 'hold', 'Sell now': 'sell', 'Your call': 'call', Information: 'info' };
+const STAMP = { Hold: 'hold', 'Sell now': 'sell', 'Your call': 'call' };
 
-// The parchi: an opaque paper slip with the week's advice. Animated grain (React Bits Noise) and a soft light
-// that follows the pointer make the paper feel physical; the verdict is stamped on whenever the mandi changes.
-export default function AdviceSlip({ action, headline, detail, chance, chanceLabel, footnote, label }) {
-  const ref = useRef(null);
-  const onMove = e => {
-    const r = ref.current?.getBoundingClientRect();
-    if (!r) return;
-    ref.current.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`);
-    ref.current.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`);
-  };
+// The parchi: a paper slip pinned to the rate board with the week's advice, stamped with the verdict.
+export default function AdviceSlip({ action, headline, detail, chance, chanceLabel, footnote, label = 'This week’s call' }) {
   return (
     <div className="slip-wrap">
-      <article className="slip" ref={ref} onPointerMove={onMove} role="status" aria-label={`Advice: ${action}. ${headline}`}>
+      <article className="slip" role="status" aria-label={`Advice: ${action}. ${headline}`}>
         <div className="slip-paper" aria-hidden="true" />
-        <Noise opacity={0.07} size={1} fps={6} blendMode="multiply" contrast={0.45} dust={0.05} />
         <div className="slip-top">
-          <span className="slip-label"><b>{label ?? (action === 'Information' ? 'Good to know' : 'This week’s call')}</b>FarmStat {action === 'Information' ? 'note' : 'estimate'}</span>
+          <span className="slip-label"><b>{label}</b>FarmStat estimate</span>
           <span className={`stamp ${STAMP[action] ?? 'call'}`}>{action}</span>
         </div>
         <div className="slip-headline">{headline}</div>

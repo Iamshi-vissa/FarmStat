@@ -1,8 +1,7 @@
 """
-Prepares everything the web app shows: the latest forecast for every mandi, price history,
-cashew and sugarcane data, and the test results.
+Prepares everything the web app shows: the latest forecast for every mandi, price history and the test results.
 
-Everything that needs the trained models (the forecasts, advice, cashew forecasts and test results) is
+Everything that needs the trained models (the forecasts, advice and test results) is
 computed once and saved as a snapshot, so the web app itself runs without scikit-learn:
 
   1. models/web_snapshot.json.gz   committed with the repo (used on Vercel, where the disk is read-only)
@@ -32,22 +31,17 @@ sys.path.insert(0, str(ROOT / "src"))
 from farmstat.data import CROPS, DATA_FILE, KEY, LIVE_FILE, load_prices  # noqa: E402
 from farmstat.calibration import CALIBRATION_FILE  # noqa: E402
 from farmstat.forecast import DEFAULT_MODEL_PATH, MAX_HOLD_WEEKS  # noqa: E402
-from farmstat.monthly import M_HORIZONS, MONTHLY_FILE, build_monthly, load_monthly, product_label  # noqa: E402
 
-CASHEW_MODEL = ROOT / "models" / "cashew_model.joblib"
 SNAPSHOT = ROOT / "models" / "web_snapshot.json.gz"
-SNAPSHOT_VERSION = "4"   # bump when the snapshot's contents change shape (4: calibrated ranges)
+SNAPSHOT_VERSION = "5"   # bump when the snapshot's contents change shape (5: weekly crops only)
 ACTIVE_WEEKS = 8
 WARMUP_WEEKS = 4        # a live series needs this many reported weeks in the last 13 before the model forecasts it
-FRP = [("2019-20", "2019-10-01", 275), ("2020-21", "2020-10-01", 285), ("2021-22", "2021-10-01", 290),
-       ("2022-23", "2022-10-01", 305), ("2023-24", "2023-10-01", 315), ("2024-25", "2024-10-01", 340),
-       ("2025-26", "2025-10-01", 355), ("2026-27", "2026-10-01", 365)]
 
 
 def fingerprint() -> str:
     """Content hash of the data and models the snapshot was built from."""
     h = hashlib.md5(SNAPSHOT_VERSION.encode())
-    for p in [DATA_FILE, LIVE_FILE, MONTHLY_FILE, DEFAULT_MODEL_PATH, CASHEW_MODEL, CALIBRATION_FILE]:
+    for p in [DATA_FILE, LIVE_FILE, DEFAULT_MODEL_PATH, CALIBRATION_FILE]:
         if p.exists():
             h.update(p.read_bytes())
     return h.hexdigest()[:12]
@@ -81,14 +75,12 @@ def write_snapshot(snap: dict, path: Path) -> None:
 def build_snapshot(prices: pd.DataFrame, fp: str) -> dict:
     """Run the trained models over the latest data. Needs scikit-learn (see requirements-full.txt)."""
     try:
-        import joblib
         import sklearn  # noqa: F401
     except ImportError as e:
         raise RuntimeError("The saved forecasts don't match the current data or models, and rebuilding them "
                            "needs scikit-learn: pip install -r requirements-full.txt") from e
     from farmstat.features import build_dataset
     from farmstat.forecast import Forecaster
-    from farmstat.monthly import MonthlyForecaster
 
     model = Forecaster.load()
     ds = build_dataset(prices, states=model.states)
@@ -110,8 +102,7 @@ def build_snapshot(prices: pd.DataFrame, fp: str) -> dict:
             "prob_rise", "advice", "hold_weeks", "advice_headline", "advice_detail", "live", "warming"]
     keep += [f"p{q}_{h}" for h in model.horizons for q in (10, 50, 90)]
     snap = dict(fingerprint=fp, version=model.version, horizons=list(model.horizons),
-                metrics=json.loads(json.dumps(model.metrics, default=_clean)),
-                cashew=_cashew(MonthlyForecaster(joblib.load(CASHEW_MODEL))), latest=latest[keep])
+                metrics=json.loads(json.dumps(model.metrics, default=_clean)), latest=latest[keep])
     return snap
 
 
@@ -141,24 +132,6 @@ def _warm_up(latest: pd.DataFrame, ds: pd.DataFrame, horizons) -> pd.DataFrame:
     latest.loc[warm, "advice_detail"] = (f"This mandi's live reports have just resumed. Forecasts start once it has "
                                           f"{WARMUP_WEEKS} recent weeks; until then the range shows how prices usually move.")
     return latest
-
-
-def _cashew(fc) -> dict:
-    df = load_monthly("Cashew")
-    last = build_monthly(df).sort_values("month").groupby("state").tail(1)
-    last = last.join(fc.predict(last))
-    states = []
-    for _, r in last.iterrows():
-        hist = df[df["state"] == r["state"]].sort_values("month")
-        fcast = [dict(month=_clean(r["month"]), p10=_clean(r["price"]), p50=_clean(r["price"]), p90=_clean(r["price"]), h=0)]
-        fcast += [dict(month=_clean(r["month"] + pd.DateOffset(months=h)), h=h, p10=_clean(r[f"p10_{h}"]),
-                       p50=_clean(r[f"p50_{h}"]), p90=_clean(r[f"p90_{h}"])) for h in M_HORIZONS]
-        states.append(dict(state=r["state"], product=product_label("Cashew", hist["price"].median()),
-                           month=_clean(r["month"]), price=_clean(r["price"]),
-                           history=records(hist[["month", "price"]]), forecast=fcast))
-    season = [dict(month=pd.Timestamp(2000, int(m), 1).strftime("%b"), pct=_clean(v))
-              for m, v in sorted(fc.bundle["season"].items())]
-    return json.loads(json.dumps(dict(states=states, season=season, metrics=fc.metrics), default=_clean))
 
 
 def _clean(v):
@@ -195,7 +168,6 @@ class FarmData:
                     continue
         self.latest = snap["latest"]
         self.horizons, self.version, self.metrics = snap["horizons"], snap["version"], snap["metrics"]
-        self._cashew = snap["cashew"]
         # last 12 weekly prices per series, for the sparklines in the mandi list
         recent = self.prices[self.prices["week"] >= self.prices["week"].max() - pd.Timedelta(weeks=40)]
         last12 = recent.sort_values(KEY + ["week"]).groupby(KEY, sort=False).tail(12)   # sort once, not per series
@@ -203,7 +175,7 @@ class FarmData:
         # row positions of each series, so a mandi's history is a lookup instead of a scan of every row
         self._rows = self.prices.groupby(KEY, sort=False).indices
         self._overview: dict[str, dict | None] = {}
-        self._sugarcane: dict | None = None
+        self._accuracy: dict | None = None
 
     # ── weekly crops ────────────────────────────────────────────────────────
     def meta(self) -> dict:
@@ -216,8 +188,6 @@ class FarmData:
                 crops.append(dict(id=c, kind="weekly", series=len(sub),
                                   states=[dict(name=s, count=int(n)) for s, n in sub.groupby("state").size().items()],
                                   data_until=_clean(sub["week"].max()), naive=bool(sub["naive"].all())))
-        crops.append(dict(id="Cashew", kind="monthly"))
-        crops.append(dict(id="Sugarcane", kind="info"))
         return dict(crops=crops, n_mandis=int(pd.DataFrame({"s": lt["state"], "b": base}).drop_duplicates().shape[0]),
                     n_states=int(lt["state"].nunique()), horizons=self.horizons,
                     max_hold_weeks=MAX_HOLD_WEEKS, version=self.version)
@@ -302,37 +272,31 @@ class FarmData:
             top=records(fresh.sort_values("price", ascending=False).head(5)[cols]),
         )
 
-    def national(self, crop: str, variety: str | None = None) -> dict:
-        sub = self.latest[self.latest["crop"] == crop]
-        if variety:
-            sub = sub[sub["market"].str.endswith(f"({variety})")]
-        recent = sub[sub["week"] >= sub["week"].max() - pd.Timedelta(weeks=2)]
-        states = recent.groupby("state")["price"].agg(["median", "size"]).sort_values("median", ascending=False)
-        top = recent.sort_values("price", ascending=False).head(15)
-        return dict(states=[dict(state=s, median=_clean(m), mandis=int(n)) for s, (m, n) in states.iterrows()],
-                    top=records(top[["state", "district", "market", "week", "price", "advice"]]))
-
-    # ── cashew ──────────────────────────────────────────────────────────────
-    def cashew(self) -> dict:
-        return self._cashew
-
-    # ── sugarcane ───────────────────────────────────────────────────────────
-    def sugarcane(self) -> dict:
-        if self._sugarcane is None:
-            self._sugarcane = self._build_sugarcane()
-        return self._sugarcane
-
-    def _build_sugarcane(self) -> dict:
-        s = pd.read_csv(MONTHLY_FILE)
-        s = s[(s["crop"] == "Sugarcane") & (s["state"] == "Chhattisgarh") & s["price"].notna()].sort_values("month")
-        return dict(frp=[dict(season=a, start=b, price=c) for a, b, c in FRP],
-                    current=dict(season="2026-27", price=365, recovery=10.25, step=3.56, floor=338.3, floor_below=9.5),
-                    chhattisgarh=records(s[["month", "price"]]))
-
+    # ── test results ─────────────────────────────────────────────────────────
     def accuracy(self) -> dict:
-        # add the independent validation (scripts/evaluate.py) when it has been run
-        ev = ROOT / "reports" / "evaluation.json"
-        if "validation" not in self.metrics and ev.exists():
-            v = json.loads(ev.read_text())
-            self.metrics = {**self.metrics, "validation": {k: v[k] for k in ("test_years", "horizons", "by_year", "rise_warning") if k in v}}
-        return self.metrics
+        """What the Model accuracy page shows: the independent walk-forward test (reports/evaluation.json, written by
+        scripts/evaluate.py) plus the farmer back-test and arecanut ranges from training."""
+        if self._accuracy is None:
+            m = self.metrics
+            out = dict(version=self.version, data_until=m.get("data_until"),
+                       backtest=m.get("backtest_extra_Rs_per_quintal", {}),
+                       arecanut_coverage=m.get("arecanut", {}).get("range_coverage", {}))
+            ev_file = ROOT / "reports" / "evaluation.json"
+            if ev_file.exists():
+                ev = json.loads(ev_file.read_text())
+                hz = {h: dict(MAE_Rs=r["MAE_Rs"], naive_MAE_Rs=r["naive_MAE_Rs"], skill_vs_naive=r["skill_vs_naive"],
+                              skill_95ci=r.get("skill_95ci"), p_value=r.get("diebold_mariano", {}).get("p_value"),
+                              direction_acc=r["direction_acc"], coverage_10_90=r["coverage_10_90"],
+                              coverage_conformal=r.get("coverage_10_90_conformal"))
+                      for h, r in ev["horizons"].items()}
+                out.update(test_years=ev["test_years"], horizons=hz, segments=ev["by_crop_and_type"],
+                           by_year=ev["by_year"], rise_warning=ev["rise_warning"])
+            else:   # training metrics only (the independent test has not been run)
+                start, end = m["test_period"].split(" to ")
+                hz = {h: dict(MAE_Rs=r["MAE_Rs"], naive_MAE_Rs=r["MAE_Rs"] / (1 - r["skill_vs_naive"]),
+                              skill_vs_naive=r["skill_vs_naive"], direction_acc=r["direction_acc"],
+                              coverage_10_90=r["coverage_10_90"]) for h, r in m["horizons"].items()}
+                out.update(test_years=list(range(int(start[:4]), int(end[:4]) + 1)), horizons=hz, segments=[], by_year=[],
+                           rise_warning=None)
+            self._accuracy = json.loads(json.dumps(out, default=_clean))
+        return self._accuracy

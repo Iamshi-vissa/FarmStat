@@ -1,14 +1,10 @@
 import { useMemo } from 'react';
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import Delta from './Delta.jsx';
 import { priceStats } from '../stats.js';
 import { compactRupees, pct, pct0, placeName, rupees } from '../format.js';
-import { T } from '../theme.js';
 
-const AXIS = { fontSize: 12, fill: T.ink3 };
-
-// Price statistics for one mandi: where today's price sits, how it compares with last year, how much prices
-// usually move, what happened in the same weeks of earlier years, the seasonal pattern and the price distribution.
+// How this week compares for one mandi: where today's price sits in the past year, the change from a year ago, how much
+// prices usually move, and what happened in the same weeks of earlier years.
 export default function PriceStats({ crop, market, data }) {
   const L = data.latest;
   const s = useMemo(() => priceStats(data.history, L.week, L.price), [data, L.week, L.price]);
@@ -18,9 +14,8 @@ export default function PriceStats({ crop, market, data }) {
   return (
     <section className="panel" aria-labelledby="stats-title">
       <div className="panel-head"><div>
-        <h2 id="stats-title">Price statistics</h2>
-        <p className="sub">How this week’s {crop.toLowerCase()} price at {placeName(market)} compares with its own history. Context for the
-          forecast, worked out from past prices only.</p>
+        <h2 id="stats-title">How this week compares</h2>
+        <p className="sub">This week’s {crop.toLowerCase()} price at {placeName(market)} against its own history.</p>
       </div></div>
 
       <div className="mini-stats">
@@ -51,60 +46,6 @@ export default function PriceStats({ crop, market, data }) {
         </div>
       </div>
 
-      <div className="stat-charts">
-        {s.season && (
-          <figure className="stat-chart">
-            <figcaption><b>Seasonal pattern</b><span>Each month vs that year’s average, median of {s.yearsUsed} years.
-              {' '}{s.currentMonth} is this month.</span></figcaption>
-            <ResponsiveContainer width="100%" height={210}>
-              <BarChart data={s.season} margin={{ top: 18, right: 4, bottom: 0, left: 0 }} barCategoryGap={3}>
-                <CartesianGrid stroke={T.grid} vertical={false} />
-                <XAxis dataKey="month" tick={AXIS} tickLine={false} axisLine={false} interval={0}
-                  tickFormatter={m => m.slice(0, 1)} />
-                <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} tickFormatter={v => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)}%`} />
-                <ReferenceLine y={0} stroke={T.context} />
-                <Tooltip cursor={{ fill: 'rgba(22,24,19,0.05)' }} isAnimationActive={false}
-                  content={({ active, payload }) => active && payload?.[0] ? (
-                    <div className="chart-tip"><div className="tip-when">{payload[0].payload.month}, {payload[0].payload.years} years</div>
-                      <div className="tip-row"><strong>{pct(payload[0].value / 100, 0)}</strong>
-                        <span>vs the year’s average</span></div></div>) : null} />
-                <Bar dataKey="pct" maxBarSize={20} isAnimationActive={false}>
-                  {s.season.map(d => (
-                    <Cell key={d.month} fill={d.pct >= 0 ? T.forecast : T.drop} fillOpacity={d.month === s.currentMonth ? 1 : 0.55}
-                      radius={d.pct >= 0 ? [3, 3, 0, 0] : [0, 0, 3, 3]} />
-                  ))}
-                  <LabelList dataKey="month" content={({ x, y, width, height, value }) => value === s.currentMonth ? (
-                    <text x={x + width / 2} y={height >= 0 ? y - 6 : y + 14} textAnchor="middle" fontSize={11} fontWeight={600} fill={T.ink}>now</text>
-                  ) : null} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </figure>
-        )}
-        <figure className="stat-chart">
-          <figcaption><b>Where this week’s price sits</b><span>Weekly prices over the last 3 years ({s.distWeeks} weeks). This
-            week is higher than {pct0(s.distRank)} of them.</span></figcaption>
-          <ResponsiveContainer width="100%" height={210}>
-            <BarChart data={s.bins} margin={{ top: 18, right: 4, bottom: 0, left: 0 }} barCategoryGap={1}>
-              <CartesianGrid stroke={T.grid} vertical={false} />
-              <XAxis dataKey="from" tick={AXIS} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24}
-                tickFormatter={compactRupees} />
-              <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} allowDecimals={false} />
-              <Tooltip cursor={{ fill: 'rgba(22,24,19,0.05)' }} isAnimationActive={false}
-                content={({ active, payload }) => active && payload?.[0] ? (
-                  <div className="chart-tip"><div className="tip-when">{rupees(payload[0].payload.from)} – {rupees(payload[0].payload.to)}</div>
-                    <div className="tip-row"><strong>{payload[0].value} weeks</strong>
-                      <span>{payload[0].payload.today ? 'includes this week' : ''}</span></div></div>) : null} />
-              <Bar dataKey="n" isAnimationActive={false} radius={[3, 3, 0, 0]}>
-                {s.bins.map(b => <Cell key={b.from} fill={b.today ? T.forest : T.arrivals} />)}
-                <LabelList dataKey="today" content={({ x, y, width, value }) => value ? (
-                  <text x={x + width / 2} y={y - 6} textAnchor="middle" fontSize={11} fontWeight={600} fill={T.forest}>this week</text>
-                ) : null} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </figure>
-      </div>
     </section>
   );
 }

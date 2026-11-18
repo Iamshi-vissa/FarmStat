@@ -17,7 +17,6 @@ const HIST = "35985678-0d79-46b4-9ed6-6f13308a1d24";   // Variety-wise Daily Mar
 // Exact matches only: the API's commodity filter also returns e.g. "Onion Green" for "Onion".
 const CROP: Record<string, string> = {
   "Onion": "Onion", "Tomato": "Tomato", "Potato": "Potato", "Arecanut(Betelnut/Supari)": "Arecanut",
-  "Cashewnuts": "Cashew", "Sugarcane": "Sugarcane",
 };
 const COMMODITIES = Object.keys(CROP);
 const STATE_FIX: Record<string, string> = { Keralam: "Kerala", Chattisgarh: "Chhattisgarh", Delhi: "NCT of Delhi" };

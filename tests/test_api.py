@@ -63,3 +63,19 @@ def test_web_app_route_never_serves_files_outside_dist(client):
     for path in ["/../api/service.py", "/..%2Fapi%2Fservice.py", "/%2e%2e/requirements.txt"]:
         r = client.get(path)
         assert "FarmData" not in r.text and "fastapi" not in r.text
+
+
+def test_unknown_api_path_is_404(client):
+    for path in ("/api/cashew", "/api/sugarcane", "/api/national?crop=Onion", "/api/nope"):
+        assert client.get(path).status_code == 404, path
+
+
+def test_accuracy_payload(client):
+    a = client.get("/api/accuracy").json()
+    assert set(a["horizons"]) == {"1", "2", "4"}
+    assert all(0 < h["MAE_Rs"] < h["naive_MAE_Rs"] * 1.5 for h in a["horizons"].values())
+    assert a["test_years"][0] <= a["test_years"][-1]
+
+
+def test_meta_lists_weekly_crops_only(client):
+    assert [c["id"] for c in client.get("/api/meta").json()["crops"]] == ["Onion", "Tomato", "Potato", "Arecanut"]

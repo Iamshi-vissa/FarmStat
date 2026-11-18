@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MousePointerClick, Search } from 'lucide-react';
 import RateBoard from './RateBoard.jsx';
-import SpotlightCard from './reactbits/SpotlightCard.jsx';
 import Delta from './Delta.jsx';
 import { MarketSkeleton } from './MarketView.jsx';
 import { openSearch, openSidePanel } from '../events.js';
@@ -75,15 +74,15 @@ export default function OverviewView({ crop, onState, onPick }) {
 }
 
 // KPI tile: label, a big number, a plain-language note and (optionally) a 26-week trend line.
-// Built on the React Bits SpotlightCard, following the 21st.dev KPI tile pattern (value, change, sparkline).
+// KPI tile: label, value, a trend line where there is one, and a note.
 function Kpi({ label, value, note, trend }) {
   return (
-    <SpotlightCard className="kpi" theme="light" spotlightColor="rgba(43,123,71,0.12)" intensity={0.45} spotlightSize={240} borderGlow={0.2} flare={false}>
+    <div className="kpi">
       <div className="kpi-label">{label}</div>
       <div className="kpi-value num">{value}</div>
       {trend && <Trend points={trend} />}
       {note && <div className="kpi-note">{note}</div>}
-    </SpotlightCard>
+    </div>
   );
 }
 

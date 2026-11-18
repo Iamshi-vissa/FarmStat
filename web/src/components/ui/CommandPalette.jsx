@@ -51,7 +51,8 @@ export default function CommandPalette({ open, items, onSelect, onClose, placeho
   const listRef = useRef(null);
   const inputRef = useRef(null);
   const pointer = useRef({ x: -1, y: -1 });
-  const returnFocus = useRef(null);
+  // what had focus before the palette opened, read while rendering (before the input takes focus), to restore on close
+  const [opener] = useState(() => (typeof document !== 'undefined' ? document.activeElement : null));
 
   const results = useMemo(() => rank(items, query), [items, query]);
   const activeId = results.some(r => r.id === pinned) ? pinned : results[0]?.id ?? null;
@@ -59,7 +60,6 @@ export default function CommandPalette({ open, items, onSelect, onClose, placeho
 
   useEffect(() => {
     if (!open) return undefined;
-    returnFocus.current = document.activeElement;
     setQuery('');
     setPinned(null);
     requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
@@ -70,9 +70,9 @@ export default function CommandPalette({ open, items, onSelect, onClose, placeho
     if (gutter > 0) root.style.paddingRight = `${gutter}px`;
     return () => {
       [root.style.overflow, root.style.paddingRight] = prev;
-      returnFocus.current?.focus?.({ preventScroll: true });
+      opener?.focus?.({ preventScroll: true });
     };
-  }, [open]);
+  }, [open, opener]);
 
   useEffect(() => { if (listRef.current) listRef.current.scrollTop = 0; }, [query]);
 
@@ -117,7 +117,7 @@ export default function CommandPalette({ open, items, onSelect, onClose, placeho
           <Search size={16} aria-hidden="true" />
           <input ref={inputRef} type="text" role="combobox" aria-expanded="true" aria-controls={`${uid}-list`}
             aria-autocomplete="list" aria-activedescendant={activeId ? `${uid}-${activeId}` : undefined}
-            autoComplete="off" spellCheck={false} value={query} placeholder={placeholder}
+            autoComplete="off" spellCheck={false} value={query} placeholder={placeholder} autoFocus
             onChange={e => setQuery(e.target.value)} onKeyDown={onKeyDown} />
           {query && (
             <button type="button" className="cmdk-clear" aria-label="Clear the search" title="Clear"

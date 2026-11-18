@@ -17,8 +17,9 @@ The live-data pipeline (Supabase) and the scheduled GitHub jobs have their own r
 ## BEFORE PUSHING
 
 - [ ] **Tests pass:** `python -m pytest -q tests`
-- [ ] **Lint is clean:** `ruff check --select F,E9,B,UP,SIM,PERF --target-version py311 api src scripts tests streamlit_app.py index.py`
+- [ ] **Lint is clean:** `ruff check --select F,E9,B,UP,SIM,PERF --target-version py311 api src scripts tests index.py`
 - [ ] **Web lint passes:** `cd web && npm run lint`
+- [ ] **Browser tests pass:** `FARMSTAT_E2E=1 python -m pytest tests/e2e -q` (CI runs them too)
 - [ ] **Web build is fresh and committed:** `cd web && npm run build`, then `git status web/dist` shows the new files
   staged. CI fails the push if `web/dist` doesn't match `web/src`.
 - [ ] **Snapshot is current:** if models, data, calibration or `SNAPSHOT_VERSION` changed, run

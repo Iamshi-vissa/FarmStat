@@ -177,7 +177,7 @@ def to_weekly(daily: pd.DataFrame) -> pd.DataFrame:
     the models handle missing values)."""
     if daily.empty:
         return pd.DataFrame(columns=["crop", "state", "district", "market", "week", "price", "arrivals_t", "trading_days"])
-    d = daily[daily["commodity"].isin(COMMODITIES.values())].copy()   # cashew/sugarcane are stored but not weekly
+    d = daily[daily["commodity"].isin(COMMODITIES.values())].copy()   # weekly crops only
     d["arrival_date"] = pd.to_datetime(d["arrival_date"])
     d["week"] = d["arrival_date"] - pd.to_timedelta(d["arrival_date"].dt.weekday, unit="D")
     arec = d["commodity"] == "Arecanut"

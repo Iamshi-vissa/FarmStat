@@ -1,4 +1,3 @@
-import SpotlightCard from './reactbits/SpotlightCard.jsx';
 import Delta from './Delta.jsx';
 import { compactRupees, rupees } from '../format.js';
 
@@ -23,8 +22,7 @@ export default function ForecastTiles({ items, now, naive, unitLabel }) {
   return (
     <div className="tiles">
       {items.map(it => (
-        <SpotlightCard key={it.h} className="tile" theme="light" spotlightColor="rgba(42,120,214,0.14)"
-          intensity={0.5} spotlightSize={220} borderGlow={0.25} flare={false}>
+        <div key={it.h} className="tile">
           <div className="tile-label"><span className="wide-only">{naive ? 'Usual range in ' : 'Expected in '}</span>
             <span className="narrow-only">In </span>{unitLabel(it.h)}</div>
           {naive ? (
@@ -42,7 +40,7 @@ export default function ForecastTiles({ items, now, naive, unitLabel }) {
                 <span className="narrow-only">{rupees(it.p10)}–{rupees(it.p90)}</span></>
             )}
           </div>
-        </SpotlightCard>
+        </div>
       ))}
     </div>
   );

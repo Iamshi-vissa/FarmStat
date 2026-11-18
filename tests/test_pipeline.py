@@ -85,11 +85,3 @@ def test_arecanut_is_shown_as_no_change_with_a_range(prices):
     np.testing.assert_allclose(pred["p50_2"], latest["price"])
     assert (pred["p10_2"] < latest["price"]).all() and (pred["p90_2"] > latest["price"]).all()
     assert fc.advise("Arecanut", 40000.0, pred.iloc[0]).action == "Your call"
-
-
-def test_cashew_monthly_features():
-    from farmstat.monthly import M_FEATURES, build_monthly, load_monthly
-    c = load_monthly("Cashew")
-    assert c["state"].nunique() >= 4
-    d = build_monthly(c)
-    assert set(M_FEATURES) <= set(d.columns) and d["y_1"].notna().sum() > 200

@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { Info, MapPin, Search, Store } from 'lucide-react';
+import { Search, Store } from 'lucide-react';
 import CropSwitch from './components/CropSwitch.jsx';
-import Sidebar, { CashewSidebar, SugarcaneSidebar } from './components/Sidebar.jsx';
+import Sidebar from './components/Sidebar.jsx';
 import MarketView, { MarketSkeleton, loadMarketChart } from './components/MarketView.jsx';
 import { Brand, Notice } from './components/Chrome.jsx';
 import Tabs from './components/ui/Tabs.jsx';
@@ -14,15 +14,13 @@ import { useScrollEnd } from './hooks.js';
 // Pages other than the mandi page load on demand, so the first screen only downloads what it needs.
 const CompareView = lazy(() => import('./components/CompareView.jsx'));
 const AccuracyView = lazy(() => import('./components/AccuracyView.jsx'));
-const CashewView = lazy(() => import('./components/CashewView.jsx'));
-const SugarcaneView = lazy(() => import('./components/SugarcaneView.jsx'));
 const AboutView = lazy(() => import('./components/AboutView.jsx'));
 const loadOverview = () => import('./components/OverviewView.jsx');
 const OverviewView = lazy(loadOverview);
 
 const DEFAULT_CROP = 'Onion';
-const WEEKLY = ['Onion', 'Tomato', 'Potato', 'Arecanut'];   // crops with a weekly mandi panel (meta confirms)
-const SHARED_VIEWS = ['overview', 'accuracy', 'about'];       // the pages every crop has
+const VIEWS = ['overview', 'market', 'compare', 'accuracy', 'about'];
+const TABS = [['overview', 'India overview'], ['market', 'Mandi'], ['compare', 'Compare mandis'], ['accuracy', 'Model accuracy'], ['about', 'About']];
 const readHash = () => Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
 const Wait = ({ label = 'Loading…' }) => <div className="loading" role="status">{label}</div>;
 
@@ -34,10 +32,9 @@ export default function App() {
   const [state, setState] = useState(init.state || null);
   const [market, setMarket] = useState(init.mandi || null);
   // Nothing is chosen for the visitor: the first screen is the crop across India, until they pick a state or mandi.
-  const [view, setView] = useState(init.view || (init.mandi ? 'market' : 'overview'));
+  const [view, setView] = useState(VIEWS.includes(init.view) ? init.view : init.mandi ? 'market' : 'overview');
   const [section, setSection] = useState(init.section || null);   // About page section
   const [mandis, setMandis] = useState([]);                         // the chosen state's mandis for this crop
-  const [extra, setExtra] = useState({});                           // cashew / sugarcane payloads
   const tabsRef = useRef(null);
   const userMove = useRef(false);   // set by the visitor's clicks: the next address change gets its own history entry
   useScrollEnd(tabsRef);
@@ -46,8 +43,9 @@ export default function App() {
   useEffect(() => {
     api('meta').then(setMeta).catch(e => setError(e.message));
     if (init.mandi) loadMarketChart();
-    else if (WEEKLY.includes(init.crop || DEFAULT_CROP)) {
-      api('overview', { crop: init.crop || DEFAULT_CROP }).catch(() => {});
+    else {
+      // the default crop's overview is fetched alongside meta; another crop's waits until meta confirms it exists
+      if (!init.crop || init.crop === DEFAULT_CROP) api('overview', { crop: DEFAULT_CROP }).catch(() => {});
       loadOverview();
     }
     (window.requestIdleCallback ?? (f => setTimeout(f, 1500)))(() => loadMarketChart());
@@ -61,7 +59,7 @@ export default function App() {
       if (h.crop) setCrop(h.crop);
       if (h.state) setState(h.state);
       if (h.mandi) setMarket(h.mandi);
-      if (h.view) setView(h.view);
+      if (VIEWS.includes(h.view)) setView(h.view);
       setSection(h.section || null);
     };
     const onPop = e => {
@@ -70,7 +68,7 @@ export default function App() {
       setCrop(h.crop || DEFAULT_CROP);
       setState(h.state || null);
       setMarket(h.mandi || null);
-      setView(h.view || (h.mandi ? 'market' : 'overview'));
+      setView(VIEWS.includes(h.view) ? h.view : h.mandi ? 'market' : 'overview');
       setSection(h.section || null);
     };
     window.addEventListener('hashchange', onHash);
@@ -79,31 +77,20 @@ export default function App() {
   }, []);
 
   const cropMeta = useMemo(() => meta?.crops.find(c => c.id === crop), [meta, crop]);
-  const weekly = cropMeta?.kind === 'weekly';
-  const extraKey = weekly || !cropMeta ? null : crop.toLowerCase();
+
+  // An address naming a crop FarmStat doesn't cover (an old link, a typo) falls back to the default crop.
+  useEffect(() => {
+    if (meta && !cropMeta) { setCrop(DEFAULT_CROP); setState(null); setMarket(null); }
+  }, [meta, cropMeta]);
 
   // A crop change keeps the visitor's state only if the new crop has it (never chooses one for them).
   useEffect(() => {
-    if (!cropMeta) return;
-    if (weekly) {
-      if (state && !cropMeta.states.some(s => s.name === state)) { setState(null); setMarket(null); }
-    } else {
-      setView(v => (SHARED_VIEWS.includes(v) ? v : 'overview'));
-    }
+    if (cropMeta && state && !cropMeta.states.some(s => s.name === state)) { setState(null); setMarket(null); }
   }, [cropMeta]); // eslint-disable-line react-hooks/exhaustive-deps -- runs on crop change only, by design
-
-  // Cashew and sugarcane have their own payloads, fetched once each.
-  useEffect(() => {
-    if (!extraKey || extra[extraKey]) return;
-    api(extraKey).then(d => setExtra(x => ({ ...x, [extraKey]: d }))).catch(e => setError(e.message));
-  }, [extraKey, extra]);
-  useEffect(() => {   // a cashew state with no data drops back to the overview
-    if (crop === 'Cashew' && state && extra.cashew && !extra.cashew.states.some(s => s.state === state)) setState(null);
-  }, [crop, state, extra.cashew]);
 
   // The chosen state's mandi list (no mandi is picked automatically).
   useEffect(() => {
-    if (!weekly || !state || !cropMeta.states.some(s => s.name === state)) { setMandis([]); return undefined; }
+    if (!cropMeta || !state || !cropMeta.states.some(s => s.name === state)) { setMandis([]); return undefined; }
     let live = true;
     api('mandis', { crop, state }).then(rows => {
       if (!live) return;
@@ -123,14 +110,14 @@ export default function App() {
     if (!meta) return;   // until meta arrives the choices may still be corrected
     const p = new URLSearchParams({ crop, view });
     if (state) p.set('state', state);
-    if (market && weekly) p.set('mandi', market);
+    if (market) p.set('mandi', market);
     if (view === 'about' && section) p.set('section', section);
     const next = `#${p}`;
     const push = userMove.current && window.history.state?.farmstat;
     userMove.current = false;
     if (next === window.location.hash && window.history.state?.farmstat) return;
     window.history[push ? 'pushState' : 'replaceState']({ farmstat: true }, '', next);
-  }, [meta, crop, state, market, view, weekly, section]);
+  }, [meta, crop, state, market, view, section]);
 
   // Start each page at the top, unless a link points into the About page.
   useEffect(() => { if (!(view === 'about' && section)) window.scrollTo(0, 0); }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -156,61 +143,41 @@ export default function App() {
   }
   if (!meta || !cropMeta) return <Wait label="Loading FarmStat…" />;
 
-  const tabs = weekly
-    ? [['overview', 'India overview'], ['market', 'Mandi'], ['compare', 'Compare mandis'], ['accuracy', 'Model accuracy'], ['about', 'About']]
-    : [['overview', crop === 'Cashew' ? 'Prices by state' : 'FRP and prices'], ['accuracy', 'Model accuracy'], ['about', 'About']];
-
-  // The icon rail on the left (desktop) holds only what the tabs don't: the side panel (which also opens on hover) and search.
-  const icon = Icon => <Icon size={20} aria-hidden="true" />;
-  const panelItem = weekly
-    ? { id: 'mandis', label: market ? `Mandi: ${placeName(market)}` : 'Choose a mandi', icon: icon(Store),
-      active: view === 'market' || view === 'compare', onClick: () => (market && view !== 'market' ? goTo('market') : openSidePanel()) }
-    : crop === 'Cashew'
-      ? { id: 'states', label: state ? `State: ${state}` : 'Choose a state', icon: icon(MapPin), active: Boolean(state), onClick: openSidePanel }
-      : { id: 'about-frp', label: 'About sugarcane prices', icon: icon(Info), onClick: openSidePanel };
-  const rail = [{ ...panelItem, panel: true }, { id: 'search', label: 'Search all mandis', icon: icon(Search), onClick: openSearch }];
-
-  let side;
-  if (weekly) {
-    side = <Sidebar crop={crop} states={cropMeta.states} state={state} onState={chooseState} rail={rail}
-      mandis={mandis} market={market} onMarket={chooseMarket} unit={crop === 'Arecanut' ? 'mandi-varieties' : 'mandis'}
-      footer={<>Prices to the week of {date(cropMeta.data_until)}. Source: Agmarknet, Government of India.</>} />;
-  } else if (crop === 'Cashew') {
-    side = <CashewSidebar states={extra.cashew?.states} state={state} onState={setState} rail={rail} />;
-  } else {
-    side = <SugarcaneSidebar rail={rail} />;
-  }
+  // The icon rail on the left (desktop) holds only what the tabs don't: the mandi panel (which also opens on hover) and search.
+  const rail = [
+    { id: 'mandis', label: market ? `Mandi: ${placeName(market)}` : 'Choose a mandi', icon: <Store size={20} aria-hidden="true" />,
+      panel: true, active: view === 'market' || view === 'compare',
+      onClick: () => (market && view !== 'market' ? goTo('market') : openSidePanel()) },
+    { id: 'search', label: 'Search all mandis', icon: <Search size={20} aria-hidden="true" />, onClick: openSearch },
+  ];
+  const side = <Sidebar crop={crop} states={cropMeta.states} state={state} onState={chooseState} rail={rail}
+    mandis={mandis} market={market} onMarket={chooseMarket} unit={crop === 'Arecanut' ? 'mandi-varieties' : 'mandis'}
+    footer={<>Prices to the week of {date(cropMeta.data_until)}. Source: Agmarknet, Government of India.</>} />;
 
   // The mandi list for this crop and state has arrived (it lags a state change by one request).
-  const listReady = weekly && mandis.length > 0 && mandis[0].crop === crop && mandis[0].state === state;
+  const listReady = mandis.length > 0 && mandis[0].crop === crop && mandis[0].state === state;
 
   function page() {
     switch (view) {
       case 'about': return <AboutView meta={meta} section={section} onSection={setSection} />;
       case 'accuracy': return <AccuracyView />;
       case 'market':
-        if (!weekly) return null;
         if (!market) return <ChooseFirst what="mandi" crop={crop} state={state} />;
-        if (!listReady || !mandis.some(m => m.market === market)) return <MarketSkeleton label={`Loading ${market}`} />;
+        if (!listReady || !mandis.some(m => m.market === market)) return <MarketSkeleton label={`Loading ${placeName(market)}`} />;
         return <MarketView crop={crop} state={state} market={market} meta={meta} />;
       case 'compare':
-        if (!weekly) return null;
         if (!state) return <ChooseFirst what="state" crop={crop} states={cropMeta.states} onState={chooseState} />;
         if (!listReady) return <Wait label={`Loading ${crop.toLowerCase()} mandis…`} />;
         return <CompareView crop={crop} state={state} market={market} mandis={mandis} onMarket={chooseMarket}
           onOpen={m => openMarket(state, m)} />;
       default:
-        if (weekly) return <OverviewView crop={crop} onState={chooseState} onPick={openMarket} />;
-        if (!extra[extraKey]) return <MarketSkeleton label={`Loading ${crop.toLowerCase()} prices`} />;
-        return crop === 'Cashew'
-          ? <CashewView data={extra.cashew} state={state} onState={setState} />
-          : <SugarcaneView data={extra.sugarcane} />;
+        return <OverviewView crop={crop} onState={chooseState} onPick={openMarket} />;
     }
   }
 
   // The About page stands on its own: no crop switcher, side panel, search or notice, only the tabs to go back.
   const plain = view === 'about';
-  const pageTabs = <Tabs items={tabs.map(([value, label]) => ({ value, label }))} value={view} onChange={goTo} label="Page"
+  const pageTabs = <Tabs items={TABS.map(([value, label]) => ({ value, label }))} value={view} onChange={goTo} label="Page"
     className="tabs" tabRef={tabsRef} />;
 
   return (

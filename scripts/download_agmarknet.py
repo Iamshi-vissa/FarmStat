@@ -1,5 +1,5 @@
 """
-Download daily mandi prices for extra crops (arecanut, cashew) for every state
+Download daily arecanut mandi prices for every state
 from the Agmarknet public report service (the same one the "Daily Price and
 Arrival Report" page on agmarknet.gov.in uses; no login needed). Data starts 2021.
 
@@ -23,7 +23,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 BASE = "https://api.agmarknet.gov.in/v1"
-WANTED = {"Arecanut": ["arecanut", "betelnut", "supari"], "Cashew": ["cashew"]}
+WANTED = {"Arecanut": ["arecanut", "betelnut", "supari"]}
 ALL_DISTRICTS, ALL_MARKETS, ALL_GRADES, PRICE, ALL_VARIETIES = 100001, 100002, 100003, 100004, 100007
 START = date(2021, 1, 1)
 PAGE = 1000

@@ -27,7 +27,7 @@ export default function MarketChart({ crop, state, market, data, maxHold }) {
 
   return (
     <>
-    <LiveReports crop={crop} state={state} market={market} narrow={narrow} />
+    <LiveReports crop={crop} state={state} market={market} />
     <section className="panel chart-panel" aria-labelledby="chart-title">
       <div className="panel-head">
         <div>
@@ -55,7 +55,7 @@ export default function MarketChart({ crop, state, market, data, maxHold }) {
           {lastYear && <span className="key"><i className="ctx" />A year earlier</span>}
           {season && <span className="key"><i className="season" />Usual range, same weeks of the past 5 years</span>}
         </div>
-      {asTable ? <ChartTable rows={chart.rows} naive={naive} period="week" /> : (
+      {asTable ? <ChartTable rows={chart.rows} naive={naive} /> : (
         <>
           <PriceChart rows={chart.rows} naive={naive} syncId="mandi" horizonLabel="in 4 weeks" height={narrow ? 260 : 340} compact={narrow} />
           {hasArrivals && (

@@ -104,21 +104,6 @@ def series(crop: str, state: str, market: str, weeks: int = Query(104, ge=8, le=
     return out
 
 
-@app.get("/api/national")
-def national(crop: str, variety: str | None = None):
-    return data().national(weekly_crop(crop), variety)
-
-
-@app.get("/api/cashew")
-def cashew():
-    return data().cashew()
-
-
-@app.get("/api/sugarcane")
-def sugarcane():
-    return data().sugarcane()
-
-
 @app.get("/api/live")
 def live(crop: str, state: str, market: str):
     """Latest daily prices this mandi reported (from the daily data.gov.in fetch stored in Supabase)."""
@@ -146,5 +131,7 @@ if DIST.exists():
     @app.get("/{path:path}", include_in_schema=False)
     def spa(path: str):
         # a real file inside web/dist (favicon, fonts), else the app shell; never anything outside web/dist
+        if path == "api" or path.startswith("api/"):   # an unknown API address is an error, not the app
+            raise HTTPException(404, "No such API endpoint. See docs/API.md.")
         f = (DIST_ROOT / path).resolve()
         return FileResponse(f if path and f.is_file() and f.is_relative_to(DIST_ROOT) else DIST_ROOT / "index.html")
