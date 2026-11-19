@@ -62,6 +62,7 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
   const [pinned, setPinned] = useState(() => readFlag(PIN_KEY));
   const aside = useRef(null);
   const timer = useRef(0);
+  const over = useRef(false);   // the pointer is over the rail or the panel
   const marker = useRef(null);
   const buttons = useRef({});
   const desktop = useDesktop();
@@ -69,15 +70,18 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
   const clear = () => { window.clearTimeout(timer.current); timer.current = 0; };
   const show = useCallback(() => { clear(); setPeek(true); }, []);
   const hide = useCallback(() => { clear(); setPeek(false); }, []);
-  const showSoon = () => { clear(); timer.current = window.setTimeout(() => setPeek(true), PEEK_INTENT); };
+  const showSoon = () => { clear(); timer.current = window.setTimeout(() => { timer.current = 0; setPeek(true); }, PEEK_INTENT); };
   const hideSoon = () => {
     // a native drop-down (the state picker) draws outside the page, so the pointer "leaves" while choosing: stay open
     if (document.activeElement?.tagName === 'SELECT' && aside.current?.contains(document.activeElement)) return;
+    if (over.current) return;   // still over the panel (focus moved, the pointer didn't): stay open
     clear();
-    timer.current = window.setTimeout(() => setPeek(false), PEEK_GRACE);
+    timer.current = window.setTimeout(() => { timer.current = 0; setPeek(false); }, PEEK_GRACE);
   };
 
-  useEffect(() => { setOpen(false); setPeek(false); }, [current]);   // a choice was made: get out of the way
+  // A mandi was chosen: get out of the way. Choosing a state clears the mandi, and the panel must stay open for the
+  // visitor to pick one, so only a new mandi closes it.
+  useEffect(() => { if (current) { setOpen(false); setPeek(false); } }, [current]);
   useAppEvent(PANEL, useCallback(() => { setOpen(true); setPeek(true); }, []));
   useEffect(() => () => window.clearTimeout(timer.current), []);
   // A tap or click outside, or Escape from anywhere on the page, closes the desktop peek and the phone drop-down.
@@ -121,10 +125,15 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
   const hidden = desktop && !(pinned || peek);   // on phones the panel is the header, always there
   return (
     <aside className="side" aria-label={label} ref={aside} data-open={open} data-peek={peek && !pinned} data-pinned={pinned}
-      onPointerEnter={e => { if (e.pointerType !== 'touch' && !pinned) (peek ? show() : showSoon()); }}
-      onPointerLeave={e => { if (e.pointerType !== 'touch' && !pinned) hideSoon(); }}
+      onPointerEnter={e => { if (e.pointerType === 'touch') return; over.current = true; if (!pinned && peek) show(); }}
+      // Open only when the pointer moves over the rail. A rail that appears under a still pointer (after Back, or after
+      // leaving the About page) must not open the panel over what the visitor was about to click.
+      onPointerMove={e => { if (e.pointerType !== 'touch' && !pinned && !peek && !timer.current) showSoon(); }}
+      onPointerLeave={e => { if (e.pointerType === 'touch') return; over.current = false; if (!pinned) hideSoon(); }}
       onFocus={e => { if (!pinned && e.target.matches?.('.side-panel :focus-visible, .rail-btn[data-panel]:focus-visible')) show(); }}
-      onBlur={e => { if (!pinned && !aside.current?.contains(e.relatedTarget)) hideSoon(); }}
+      // Close when keyboard focus moves to something outside. Focus that just drops (the chosen state's chip disappears,
+      // the drop-down is closed) has no new target, and must not close the panel.
+      onBlur={e => { if (!pinned && e.relatedTarget && !aside.current?.contains(e.relatedTarget)) hideSoon(); }}
       onKeyDown={e => { if (e.key === 'Escape' && peek && !pinned && aside.current?.contains(document.activeElement)) buttons.current[active]?.focus(); }}>
       <nav className="rail" aria-label="Mandis and search" onKeyDown={onRailKeys}>
         <div className="rail-list">

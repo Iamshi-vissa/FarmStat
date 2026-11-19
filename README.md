@@ -177,7 +177,8 @@ into cards.
 - **Pages:** All crops (home), India overview and Compare mandis as tabs; About, which includes the test results,
   opens from the info button at the right of the top bar. A mandi page has no tab of its own: it opens from the side
   panel, search, the Compare table or the overview's lists, and the "All India / state / mandi" bar under the top bar
-  shows where you are. Pages that aren't about one crop (home, about) hide the crop switcher, side panel and search
+  shows where you are. A Back button at the left of the top bar returns to the previous FarmStat page (it appears once
+  there is one). Pages that aren't about one crop (home, about) hide the crop switcher, side panel and search
 - **Price chart,** drawn as plain SVG: price in ink, forecast and likely range in marigold, the usual price for the season
   (10th to 90th percentile of the same weeks in the past 5 years) in grey, an optional "same weeks last year" line, and
   arrivals as bars underneath on the same time axis, heavier-than-usual weeks darker. One hover line runs through both

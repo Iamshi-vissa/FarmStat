@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Info, Search, Store } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Info, Search, Store } from 'lucide-react';
 import CropSwitch from './components/CropSwitch.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import MarketView, { MarketSkeleton, loadMarketChart } from './components/MarketView.jsx';
@@ -46,6 +46,10 @@ export default function App() {
   const [section, setSection] = useState(init.section || null);   // About page section
   const [mandis, setMandis] = useState([]);                         // the chosen state's mandis for this crop
   const userMove = useRef(false);   // set by the visitor's clicks: the next address change gets its own history entry
+  // How many FarmStat pages lie behind this one in the browser history (0 on the first page of a visit), for Back.
+  const [depth, setDepth] = useState(() => window.history.state?.depth ?? 0);
+  const depthRef = useRef(depth);
+  const synced = useRef(false);
   const tabsRef = useScrollEnd();
 
   // First paint: fetch meta and, alongside it, the first screen's data and code. The chart code follows when idle.
@@ -71,6 +75,8 @@ export default function App() {
     };
     const onPop = e => {
       if (!e.state?.farmstat) return;   // a link's own entry: hashchange handles it
+      depthRef.current = e.state.depth ?? 0;
+      setDepth(depthRef.current);
       const h = readHash();
       setCrop(h.crop || null);
       setState(h.state || null);
@@ -124,10 +130,17 @@ export default function App() {
     if (cropMeta && market) p.set('mandi', market);
     if (page_ === 'about' && section) p.set('section', section);
     const next = `#${p}`;
-    const push = userMove.current && window.history.state?.farmstat;
+    const cur = window.history.state;
+    const push = userMove.current && cur?.farmstat;
+    const first = !synced.current;
     userMove.current = false;
-    if (next === window.location.hash && window.history.state?.farmstat) return;
-    window.history[push ? 'pushState' : 'replaceState']({ farmstat: true }, '', next);
+    synced.current = true;
+    if (next === window.location.hash && cur?.farmstat) return;
+    // a new entry is one step further; an entry a link opened sits one step after the page the link was on
+    const d = push ? depthRef.current + 1 : cur?.farmstat ? cur.depth ?? 0 : first ? 0 : depthRef.current + 1;
+    window.history[push ? 'pushState' : 'replaceState']({ farmstat: true, depth: d }, '', next);
+    depthRef.current = d;
+    setDepth(d);
   }, [meta, crop, cropMeta, state, market, page_, section]);
 
   // Start each page at the top, unless a link points into the About page.
@@ -203,6 +216,10 @@ export default function App() {
       {!plain && side}
       <main className="main" id="main">
         <header className="topbar">
+          {depth > 0 && (
+            <button type="button" className="back-btn" onClick={() => window.history.back()}
+              aria-label="Back to the previous page" title="Back to the previous page"><ArrowLeft size={19} aria-hidden="true" /></button>
+          )}
           <Brand />
           {pageTabs}
           {!plain && <SearchButton crop={crop} onPick={openMarket} />}

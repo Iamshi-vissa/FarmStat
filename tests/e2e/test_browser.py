@@ -280,3 +280,39 @@ def test_chart_hover_shows_the_week(page, base):
     page.mouse.move(box["x"] + box["width"] * 0.5, box["y"] - 60)   # leaving the chart hides it
     page.wait_for_timeout(200)
     assert page.locator(".pchart-tip").count() == 0
+
+
+def test_panel_stays_open_until_a_mandi_is_chosen(page, base):
+    """Choosing a state (drop-down or chip) keeps the hover panel open; choosing a mandi closes it."""
+    page.goto(base + "#crop=Tomato&view=overview")
+    page.wait_for_selector(".state-bars")
+    page.mouse.move(28, 40)
+    page.wait_for_timeout(400)
+    page.mouse.move(200, 300)
+    page.click(".pick-state .chip >> nth=0")
+    page.wait_for_selector(".mandi-row")
+    page.wait_for_timeout(500)
+    assert peek(page) == "true"
+    page.select_option(".side .select", "Karnataka")
+    page.wait_for_timeout(500)
+    assert peek(page) == "true" and page.locator(".mandi-row").count() > 0
+    page.click(".mandi-row >> nth=0")
+    page.wait_for_selector(".chart-panel")
+    page.wait_for_timeout(400)
+    assert peek(page) == "false"
+
+
+def test_back_button_returns_through_the_visit(page, base):
+    page.goto(base)
+    page.wait_for_selector(".crop-choice")
+    assert page.locator(".back-btn").count() == 0          # first page of the visit: nowhere to go back to
+    page.click(".crop-pick:has-text('Onion')")
+    page.wait_for_selector(".state-bars")
+    page.click(".topbar .info-btn")
+    page.wait_for_selector(".doc-body")
+    page.click(".back-btn")
+    page.wait_for_selector("main h1:has-text('Onion across India')")
+    assert peek(page) == "false"                            # the rail appeared under the pointer: no panel
+    page.click(".back-btn")
+    page.wait_for_selector(".crop-choice")
+    assert page.locator(".back-btn").count() == 0

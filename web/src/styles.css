@@ -772,14 +772,16 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
 .board-cell.lead .board-value { font-size: calc(var(--t-figure-lead) * 1.08); }
 .panel h2, .doc-section > h2 { font-weight: 700; letter-spacing: -0.02em; }
 
-/* the info button: About, with how the model works and how accurate it is */
-.info-btn { align-self: center; flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
+/* the info button (About, with how the model works and how accurate it is) and the back button */
+.back-btn { margin-right: -12px; border: 1px solid var(--bar-line); background: none; cursor: pointer; }
+.back-btn, .info-btn { align-self: center; flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
   color: var(--bar-ink-2); border: 1px solid var(--bar-line); transition: background-color .15s, color .15s; }
-.info-btn:hover { color: #fff; background: rgba(255, 255, 255, .12); }
+.back-btn:hover, .info-btn:hover { color: #fff; background: rgba(255, 255, 255, .12); }
 .info-btn[aria-current="page"] { color: var(--bar); background: #fff; border-color: #fff; }
-.topbar .info-btn:focus-visible { outline: 2px solid var(--marigold-lit); outline-offset: 2px; }
+.topbar .back-btn:focus-visible, .topbar .info-btn:focus-visible { outline: 2px solid var(--marigold-lit); outline-offset: 2px; }
 @media (max-width: 860px) {   /* home and about on phones: brand and info button on the first row, the tabs under them */
   .app-plain .topbar .brand { flex: 1 1 auto; order: 0; }
+  .back-btn { width: 36px; height: 36px; margin-right: 0; }
   .app-plain .topbar .info-btn { order: 1; margin-top: 2px; }
   .app-plain .topbar .tabs { order: 2; flex: 1 0 100%; }
   .info-btn { width: 36px; height: 36px; }
