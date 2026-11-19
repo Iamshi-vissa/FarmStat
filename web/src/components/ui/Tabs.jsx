@@ -22,20 +22,11 @@ export default function Tabs({ items, value, onChange, label, variant = 'line', 
     return () => ro.disconnect();
   }, [index, items]);
 
-  const setRow = useCallback(n => { rowRef.current = n; if (typeof tabRef === 'function') tabRef(n); else if (tabRef) tabRef.current = n; }, [tabRef]);
+  const setRow = useCallback(n => { rowRef.current = n; tabRef?.(n); }, [tabRef]);   // tabRef: an optional callback ref
 
-  const step = (from, dir) => {
-    const n = items.length;
-    let i = from;
-    for (let k = 0; k < n; k += 1) { i = (i + dir + n) % n; if (!items[i].disabled) return i; }
-    return from;
-  };
   const onKeyDown = e => {
-    let to = null;
-    if (e.key === 'ArrowRight') to = step(index, 1);
-    else if (e.key === 'ArrowLeft') to = step(index, -1);
-    else if (e.key === 'Home') to = step(-1, 1);
-    else if (e.key === 'End') to = step(items.length, -1);
+    const n = items.length;
+    const to = { ArrowRight: (index + 1) % n, ArrowLeft: (index - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
     if (to == null) return;
     e.preventDefault();
     onChange(items[to].value);
@@ -52,7 +43,7 @@ export default function Tabs({ items, value, onChange, label, variant = 'line', 
         return (
           <button key={item.value} ref={n => { nodes.current[i] = n; }} type="button" id={`${base}-${item.value}`}
             {...(isTabs ? { role: 'tab', 'aria-selected': on } : { 'aria-pressed': on })}
-            tabIndex={on || (index < 0 && i === 0) ? 0 : -1} disabled={item.disabled} title={item.title}
+            tabIndex={on || (index < 0 && i === 0) ? 0 : -1}
             onClick={() => onChange(item.value)}>
             {/* the bold copy reserves width so the row doesn't shift when the weight changes */}
             <span className="ftabs-label"><span aria-hidden="true" className="ftabs-ghost">{item.label}</span><span>{item.label}</span></span>

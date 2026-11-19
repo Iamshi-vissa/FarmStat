@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 // True while a media query matches, e.g. useMedia('(max-width: 640px)').
-export function useMedia(query) {
+function useMedia(query) {
   const [on, setOn] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
   useEffect(() => {
     const m = window.matchMedia(query);
@@ -18,11 +18,11 @@ export const useNarrow = () => useMedia('(max-width: 640px)');
 // Wide enough for the icon rail and the hover panel (below this the panel is the page header).
 export const useDesktop = () => useMedia('(min-width: 861px)');
 
-// Marks a sideways-scrolling row with .at-end once it is scrolled to the end (or fits), to drop its edge fade.
-export function useScrollEnd(ref) {
-  const node = ref.current;   // re-attach when the element appears (e.g. after loading)
+// Marks a sideways-scrolling row with .at-end once it is scrolled to the end (or fits), and .scrolled once it has moved,
+// to drop its edge fades. Returns a callback ref for the row.
+export function useScrollEnd() {
+  const [el, setEl] = useState(null);
   useEffect(() => {
-    const el = node;
     if (!el) return undefined;
     const update = () => {
       el.classList.toggle('at-end', el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
@@ -33,7 +33,8 @@ export function useScrollEnd(ref) {
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => { el.removeEventListener('scroll', update); ro.disconnect(); };
-  }, [node]);
+  }, [el]);
+  return setEl;
 }
 
 // Listen to one of the app-wide events in events.js while a component is mounted.

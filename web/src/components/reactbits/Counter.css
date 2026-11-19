@@ -1,0 +1,9 @@
+.counter__face { display: inline-flex; white-space: nowrap; }
+.counter__ch, .counter__strip > span { display: block; height: 1em; line-height: 1em; }
+/* clip, not hidden: a clipping box keeps its text baseline, so the reels line up with the signs around them */
+.counter__reel { display: block; height: 1em; overflow: hidden; overflow: clip; }
+.counter__strip { display: flex; flex-direction: column; transform: translateY(calc(var(--d) * -1em));
+  transition: transform .8s cubic-bezier(.2, .9, .25, 1); }
+.counter__reel:nth-last-child(2) .counter__strip { transition-delay: 40ms; }
+.counter__reel:nth-last-child(n+3) .counter__strip { transition-delay: 80ms; }
+@media (prefers-reduced-motion: reduce) { .counter__strip { transition: none; } }

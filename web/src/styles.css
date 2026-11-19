@@ -6,8 +6,10 @@
    Colour (OKLCH, checked for contrast and colour-blind separation):
      paper and ink are a faintly green neutral; mandi green is the brand and "hold"; brick is "sell now" and falling
      prices; marigold (the flower strung over every mandi gate) is the forecast and its likely range.
-   Type: one family, Archivo, in three widths: wide for headings (painted signboards), normal for reading and the
-     interface, condensed and heavy for the big numbers (the rate board). Tabular figures wherever numbers line up. */
+   Type: one family, Archivo, along its width axis: wide for headings (painted signboards), normal for reading and the
+     interface, condensed and heavy for the big numbers (the rate board). Tabular figures wherever numbers line up.
+     One scale (below): display for the home headline, h1 for page titles, h2 for sections, h3 for lists; reading text
+     at 15px, lead paragraphs at 17px, labels at 13px and notes never under 12px. */
 :root {
   --paper: #f1f4f1;        /* app background behind the rail and bars */
   --surface: #fbfdfb;      /* the page itself */
@@ -30,10 +32,15 @@
   --focus: #1d5e35;
 
   --font: "Archivo Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --wide: 118%;            /* headings */
+  --wide: 118%;            /* page titles */
+  --wide-2: 112%;          /* section and list headings */
   --tight: 72%;            /* big numbers */
 
-  --t-xs: 0.75rem; --t-sm: 0.8125rem; --t-md: 0.9375rem; --t-lg: 1.0625rem; --t-xl: 1.375rem;
+  --t-xs: 0.75rem; --t-sm: 0.8125rem; --t-md: 0.9375rem; --t-lg: 1.0625rem; --t-xl: 1.375rem; --t-2xl: 1.75rem;
+  --t-h1: clamp(2.1rem, 1.35rem + 2.5vw, 3.25rem);
+  --t-display: clamp(2.5rem, 1.3rem + 4.4vw, 4.75rem);
+  --t-figure: clamp(2.2rem, 1.4rem + 2vw, 3.1rem);
+  --t-figure-lead: clamp(3rem, 2rem + 3.6vw, 4.9rem);
   --r: 8px;
   --ease: cubic-bezier(.2, .8, .2, 1);
   --rail: 56px;
@@ -47,11 +54,16 @@ body {
   font-family: var(--font); font-size: var(--t-md); line-height: 1.5;
   -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
 }
-h1, h2, h3 { font-stretch: var(--wide); text-wrap: balance; }
+h1, h2, h3 { font-stretch: var(--wide); text-wrap: balance; font-kerning: normal; }
+h2, h3 { font-stretch: var(--wide-2); }
+p { text-wrap: pretty; }
 .num { font-variant-numeric: tabular-nums lining-nums; }
+/* page titles: one style everywhere (mandi, India overview, compare, accuracy, about) */
+.board-title h1, .page-head h1, .doc-hero h1 { margin: 0; font-weight: 800; font-size: var(--t-h1); line-height: 1; letter-spacing: -0.022em; }
+.lede, .page-head p, .doc-hero p { color: var(--ink-2); font-size: var(--t-lg); line-height: 1.55; max-width: 62ch; }
 button, input, select { font: inherit; color: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
-a { color: var(--green); text-underline-offset: 3px; }
+a { color: var(--green); text-underline-offset: 3px; text-decoration-thickness: 1px; }
 a:hover { color: var(--green-2); }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var(--rule); border-bottom-width: 2px;
@@ -131,7 +143,6 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
 .side { position: sticky; top: 0; height: 100vh; z-index: 40; display: flex; }
 .rail { width: var(--rail); flex: none; height: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 14px 0;
   background: var(--paper); border-right: 1px solid var(--rule); color: var(--ink-2); }
-.rail-brand { width: 30px; height: 30px; font-size: 1.05rem; }
 .rail-list { position: relative; display: flex; flex-direction: column; gap: 4px; width: 100%; align-items: center; margin-top: 6px; }
 .rail-marker { position: absolute; left: 0; top: 0; width: 100%; height: 40px; pointer-events: none; opacity: 0; transition: transform .24s var(--ease), opacity .2s; }
 .rail-marker::before { content: ""; position: absolute; left: 0; top: 10px; width: 3px; height: 20px; border-radius: 0 3px 3px 0; background: var(--green); }
@@ -205,7 +216,7 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
 .delta.flat { color: var(--ink-3); }
 .delta.big { font-size: 1.75rem; font-weight: 800; font-stretch: var(--tight); line-height: 1.05; gap: 2px; }
 .badge { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; background: var(--marigold-tint);
-  color: #6b4300; font-size: 0.6875rem; font-weight: 700; vertical-align: 1px; }
+  color: #6b4300; font-size: var(--t-xs); font-weight: 700; line-height: 1.5; vertical-align: 1px; }
 .btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--rule); background: var(--surface); border-radius: var(--r);
   padding: 9px 14px; font-weight: 650; cursor: pointer; color: var(--ink); }
 .btn:hover { border-color: var(--ink-3); }
@@ -245,8 +256,9 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
 
 /* ── the rate board: the one loud element on a page ───────────────────── */
 .board { display: grid; gap: 22px; }
-.board-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 420px); gap: 20px 48px; align-items: start; }
-.board-title h1 { margin: 0; font-weight: 800; font-size: clamp(2rem, 1.3rem + 2.4vw, 3.1rem); line-height: 1; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+/* the name sits on the board's top rule, like the painted name over a rate board; the week's call stands beside it */
+.board-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 420px); gap: 20px 48px; align-items: end; }
+.board-title h1 { overflow-wrap: anywhere; }
 .board-where { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 12px 0 0; color: var(--ink-2); font-size: var(--t-md); }
 .board-where > span + span::before { content: ""; display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: var(--ctx);
   margin-right: 14px; vertical-align: 3px; }
@@ -264,26 +276,16 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
 .board-cell + .board-cell { border-left: 1px solid var(--ink); }
 .board-cell:first-child { padding-left: 0; }
 .board-label { font-size: var(--t-sm); font-weight: 650; color: var(--ink-2); }
-.board-value { font-weight: 850; font-stretch: var(--tight); font-size: clamp(2.2rem, 1.4rem + 2vw, 3.1rem); line-height: .95;
+.board-value { font-weight: 850; font-stretch: var(--tight); font-size: var(--t-figure); line-height: 1;
   letter-spacing: -0.01em; font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
-.board-cell.lead .board-value { font-size: clamp(3rem, 2rem + 3.6vw, 4.9rem); }
+.board-cell.lead .board-value { font-size: var(--t-figure-lead); }
 .board-value small { font-size: .42em; font-weight: 700; font-stretch: 100%; color: var(--ink-2); margin-left: 6px; letter-spacing: 0; }
 .board-value.range { font-size: clamp(1.6rem, 1.1rem + 1.4vw, 2.2rem); }
 .board-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: var(--t-sm); color: var(--ink-3); }
 .board-sub .delta { font-size: var(--t-sm); }
-.board-note { font-size: var(--t-xs); color: var(--ink-3); margin-top: auto; padding-top: 2px; }
-.board-cell.fc .board-value { color: var(--ink); }
-.board-trend { width: 100%; max-width: 280px; height: 34px; margin-top: 4px; }
-
-/* React Bits SpotlightCard as a board cell: no card chrome, just the marigold light following the pointer */
-.board-cell.spotlight-card, .cp-spot.spotlight-card { border-radius: 0; box-shadow: none; background: transparent; overflow: hidden; }
-.board-cell.spotlight-card { padding: 16px 22px 18px; }
-.board-cell.spotlight-card:first-child { padding-left: 0; }
-.board-cell .spotlight-card__border, .cp-spot .spotlight-card__border { display: none; }
-.cp-spot.spotlight-card { padding: 0; height: 100%; }
-.cp-spot .spotlight-card__light { mix-blend-mode: multiply; }
-.board-cell .spotlight-card__light { mix-blend-mode: multiply; }
-.verdict-word .shiny-text { display: inline; }
+.board-note { font-size: var(--t-xs); line-height: 1.45; color: var(--ink-3); padding-top: 2px; }
+.trendline { display: block; width: 100%; height: 34px; }
+.board-trend { max-width: 280px; margin-top: 4px; }
 
 /* forecast range bar: marigold band = likely range, tick = forecast, dot = today */
 .rangebar { position: relative; height: 18px; margin-top: 4px; }
@@ -309,7 +311,10 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
 .verdict-foot a { font-weight: 650; }
 
 /* calls across India: one bar split into hold / no clear signal / sell now */
+.calls { display: block; }
 .calls-bar { display: flex; height: 12px; gap: 2px; margin-top: 8px; }
+.calls.compact .calls-bar { height: 6px; }
+.calls.compact .calls-legend { font-size: var(--t-xs); margin-top: 6px; gap: 2px 12px; }
 .calls-bar span { display: block; border-radius: 2px; min-width: 3px; }
 .calls-bar .hold { background: var(--green); }
 .calls-bar .call { background: var(--ctx); }
@@ -325,33 +330,44 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
 .start-hint svg { flex: none; color: var(--ink-3); }
 
 /* ── home: choose a crop (the four crops on one ruled board) ─────────── */
-.home-head h1 { margin: 0; font-weight: 800; font-size: clamp(2.2rem, 1.4rem + 3vw, 3.6rem); line-height: 1; letter-spacing: -0.02em; }
-.home-head p { margin: 16px 0 0; max-width: 64ch; color: var(--ink-2); font-size: var(--t-lg); line-height: 1.55; text-wrap: pretty; }
+.home-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px 56px; align-items: end; }
+.home-head h1 { grid-column: 1 / -1; margin: 0; font-weight: 800; font-size: var(--t-display); line-height: .98; letter-spacing: -0.03em; }
+.home-head .lede { margin: 0; align-self: start; }
+.vp-word { display: inline-block; white-space: nowrap; }
+.vp-live .vp-letter { display: inline-block; text-align: center; }   /* widths pinned by VariableProximity.jsx */
+/* how FarmStat is used: a real sequence, so it is numbered; the numbers are set like the board's figures */
+.home-steps { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px; align-self: start; }
+.home-steps li { counter-increment: step; display: grid; gap: 2px; align-content: start; padding-top: 10px; border-top: 1px solid var(--ink);
+  font-size: var(--t-sm); color: var(--ink-2); line-height: 1.45; }
+.home-steps li::before { content: counter(step); font-weight: 850; font-stretch: var(--tight); font-size: 1.6rem; line-height: 1; color: var(--green); }
+.home-steps b { color: var(--ink); font-weight: 700; font-size: var(--t-md); }
 .crop-choice { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
   border-top: 3px solid var(--ink); border-bottom: 3px solid var(--ink); }
 .crop-choice li + li { border-left: 1px solid var(--ink); }
 .crop-pick { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left;
   border: 0; background: none; padding: 20px 22px 22px; cursor: pointer; color: inherit; transition: background-color .15s; }
-.crop-pick:hover { background: transparent; }
 .crop-pick:hover .cp-name { color: var(--green); }
 .crop-pick:focus-visible { outline-offset: -3px; }
-.cp-name { font-weight: 800; font-stretch: var(--wide); font-size: 1.6rem; line-height: 1.05; letter-spacing: -0.01em; transition: color .15s; }
+.cp-name { font-weight: 800; font-stretch: var(--wide); font-size: var(--t-2xl); line-height: 1.05; letter-spacing: -0.015em; transition: color .15s; }
 .cp-about { color: var(--ink-2); font-size: var(--t-sm); line-height: 1.45; min-height: 2.9em; }
-.cp-price { margin-top: 10px; font-weight: 850; font-stretch: var(--tight); font-size: clamp(2.4rem, 1.6rem + 2vw, 3.3rem); line-height: .95; white-space: nowrap; }
+.cp-price { margin-top: 10px; font-weight: 850; font-stretch: var(--tight); font-size: clamp(2.4rem, 1.6rem + 2vw, 3.3rem); line-height: 1; white-space: nowrap; }
 .cp-price small { font-size: .42em; font-weight: 700; font-stretch: 100%; color: var(--ink-2); margin-left: 6px; }
 .cp-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: var(--t-sm); color: var(--ink-3); }
 .cp-sub .delta { font-size: var(--t-sm); }
+.cp-trend { margin-top: 6px; height: 30px; }
+.cp-spot { height: 100%; }
+.crop-pick .calls { width: 100%; }
 .cp-count { margin-top: auto; padding-top: 10px; font-size: var(--t-sm); font-weight: 650; color: var(--ink-2); }
 .home-foot { margin: 0; color: var(--ink-2); font-size: var(--t-md); }
 
 /* ── sections (no cards: a heading, a sentence, the content) ───────────── */
 .panel { min-width: 0; }
 .panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; align-items: flex-end; margin-bottom: 14px; }
-.panel h2, .page-head h2 { margin: 0; font-weight: 750; font-size: var(--t-xl); line-height: 1.15; letter-spacing: -0.01em; }
-.panel h3 { margin: 0 0 8px; font-weight: 750; font-size: var(--t-lg); }
-.panel .sub { margin: 4px 0 0; color: var(--ink-2); font-size: var(--t-sm); max-width: 78ch; text-wrap: pretty; }
-.page-head h1 { margin: 0; font-weight: 800; font-size: clamp(2rem, 1.3rem + 2.4vw, 3.1rem); line-height: 1; letter-spacing: -0.02em; }
-.page-head p { margin: 14px 0 0; color: var(--ink-2); max-width: 72ch; font-size: var(--t-lg); line-height: 1.55; text-wrap: pretty; }
+.panel h2 { margin: 0; font-weight: 750; font-size: var(--t-xl); line-height: 1.15; letter-spacing: -0.012em; }
+.panel h3 { margin: 0 0 8px; font-weight: 750; font-size: var(--t-lg); letter-spacing: -0.005em; }
+.panel .sub { margin: 6px 0 0; color: var(--ink-2); font-size: var(--t-sm); line-height: 1.5; max-width: 78ch; }
+.page-head p { margin: 14px 0 0; }
 .grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 36px 48px; align-items: start; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; border-top: 1px solid var(--rule); }
 .grid-3 > .panel { padding: 18px 24px 0; }
@@ -460,7 +476,7 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
 .table tr.me td { background: var(--green-tint); font-weight: 650; }
 .table-wrap { overflow-x: auto; }
 .table-wrap .table th { top: 0; }
-.advice-word { font-weight: 700; }
+.advice-word { font-weight: 700; white-space: nowrap; }
 .advice-word.hold { color: var(--green); }
 .advice-word.sell { color: var(--brick); }
 .advice-word.call { color: var(--ink-3); font-weight: 600; }
@@ -511,9 +527,6 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
 .cmdk-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; overscroll-behavior: contain; flex: 1; }
 .cmdk-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "label aside" "hint aside";
   column-gap: 12px; padding: 7px 10px; border-radius: 7px; cursor: pointer; }
-.cmdk-head { margin-top: 30px; position: relative; }
-.cmdk-head:first-child { margin-top: 24px; }
-.cmdk-head::before { content: attr(data-group); position: absolute; left: 10px; top: -22px; font-size: var(--t-xs); font-weight: 650; color: var(--ink-3); }
 .cmdk-row[aria-selected="true"] { background: var(--green-tint); box-shadow: inset 3px 0 0 var(--green); }
 .cmdk-label { grid-area: label; font-weight: 650; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cmdk-hint { grid-area: hint; font-size: var(--t-xs); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -541,8 +554,8 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
 .doc-toc-title { font-size: var(--t-sm); font-weight: 700; margin: 0 0 6px; }
 .doc-meta { font-size: var(--t-xs); color: var(--ink-3); margin-top: 18px; line-height: 1.6; }
 .doc-body { max-width: 72ch; min-width: 0; }
-.doc-hero h1 { margin: 0; font-weight: 800; font-size: clamp(2.1rem, 1.4rem + 2.6vw, 3.3rem); line-height: 1; letter-spacing: -0.02em; max-width: 16ch; }
-.doc-hero p { margin: 16px 0 0; color: var(--ink-2); font-size: 1.1875rem; line-height: 1.55; }
+.doc-hero h1 { max-width: 16ch; }
+.doc-hero p { margin: 16px 0 0; font-size: 1.125rem; }
 .doc-facts { display: grid; grid-template-columns: repeat(4, 1fr); margin: 28px 0 0; border-top: 3px solid var(--ink); border-bottom: 3px solid var(--ink); }
 .doc-facts div { padding: 12px 16px 14px; }
 .doc-facts div:first-child { padding-left: 0; }
@@ -556,7 +569,7 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
 .crop-card h3 span { font-size: var(--t-sm); font-weight: 650; font-stretch: 100%; color: var(--green); }
 .crop-card p { margin: 0; font-size: var(--t-md); color: var(--ink-2); line-height: 1.55; }
 .doc-section { padding-top: 44px; scroll-margin-top: 80px; }
-.doc-section > h2 { display: flex; align-items: baseline; gap: 14px; font-size: 1.5rem; font-weight: 750; letter-spacing: -0.01em; margin: 0 0 12px; }
+.doc-section > h2 { display: flex; align-items: baseline; gap: 14px; font-size: 1.5rem; font-weight: 750; line-height: 1.15; letter-spacing: -0.012em; margin: 0 0 12px; }
 .doc-section > h2 .sec-no { font-weight: 850; font-stretch: var(--tight); color: var(--ctx); font-size: 1.5rem; font-variant-numeric: tabular-nums; }
 .doc-section h3 { font-size: var(--t-lg); font-weight: 750; margin: 22px 0 4px; }
 .doc-section p, .doc-section li { font-size: 1.0625rem; color: #2c362f; line-height: 1.65; }
@@ -597,12 +610,13 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
   .board-head { grid-template-columns: minmax(0, 1fr); }
   .verdict { max-width: 620px; }
   .board-grid { grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); }
-  .board-cell.lead, .board-cell.lead.spotlight-card { grid-column: 1 / -1; padding: 16px 0 18px; border-bottom: 1px solid var(--ink); }
-  .board-cell.lead + .board-cell, .board-cell.lead + .board-cell.spotlight-card { border-left: 0; padding-left: 0; }
+  .board-cell.lead { grid-column: 1 / -1; padding: 16px 0 18px; border-bottom: 1px solid var(--ink); }
+  .board-cell.lead + .board-cell { border-left: 0; padding-left: 0; }
   .grid-2 { grid-template-columns: minmax(0, 1fr); }
   .grid-3 { grid-template-columns: minmax(0, 1fr); border-top: 0; }
   .grid-3 > .panel, .grid-3 > .panel:first-child { padding: 18px 0 0; border-top: 1px solid var(--rule); }
   .grid-3 > .panel + .panel { border-left: 0; }
+  .home-head { grid-template-columns: minmax(0, 1fr); align-items: start; }
   .crop-choice { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .crop-choice li:nth-child(3) { border-left: 0; }
   .crop-choice li:nth-child(n+3) { border-top: 1px solid var(--ink); }
@@ -661,16 +675,20 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
 }
 @media (max-width: 640px) {
   .board-grid { --cols: 3 !important; }
-  .board-cell, .board-cell.spotlight-card { padding: 12px 10px 14px; }
-  .board-cell.lead.spotlight-card { padding: 12px 0 14px; }
-  .board-cell.lead + .board-cell.spotlight-card { padding-left: 0; }
+  .board-cell { padding: 12px 10px 14px; }
+  .board-cell.lead { padding: 12px 0 14px; }
+  .board-cell.lead + .board-cell { padding-left: 0; }
   .board-cell:not(.lead) .board-value { font-size: 1.7rem; }
   .board-cell:not(.lead) .board-value.range { font-size: 1.1rem; }
   .board-cell:not(.lead) .board-label { font-size: var(--t-xs); }
   .board-sub { font-size: var(--t-xs); }
-  .board-note { font-size: .6875rem; }
+  .board-note { font-size: var(--t-xs); }
   .verdict-word { font-size: 1.5rem; }
   .mini-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .crop-pick .calls { display: none; }   /* the India overview shows the calls; the phone cell keeps price and trend */
+  .home-steps { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .home-steps li { grid-template-columns: 28px minmax(0, 1fr); column-gap: 10px; padding: 10px 0; border-top-color: var(--rule); }
+  .home-steps li::before { grid-row: span 2; font-size: 1.35rem; }
   .crop-pick { padding: 14px 12px 16px; }
   .crop-choice li:nth-child(odd) .crop-pick { padding-left: 0; }
   .cp-name { font-size: 1.3rem; }

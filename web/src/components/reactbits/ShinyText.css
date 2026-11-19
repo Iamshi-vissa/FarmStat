@@ -1,21 +1,8 @@
-.shiny-text {
-  position: relative;
-  display: inline-block;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+.shiny-text { color: var(--shiny-base); }
+.shiny-text--run {
+  background: linear-gradient(110deg, var(--shiny-base) 40%, var(--shiny-light) 50%, var(--shiny-base) 60%) 100% 0 / 250% 100% no-repeat;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: shiny-sweep var(--shiny-speed) cubic-bezier(.4, 0, .2, 1) .25s both;
 }
-
-.shiny-text__glow {
-  position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  filter: blur(0.14em);
-  pointer-events: none;
-  user-select: none;
-}
+@keyframes shiny-sweep { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .shiny-text--run { animation: none; background: none; -webkit-text-fill-color: currentColor; } }

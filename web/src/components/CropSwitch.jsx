@@ -1,11 +1,12 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { useScrollEnd } from '../hooks.js';
 
 // Crop switcher: a segmented control whose forest-green thumb slides to the chosen crop (CSS transition only).
 export default function CropSwitch({ items, value, onChange }) {
   const ref = useRef(null);
   const [thumb, setThumb] = useState(null);
-  useScrollEnd(ref);
+  const watchScroll = useScrollEnd();
+  const setRef = useCallback(n => { ref.current = n; watchScroll(n); }, [watchScroll]);
   useLayoutEffect(() => {
     const place = () => {
       const b = ref.current?.querySelector('[aria-checked="true"]');
@@ -29,7 +30,7 @@ export default function CropSwitch({ items, value, onChange }) {
     requestAnimationFrame(() => ref.current?.querySelector('[aria-checked="true"]')?.focus());
   };
   return (
-    <div className="crops" role="radiogroup" aria-label="Crop" ref={ref} onKeyDown={onKey}>
+    <div className="crops" role="radiogroup" aria-label="Crop" ref={setRef} onKeyDown={onKey}>
       {thumb && <span className="crops-thumb" aria-hidden="true" style={{ width: thumb.w, transform: `translateX(${thumb.x - 3}px)` }} />}
       {items.map(it => (
         <button key={it.value} type="button" role="radio" aria-checked={it.value === value} tabIndex={it.value === value ? 0 : -1}

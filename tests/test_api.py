@@ -56,6 +56,8 @@ def test_overview_summarises_a_crop_without_choosing_a_mandi(client):
     assert sum(s["mandis"] for s in d["states"]) <= d["series"]
     assert d["rises"][0]["move"] >= d["rises"][-1]["move"]          # sorted, biggest expected rise first
     assert d["falls"][0]["move"] <= d["falls"][-1]["move"]
+    # the trend and "last week" are the same statistic as the headline median, so the line ends on the big number
+    assert d["trend"][-1]["price"] == round(d["median"]) and d["median_prev"] == d["trend"][-2]["price"]
     assert client.get("/api/overview", params={"crop": "Wheat"}).status_code == 404
 
 

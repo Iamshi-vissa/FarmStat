@@ -4,6 +4,7 @@ export const T = {
   ink2: '#465048',
   ink3: '#636c64',
   grid: '#e3e8e3',          // rule-2
+  rule: '#d4d9d3',
   panel: '#fbfdfb',         // the page surface (halo behind marks)
   context: '#a1a69f',       // "a year earlier", reference lines, the usual seasonal range
   arrivals: '#cdd2cc',

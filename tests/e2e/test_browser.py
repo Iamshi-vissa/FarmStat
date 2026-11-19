@@ -111,12 +111,25 @@ def test_home_asks_for_a_crop_first(page, base):
     ("#crop=Onion&view=accuracy", ".stats", "How accurate is it?"),
     ("#crop=Onion&view=about", ".doc-body", "Mandi prices, a few weeks ahead"),
     ("#crop=Arecanut&view=overview", ".state-bars", "Arecanut across India"),
+    ("#crop=Arecanut&view=compare&state=Karnataka", ".table", "Where to sell arecanut"),   # no mandi chosen yet
 ])
 def test_every_page_renders(page, base, hash_, ready, title):
     page.goto(base + hash_)
     page.wait_for_selector(ready)
     assert heading(page) == title
     assert no_sideways_scroll(page)
+
+
+def test_board_figures_roll_to_the_real_value(page, base):
+    """The rolling digits end on the same number screen readers are given, on the board and on the home page."""
+    for hash_, ready in [("#crop=Onion&view=market&state=Maharashtra&mandi=Lasalgaon", ".chart-panel"), ("", ".crop-choice")]:
+        page.goto(base + hash_)
+        page.wait_for_selector(ready)
+        page.wait_for_timeout(1500)   # the first roll starts when the figure is in view and lasts under a second
+        pairs = page.evaluate("""() => [...document.querySelectorAll('.counter')].map(c => [
+            c.querySelector('.sr').textContent.replace(/\\D/g, ''),
+            [...c.querySelectorAll('.counter__strip')].map(s => s.style.getPropertyValue('--d')).join('')])""")
+        assert pairs and all(a == b for a, b in pairs), pairs
 
 
 @pytest.mark.parametrize("hash_, ready, title", [

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { MousePointerClick, Search } from 'lucide-react';
-import RateBoard, { Count, Price, Verdict, priceWeek } from './RateBoard.jsx';
+import RateBoard, { CallsBar, Count, Price, Verdict, priceWeek } from './RateBoard.jsx';
+import { TrendLine } from './Sparkline.jsx';
 import Delta from './Delta.jsx';
 import { MarketSkeleton } from './MarketView.jsx';
 import { openSearch, openSidePanel } from '../events.js';
 import { api } from '../api.js';
 import { pct, pct0, placeName, rupees, weeks } from '../format.js';
-import { T } from '../theme.js';
 
 // The first screen for a weekly crop, before any state or mandi is chosen: the crop across India this week.
 // Every row is a way in (a state opens its mandi list, a mandi opens its page).
@@ -30,7 +30,7 @@ export default function OverviewView({ crop, onState, onPick }) {
   const cells = [
     { key: 'now', label: 'Median price this week', value: <Price v={d.median} />, valueLabel: `${rupees(d.median)} per quintal`,
       sub: d.median_prev ? <><Delta value={d.median / d.median_prev - 1} /><span>vs last week ({rupees(d.median_prev)})</span></> : null,
-      extra: d.trend ? <Trend points={d.trend} /> : null, note: priceWeek(d.week) },
+      extra: <TrendLine values={d.trend?.map(p => p.price)} className="board-trend" label="India median by week" />, note: priceWeek(d.week) },
     { key: 'yoy', label: 'Compared with a year ago', value: d.median_year_ago ? <Count to={d.median / d.median_year_ago - 1} format={v => pct(v, 0)} /> : '–',
       note: d.median_year_ago ? `The median was ${rupees(d.median_year_ago)} in the same week last year` : 'Not enough history a year back' },
     // a crop with no forecast (arecanut) gets no forecast cells, rather than cells that say so
@@ -39,7 +39,6 @@ export default function OverviewView({ crop, onState, onPick }) {
       { key: 'rise', label: 'Likely to rise 5% or more', value: <Count to={d.rise_share} format={pct0} />, note: 'Share of mandis where the chance is 50% or higher' },
     ]),
   ];
-  const total = (calls.Hold ?? 0) + (calls['Your call'] ?? 0) + (calls['Sell now'] ?? 0);
   const verdict = d.naive ? (
     <Verdict action="Your call" word="No forecast" label="This week across India" headline="Today’s price is the best guide"
       detail={`No model beat “no change” for ${crop.toLowerCase()}, so each mandi shows the usual range of movement instead of a forecast.`}
@@ -48,7 +47,7 @@ export default function OverviewView({ crop, onState, onPick }) {
     <Verdict action="Your call" label="This week’s calls across India" word={`${calls.Hold ?? 0} say hold`}
       headline={`${calls['Sell now'] ?? 0} say sell now, ${calls['Your call'] ?? 0} have no clear signal.`}
       detail="Choose a mandi for its own call and the reasons behind it." footnote="Estimates, not guarantees.">
-      {total > 0 && <CallsBar calls={calls} total={total} />}
+      <CallsBar calls={calls} />
     </Verdict>
   );
 
@@ -76,38 +75,6 @@ export default function OverviewView({ crop, onState, onPick }) {
         <MoverList title="Highest prices this week" rows={d.top} onPick={pick} noMove={d.naive} />
       </div>
     </>
-  );
-}
-
-// The week's calls as one bar: hold, no clear signal and sell now, with the counts written out beside it.
-function CallsBar({ calls, total }) {
-  const parts = [['hold', 'Hold', calls.Hold ?? 0], ['call', 'No clear signal', calls['Your call'] ?? 0], ['sell', 'Sell now', calls['Sell now'] ?? 0]];
-  return (
-    <>
-      <div className="calls-bar" role="img" aria-label={parts.map(([, l, n]) => `${l}: ${n}`).join(', ')}>
-        {parts.map(([k, , n]) => n > 0 && <span key={k} className={k} style={{ flex: n / total }} />)}
-      </div>
-      <div className="calls-legend" aria-hidden="true">
-        {parts.map(([k, l, n]) => <span key={k}><i className={k} />{l} <b>{n}</b></span>)}
-      </div>
-    </>
-  );
-}
-
-// The national median over the past 26 weeks, under the price.
-function Trend({ points }) {
-  const v = points.map(p => p.price).filter(x => x != null);
-  if (v.length < 3) return null;
-  const w = 220, h = 40, min = Math.min(...v), max = Math.max(...v), span = max - min || 1;
-  const xy = v.map((y, i) => [(i / (v.length - 1)) * (w - 8) + 4, h - 4 - ((y - min) / span) * (h - 8)]);
-  const [lx, ly] = xy[xy.length - 1];
-  return (
-    <svg className="board-trend" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" role="img"
-      aria-label={`Weekly median over ${v.length} weeks, from ${rupees(v[0])} to ${rupees(v[v.length - 1])}`}>
-      <polyline points={xy.map(p => p.join(',')).join(' ')} fill="none" stroke={T.ink} strokeWidth="1.5"
-        vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-      <circle cx={lx} cy={ly} r="3" fill={T.ink} />
-    </svg>
   );
 }
 

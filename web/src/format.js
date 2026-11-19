@@ -1,7 +1,6 @@
 const inr = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
 
 export const rupees = v => (v == null ? '–' : `₹${inr.format(Math.round(v))}`);
-export const plain = v => (v == null ? '–' : inr.format(Math.round(v)));
 export const compactRupees = v => {
   if (v == null) return '–';
   if (Math.abs(v) >= 100000) return `₹${(v / 100000).toFixed(1)}L`;

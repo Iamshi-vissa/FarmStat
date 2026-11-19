@@ -185,11 +185,12 @@ class FarmData:
         for c in CROPS:
             sub = lt[lt["crop"] == c]
             if len(sub):
-                ov = self.overview(c) or {}   # this week's India median, for the crop choice on the home page
+                ov = self.overview(c) or {}   # this week's India median, trend and calls, for the crop choice on the home page
                 crops.append(dict(id=c, kind="weekly", series=len(sub),
                                   states=[dict(name=s, count=int(n)) for s, n in sub.groupby("state").size().items()],
                                   data_until=_clean(sub["week"].max()), naive=bool(sub["naive"].all()),
-                                  median=ov.get("median"), median_prev=ov.get("median_prev"), week=ov.get("week")))
+                                  median=ov.get("median"), median_prev=ov.get("median_prev"), week=ov.get("week"),
+                                  trend=[t["price"] for t in ov.get("trend", [])], calls=ov.get("calls", {})))
         return dict(crops=crops, n_mandis=int(pd.DataFrame({"s": lt["state"], "b": base}).drop_duplicates().shape[0]),
                     n_states=int(lt["state"].nunique()), horizons=self.horizons,
                     max_hold_weeks=MAX_HOLD_WEEKS, version=self.version)
@@ -243,9 +244,16 @@ class FarmData:
         modelled = lt[~lt["naive"].astype(bool)]
         week = lt["week"].max()
         fresh = lt[lt["week"] >= week - pd.Timedelta(weeks=2)]           # reported in the last 3 weeks
-        hist = self.prices[(self.prices["crop"] == crop) & (self.prices["week"] > week - pd.Timedelta(weeks=26))
-                           & (self.prices["week"] <= week)]
-        trend = hist.groupby("week")["price"].median().round(0)
+        # The weekly India median, worked out the same way as this week's headline figure: for each week, every followed
+        # mandi's latest price among those that reported in the three weeks to then. So the trend ends on the headline
+        # figure and "vs last week" compares like with like.
+        hist = self.prices[(self.prices["crop"] == crop) & (self.prices["week"] > week - pd.Timedelta(weeks=28))
+                           & (self.prices["week"] <= week)].merge(lt[KEY], on=KEY).sort_values("week")
+        weeks = sorted(w for w in hist["week"].unique() if w > week - pd.Timedelta(weeks=26))
+        trend = pd.Series({w: hist[hist["week"].between(w - pd.Timedelta(weeks=2), w)].groupby(KEY)["price"].last().median()
+                           for w in weeks}, dtype=float).round(0)
+        if len(trend) and trend.index[-1] == week:
+            trend.iloc[-1] = round(float(fresh["price"].median()))   # this week includes the live feed's reports
         prev = trend.iloc[-2] if len(trend) > 1 else None
         year = self.prices[(self.prices["crop"] == crop)
                            & (self.prices["week"].between(week - pd.Timedelta(weeks=53), week - pd.Timedelta(weeks=51)))]

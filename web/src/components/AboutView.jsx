@@ -75,9 +75,8 @@ export default function AboutView({ meta, section, onSection }) {
     <div className="doc">
       <aside className="doc-toc">
         <p className="doc-toc-title">On this page</p>
-        <LineSidebar items={SECTIONS.map(s => s[1])} activeIndex={active} onItemClick={i => go(i)}
-          accentColor={T.forest} textColor={T.ink3} markerColor="#d4d9d3" markerLength={22} markerGap={10}
-          itemGap={11} fontSize={0.875} maxShift={6} proximityRadius={60} tickScale={0.4} ariaLabel="About sections" />
+        <LineSidebar items={SECTIONS.map(s => s[1])} activeIndex={active} onItemClick={go} label="About sections"
+          accentColor={T.forest} textColor={T.ink3} markerColor={T.rule} />
         <div className="doc-meta">Last updated {UPDATED}<br />Model version {meta.version}<br />Prices to {date(until)}</div>
       </aside>
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import BlurText from './reactbits/BlurText.jsx';
 import { ArrowDownUp } from 'lucide-react';
+import BlurText from './reactbits/BlurText.jsx';
 import Delta from './Delta.jsx';
 import DotStrip from './DotStrip.jsx';
 import { quantile } from '../stats.js';
@@ -19,7 +19,7 @@ function SortTh({ id, label, sort, setSort, right, className = '' }) {
 }
 
 export default function CompareView({ crop, state, market, mandis, onMarket, onOpen }) {
-  const variety = crop === 'Arecanut' ? varietyOf(market) : null;
+  const variety = crop === 'Arecanut' && market ? varietyOf(market) : null;   // no mandi chosen yet: every variety
   const [sort, setSort] = useState({ id: 'price', desc: true });
 
   const naive = mandis.every(m => m.naive);
@@ -78,11 +78,11 @@ export default function CompareView({ crop, state, market, mandis, onMarket, onO
             <thead><tr>
               <SortTh id="market" label="Mandi" sort={sort} setSort={setSort} />
               <SortTh id="district" label="District" sort={sort} setSort={setSort} className="wide-cell" />
-              {!sameWeek && <th>Week</th>}
+              {!sameWeek && <th className="wide-cell">Week</th>}
               <SortTh id="price" label="Price" sort={sort} setSort={setSort} right />
-              {!naive && <SortTh id={`p50_${h}`} label={`In ${weeks(h)}`} sort={sort} setSort={setSort} right />}
+              {!naive && <SortTh id={`p50_${h}`} label={`In ${weeks(h)}`} sort={sort} setSort={setSort} right className="wide-cell" />}
               {!naive && <SortTh id="change" label="Change" sort={sort} setSort={setSort} right />}
-              {!naive && <SortTh id="prob_rise" label="Chance of 5%+ rise" sort={sort} setSort={setSort} right />}
+              {!naive && <SortTh id="prob_rise" label="Chance of 5%+ rise" sort={sort} setSort={setSort} right className="wide-cell" />}
               {!naive && <th>Advice</th>}
             </tr></thead>
             <tbody>
@@ -90,13 +90,13 @@ export default function CompareView({ crop, state, market, mandis, onMarket, onO
                 <tr key={r.market} className={r.market === market ? 'me' : ''}>
                   <td><button type="button" className="cell-link" onClick={() => onOpen(r.market)}
                     aria-current={r.market === market ? 'true' : undefined}>{placeName(r.market)}</button>
-                    <div className="mandi-dist narrow-cell">{r.district}</div></td>
-                  <td className="wide-cell">{r.district}</td>{!sameWeek && <td className="num">{date(r.week)}</td>}
+                    <div className="mandi-dist narrow-cell">{r.district}{sameWeek ? '' : `, week of ${date(r.week)}`}</div></td>
+                  <td className="wide-cell">{r.district}</td>{!sameWeek && <td className="num wide-cell">{date(r.week)}</td>}
                   <td className="r num">{rupees(r.price)}</td>
-                  {!naive && <td className="r num">{rupees(r[`p50_${h}`])}</td>}
+                  {!naive && <td className="r num wide-cell">{rupees(r[`p50_${h}`])}</td>}
                   {!naive && <td className="r"><Delta value={r.change} /></td>}
-                  {!naive && <td className="r num">{pct0(r.prob_rise)}</td>}
-                  {!naive && <td><span className={`advice-word ${ADVICE[r.advice] ?? 'call'}`}>{r.advice === 'Hold' ? `Hold ~${weeks(r.hold_weeks)}` : r.advice}</span></td>}
+                  {!naive && <td className="r num wide-cell">{pct0(r.prob_rise)}</td>}
+                  {!naive && <td><span className={`advice-word ${ADVICE[r.advice] ?? 'call'}`}>{r.advice === 'Hold' && r.hold_weeks ? `Hold ~${weeks(r.hold_weeks)}` : r.advice}</span></td>}
                 </tr>
               ))}
             </tbody>

@@ -28,6 +28,7 @@ const TABS = [['home', 'All crops'], ['overview', 'India overview'], ['compare',
 const viewFor = h => (VIEWS.includes(h.view) ? h.view : h.mandi ? 'market' : h.crop ? 'overview' : 'home');
 const readHash = () => Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
 const Wait = ({ label = 'Loading…' }) => <div className="loading" role="status">{label}</div>;
+const SPARKS = [T.forecast, T.forest];   // marigold and mandi green
 
 export default function App() {
   const init = useMemo(readHash, []);
@@ -39,9 +40,8 @@ export default function App() {
   const [view, setView] = useState(() => viewFor(init));
   const [section, setSection] = useState(init.section || null);   // About page section
   const [mandis, setMandis] = useState([]);                         // the chosen state's mandis for this crop
-  const tabsRef = useRef(null);
   const userMove = useRef(false);   // set by the visitor's clicks: the next address change gets its own history entry
-  useScrollEnd(tabsRef);
+  const tabsRef = useScrollEnd();
 
   // First paint: fetch meta and, alongside it, the first screen's data and code. The chart code follows when idle.
   useEffect(() => {
@@ -193,8 +193,7 @@ export default function App() {
 
   return (
     // React Bits ClickSpark: marigold sparks when a crop is picked (on the home page or the crop switch), nowhere else
-    <ClickSpark selector=".crop-pick, .crops button" sparkColor={[T.forecast, T.forest]} sparkSize={9} sparkRadius={26}
-      sparkCount={10} duration={480} style={{ height: 'auto', minHeight: '100vh' }}>
+    <ClickSpark selector=".crop-pick, .crops button" colors={SPARKS} size={9} radius={26} count={10}>
     <div className={`app${plain ? ' app-plain' : ''}`}>
       <a className="skip" href="#main">Skip to content</a>
       {!plain && side}

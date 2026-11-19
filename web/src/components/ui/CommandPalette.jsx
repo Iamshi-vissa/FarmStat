@@ -5,7 +5,7 @@ import { Search, X } from 'lucide-react';
 // Search-anywhere palette (Ctrl/⌘ K). Ported from the 21st.dev "Command Palette" by ddoemonn: the fuzzy ranking
 // (prefix and word-boundary bonuses, streaks), arrow/Home/End/Enter/Escape keys, pointer hover that ignores scroll,
 // a polite result count for screen readers, scroll lock and click-outside to close. Restyled with FarmStat tokens and
-// animated with CSS (no motion library). Items: { id, label, hint, keywords, group, aside }.
+// animated with CSS (no motion library). Items: { id, label, hint, keywords, aside }.
 const BOUNDARY = /[\s\-_/.:(),]/;
 const MAX = 60;
 
@@ -24,7 +24,7 @@ function scoreOne(text, query) {
   return total;
 }
 
-export function rank(items, query) {
+function rank(items, query) {
   // every word of the query must match the label or the keywords ("kolar tom" = Kolar district, tomato)
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (!words.length) return items.slice(0, MAX);
@@ -127,19 +127,14 @@ export default function CommandPalette({ open, items, onSelect, onClose, placeho
         </div>
         <ul ref={listRef} id={`${uid}-list`} role="listbox" aria-label="Results" className="cmdk-list"
           onMouseDown={e => e.preventDefault()}>
-          {results.map((it, i) => {
-            const on = it.id === activeId;
-            const head = it.group && it.group !== results[i - 1]?.group;
-            return (
-              <li key={it.id} id={`${uid}-${it.id}`} role="option" aria-selected={on} data-group={head ? it.group : undefined}
-                className={head ? 'cmdk-row cmdk-head' : 'cmdk-row'}
-                onPointerMove={e => hover(it.id, e)} onClick={() => onSelect(it)}>
-                <span className="cmdk-label">{it.label}</span>
-                {it.hint && <span className="cmdk-hint">{it.hint}</span>}
-                {it.aside && <span className="cmdk-aside num">{it.aside}</span>}
-              </li>
-            );
-          })}
+          {results.map(it => (
+            <li key={it.id} id={`${uid}-${it.id}`} role="option" aria-selected={it.id === activeId} className="cmdk-row"
+              onPointerMove={e => hover(it.id, e)} onClick={() => onSelect(it)}>
+              <span className="cmdk-label">{it.label}</span>
+              {it.hint && <span className="cmdk-hint">{it.hint}</span>}
+              {it.aside && <span className="cmdk-aside num">{it.aside}</span>}
+            </li>
+          ))}
         </ul>
         {results.length === 0 && <p className="cmdk-empty">{loading ? 'Loading every mandi…' : emptyLabel}</p>}
         <div className="cmdk-foot" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> open</span>

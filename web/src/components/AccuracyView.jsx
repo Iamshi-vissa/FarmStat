@@ -153,7 +153,7 @@ export default function AccuracyView() {
           still be chance.</p>
       </section>
 
-      <div className="grid-2 even">
+      <div className="grid-2">
         <section className="panel" aria-labelledby="range-title">
           <div className="panel-head"><div><h2 id="range-title">Do the likely ranges hold?</h2>
             <p className="sub">A likely range should contain the real price 80% of the time.{calibrated
@@ -192,7 +192,7 @@ export default function AccuracyView() {
       </div>
 
       {(m.rise_warning || m.by_year.length > 0) && (
-        <div className="grid-2 even">
+        <div className="grid-2">
           {m.rise_warning && <Reliability rw={m.rise_warning} />}
           {m.by_year.length > 0 && (
             <section className="panel" aria-labelledby="year-title">
@@ -211,7 +211,7 @@ export default function AccuracyView() {
         </div>
       )}
 
-      <div className="grid-2 even">
+      <div className="grid-2">
         {Object.keys(m.backtest).length > 0 && (
           <section className="panel" aria-labelledby="advice-title">
             <div className="panel-head"><div><h2 id="advice-title">Does following the advice pay?</h2>
