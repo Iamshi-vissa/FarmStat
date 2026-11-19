@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import BlurText from './reactbits/BlurText.jsx';
 import { AlertTriangle } from 'lucide-react';
 import LineSidebar from './reactbits/LineSidebar.jsx';
+import AccuracySection from './AccuracySection.jsx';
 import { date } from '../format.js';
 import { T } from '../theme.js';
 
@@ -12,6 +13,7 @@ const REPO = 'https://github.com/Iamshi-vissa/FarmStat';
 const SECTIONS = [
   ['overview', 'Overview'],
   ['method', 'How forecasts are made'],
+  ['accuracy', 'How accurate it is'],
   ['advice', 'Reading the advice'],
   ['data', 'Data and updates'],
   ['risks', 'Risks and limitations'],
@@ -21,10 +23,12 @@ const SECTIONS = [
   ['contact', 'Contact']
 ];
 
-function Section({ id, n, title, children }) {
+// A numbered section; its number and title come from SECTIONS, so the list on the left and the page always agree.
+function Section({ id, children }) {
+  const n = SECTIONS.findIndex(([k]) => k === id) + 1;
   return (
     <section id={id} className="doc-section" aria-labelledby={`${id}-h`}>
-      <h2 id={`${id}-h`}><span className="sec-no">{String(n).padStart(2, '0')}</span>{title}</h2>
+      <h2 id={`${id}-h`}><span className="sec-no">{String(n).padStart(2, '0')}</span>{SECTIONS[n - 1][1]}</h2>
       {children}
     </section>
   );
@@ -102,7 +106,7 @@ export default function AboutView({ meta, section, onSection }) {
               past weeks. No model beat “no change” for arecanut, so it gets no forecast.</p></div>
         </div>
 
-        <Section id="method" n={2} title="How forecasts are made">
+        <Section id="method">
           <ol>
             <li><b>Collect.</b> Weekly modal prices and arrivals reported by mandis to Agmarknet since 2003.</li>
             <li><b>Clean.</b> Mandi names are matched across years, obvious typing errors (a price over 3 times the local
@@ -116,11 +120,16 @@ export default function AboutView({ meta, section, onSection }) {
             <li><b>Calibrate the range.</b> The likely range is widened by what earlier years’ misses call for, so it holds the
               real price about 8 weeks in 10.</li>
             <li><b>Test honestly.</b> The models are checked on 2023–2026 data they never saw, retrained at the start of each
-              year as they would be in real use. The results are on the <a href="#view=accuracy">Model accuracy</a> page.</li>
+              year as they would be in real use. The results are in the next section, <a href="#view=about&section=accuracy">How
+              accurate it is</a>.</li>
           </ol>
         </Section>
 
-        <Section id="advice" n={3} title="Reading the advice">
+        <Section id="accuracy">
+          <AccuracySection />
+        </Section>
+
+        <Section id="advice">
           <p>The advice assumes you already hold the crop and can store it. It compares the expected price with today’s, after
             subtracting typical storage losses.</p>
           <ul>
@@ -135,7 +144,7 @@ export default function AboutView({ meta, section, onSection }) {
             holding for more than 1 week.</p>
         </Section>
 
-        <Section id="data" n={4} title="Data and updates">
+        <Section id="data">
           <ul>
             <li><b>History:</b> weekly prices and arrivals for onion, tomato and potato from Agmarknet, through the TOP Digital
               Twin weekly panel (January 2003 onwards), and arecanut prices by mandi and variety through Malabar Mandi Prices
@@ -149,7 +158,7 @@ export default function AboutView({ meta, section, onSection }) {
             it before you rely on a forecast.</p>
         </Section>
 
-        <Section id="risks" n={5} title="Risks and limitations">
+        <Section id="risks">
           <div className="doc-callout"><AlertTriangle size={18} aria-hidden="true" />
             <p><strong>Prices can move against any forecast.</strong> FarmStat gives estimates based on past patterns. A
               decision to hold or sell can lose money, and storing produce has its own risks.</p>
@@ -184,7 +193,7 @@ export default function AboutView({ meta, section, onSection }) {
           </ul>
         </Section>
 
-        <Section id="terms" n={6} title="Terms and disclaimer">
+        <Section id="terms">
           <p>FarmStat’s forecasts are produced automatically by statistical models from historical data. They are estimates of
             what may happen, not predictions that will come true, and past accuracy does not guarantee future accuracy. Always
             confirm prices at the mandi before you sell. FarmStat is an educational project and has not been reviewed by any
@@ -221,7 +230,7 @@ export default function AboutView({ meta, section, onSection }) {
           </ol>
         </Section>
 
-        <Section id="privacy" n={7} title="Privacy">
+        <Section id="privacy">
           <ul>
             <li>FarmStat has no accounts and does not ask for your name, phone number or location.</li>
             <li>It sets no advertising or tracking cookies. Your browser remembers only that you closed the welcome notice and
@@ -232,7 +241,7 @@ export default function AboutView({ meta, section, onSection }) {
           </ul>
         </Section>
 
-        <Section id="licences" n={8} title="Licences and credits">
+        <Section id="licences">
           <ul>
             <li>Price data: Agmarknet, Directorate of Marketing &amp; Inspection, Ministry of Agriculture &amp; Farmers Welfare,
               Government of India, under the Open Government Data License – India.</li>
@@ -243,7 +252,7 @@ export default function AboutView({ meta, section, onSection }) {
           </ul>
         </Section>
 
-        <Section id="contact" n={9} title="Contact">
+        <Section id="contact">
           <p>Found a wrong price, a bug or a mandi that’s missing? Open an issue on <a href={`${REPO}/issues`} target="_blank"
             rel="noreferrer">GitHub</a>. The full code, training notebook and test results are in the{' '}
             <a href={REPO} target="_blank" rel="noreferrer">FarmStat repository</a>.</p>

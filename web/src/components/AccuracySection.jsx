@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import BlurText from './reactbits/BlurText.jsx';
 import { Count } from './RateBoard.jsx';
 import { useWidth } from '../hooks.js';
 import { T } from '../theme.js';
@@ -76,7 +75,7 @@ function Reliability({ rw }) {
   const rows = rw.reliability.map(b => ({ predicted: Math.round(b.predicted * 100), observed: Math.round(b.observed * 100), rows: b.rows }));
   return (
     <section className="panel" aria-labelledby="rel-title">
-      <div className="panel-head"><div><h2 id="rel-title">Does a “47% chance of a rise” mean 47%?</h2>
+      <div className="panel-head"><div><h3 id="rel-title">Does a “47% chance of a rise” mean 47%?</h3>
         <p className="sub">Predicted chance of a 5%+ rise in 2 weeks against how often it happened. On the dashed line the
           warning is honest. ROC-AUC {rw.roc_auc.toFixed(2)}; Brier score {rw.brier.toFixed(3)} against {rw.brier_base_rate.toFixed(3)} for always
           quoting the average ({pct0(rw.base_rate)} of weeks are followed by a rise).</p></div></div>
@@ -85,12 +84,13 @@ function Reliability({ rw }) {
   );
 }
 
-export default function AccuracyView() {
+// The test results, shown as a section of the About page (there is no separate accuracy page).
+export default function AccuracySection() {
   const [m, setM] = useState(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => { api('accuracy').then(setM).catch(() => setFailed(true)); }, []);
-  if (failed) return <div className="loading" role="alert">Couldn’t load the test results. Reload the page to try again.</div>;
-  if (!m) return <div className="loading" role="status">Loading test results…</div>;
+  if (failed) return <p className="note" role="alert">Couldn’t load the test results. Reload the page to try again.</p>;
+  if (!m) return <p className="note" role="status">Loading test results…</p>;
   const H = m.horizons;
   const hs = Object.keys(H);
   const two = H['2'] ?? H[hs[0]];
@@ -98,13 +98,10 @@ export default function AccuracyView() {
   const years = `${m.test_years[0]}–${m.test_years.at(-1)}`;
 
   return (
-    <>
-      <div className="page-head">
-        <BlurText as="h1" text="How accurate is it?" />
-        <p>Every number here comes from {years} data the model never trained on. It was retrained at the start of each year,
-          as it would be in real use, and compared with the simplest forecast possible: “next week’s price will be the same
-          as this week’s”. Onion, tomato and potato, every mandi.</p>
-      </div>
+    <div className="accuracy">
+      <p>Every number here comes from {years} data the model never trained on. It was retrained at the start of each year,
+        as it would be in real use, and compared with the simplest forecast possible: “next week’s price will be the same
+        as this week’s”. Onion, tomato and potato, every mandi.</p>
 
       <div className="stats">
         <div className="stat"><div className="stat-label">Less error than “no change”</div>
@@ -124,7 +121,7 @@ export default function AccuracyView() {
       </div>
 
       <section className="panel" aria-labelledby="beat-title">
-        <div className="panel-head"><div><h2 id="beat-title">Does it beat “no change”?</h2>
+        <div className="panel-head"><div><h3 id="beat-title">Does it beat “no change”?</h3>
           <p className="sub">Average miss in ₹ per quintal. The interval comes from resampling whole weeks; “chance it’s luck”
             is the Diebold–Mariano test’s p-value, the chance of a gain this size if the model were no better.</p></div></div>
         <div className="table-wrap">
@@ -155,7 +152,7 @@ export default function AccuracyView() {
 
       <div className="grid-2">
         <section className="panel" aria-labelledby="range-title">
-          <div className="panel-head"><div><h2 id="range-title">Do the likely ranges hold?</h2>
+          <div className="panel-head"><div><h3 id="range-title">Do the likely ranges hold?</h3>
             <p className="sub">A likely range should contain the real price 80% of the time.{calibrated
               ? ' The model’s own ranges were too narrow further ahead, so the app widens each end by what earlier years’ misses call for (split-conformal calibration).'
               : ''}</p></div></div>
@@ -177,7 +174,7 @@ export default function AccuracyView() {
 
         {m.segments.length > 0 && (
           <section className="panel" aria-labelledby="seg-title">
-            <div className="panel-head"><div><h2 id="seg-title">Where it works best</h2>
+            <div className="panel-head"><div><h3 id="seg-title">Where it works best</h3>
               <p className="sub">2 weeks ahead. “New” mandis have less than 3 years of price history and are marked in the app.</p></div></div>
             <div className="table-wrap"><table className="table">
               <thead><tr><th>Crop and mandis</th><th>vs “no change”</th><th className="r">Range hit</th></tr></thead>
@@ -196,7 +193,7 @@ export default function AccuracyView() {
           {m.rise_warning && <Reliability rw={m.rise_warning} />}
           {m.by_year.length > 0 && (
             <section className="panel" aria-labelledby="year-title">
-              <div className="panel-head"><div><h2 id="year-title">Year by year</h2>
+              <div className="panel-head"><div><h3 id="year-title">Year by year</h3>
                 <p className="sub">2 weeks ahead. Hard years happen: in 2025 hundreds of new mandis joined the data.</p></div></div>
               <div className="table-wrap"><table className="table">
                 <thead><tr><th>Year</th><th>vs “no change”</th><th className="r">Direction right</th></tr></thead>
@@ -214,7 +211,7 @@ export default function AccuracyView() {
       <div className="grid-2">
         {Object.keys(m.backtest).length > 0 && (
           <section className="panel" aria-labelledby="advice-title">
-            <div className="panel-head"><div><h2 id="advice-title">Does following the advice pay?</h2>
+            <div className="panel-head"><div><h3 id="advice-title">Does following the advice pay?</h3>
               <p className="sub">Extra rupees per quintal from following the sell-or-hold call instead of always selling at once,
                 after storage losses (onion 4%, potato 3%, tomato 15% over 4 weeks; tomato held at most a week).
                 Always holding lost money.</p></div></div>
@@ -228,7 +225,7 @@ export default function AccuracyView() {
         )}
         {m.by_state.length > 0 && (
           <section className="panel" aria-labelledby="state-title">
-            <div className="panel-head"><div><h2 id="state-title">By state</h2>
+            <div className="panel-head"><div><h3 id="state-title">By state</h3>
               <p className="sub">2 weeks ahead, the {m.by_state.length} states with the most forecasts in the test.</p></div></div>
             <div className="table-wrap"><table className="table">
               <thead><tr><th>State</th><th>vs “no change”</th><th className="r">Direction right</th></tr></thead>
@@ -241,6 +238,6 @@ export default function AccuracyView() {
           </section>
         )}
       </div>
-    </>
+    </div>
   );
 }

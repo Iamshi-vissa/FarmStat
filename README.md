@@ -81,7 +81,7 @@ warns users there.
 
 `scripts/evaluate.py` re-runs the whole yearly walk-forward test from scratch (2022 for calibration, 2023–2026 as the
 test, about 168,000 mandi-weeks per horizon) and adds the checks a sceptic would ask for. Full tables:
-[reports/model_evaluation.md](reports/model_evaluation.md); the web app's accuracy page shows the same results.
+[reports/model_evaluation.md](reports/model_evaluation.md); the "How accurate it is" section of the web app's About page shows the same results.
 
 | Forecast | Less error than "no change" | 95% interval (block bootstrap over weeks) | Diebold-Mariano p-value | Range coverage | After conformal recalibration |
 |---|---|---|---|---|---|
@@ -134,7 +134,7 @@ Finding out *when a model doesn't help*, and saying so, is part of the result.
   held more than a week
 - **Compare mandis:** the spread of prices across a state's mandis and a sortable table of every mandi
 - Warning on mandis with less than 3 years of history
-- **Model accuracy page** with every test result, so users can see how far to trust the forecasts
+- **Every test result in the About page** (info button), so users can see how far to trust the forecasts
 - **Arecanut:** every mandi and variety (Rashi, Chali, Bette…), compared only with the same variety, with its usual range
   instead of a forecast
 - **Readable mandi names:** Agmarknet names like `Junnar(Alephata)` are shown as "Junnar (Alephata)"; links and
@@ -158,14 +158,15 @@ into cards.
   icon rail are painted mandi green with the chosen page underlined in marigold, like the green-and-white boards over a
   mandi gate, and the crop bar under them is a pale wash of the same green. Built in OKLCH; text
   passes WCAG AA, and the marigold and brick pair is checked for colour-blind separation
-- **Type:** one family, Archivo, along its width axis: wide for headings (signboard lettering), normal for reading,
-  condensed and heavy for the big numbers, with tabular figures wherever numbers line up. One type scale for the whole
-  app (a display size for the home headline, one page-title size, section and list headings, 15px reading text, 17px
-  lead paragraphs, 13px labels, notes never under 12px). One variable font file
+- **Type:** two variable faces. *Bricolage Grotesque*, a grotesque with the warmth of hand-painted signs, sets the
+  headings (heavy and a little condensed), the labels (semi-condensed and slightly spaced) and the reading text;
+  *Big Shoulders*, a tall condensed signage face, sets the big figures on the rate boards. Tabular figures wherever
+  numbers line up in tables. One type scale for the whole app (a display size for the home headline, one page-title
+  size, section and list headings, 15px reading text, 17px lead paragraphs, 13px labels, notes never under 12px)
 - **Motion, from [React Bits](https://reactbits.dev),** each used in one place and switched off for visitors who ask
   for reduced motion: *Waves*, laid flat as faint green field furrows behind each page's title that part around the
-  pointer (drawn only while on screen, about 30 frames a second), *VariableProximity* (the home headline thickens and widens under the pointer along Archivo's
-  weight and width axes; each letter keeps its resting width, so the line never rewraps), *Counter* (every digit on a
+  pointer (drawn only while on screen, about 30 frames a second), *VariableProximity* (the home headline thickens and widens under the pointer along Bricolage
+  Grotesque's weight and width axes; each letter keeps its resting width, so the line never rewraps), *Counter* (every digit on a
   board is a reel that rolls to its value, and from the old price to the new when you switch crop or mandi, like the
   flaps of a rate board), *SpotlightCard* (a marigold light follows the pointer across the crop board and the forecast
   cells), *BlurText* (page headings come into focus once), *ShinyText* (one sheen across the week's call) and
@@ -173,10 +174,10 @@ into cards.
   and trimmed to what FarmStat uses
 - **Home page:** how FarmStat is used in three steps, then the four crops on one ruled board, each with this week's India
   median, its change on last week, the last 26 weeks and this week's hold / no clear signal / sell calls
-- **Pages:** All crops (home), India overview, Compare mandis, Model accuracy and About. A mandi page has no tab of its
-  own: it opens from the side panel, search, the Compare table or the overview's lists, and the "All India / state /
-  mandi" bar under the top bar shows where you are. Pages that aren't about one crop (home, accuracy, about) hide the
-  crop switcher, side panel and search
+- **Pages:** All crops (home), India overview and Compare mandis as tabs; About, which includes the test results,
+  opens from the info button at the right of the top bar. A mandi page has no tab of its own: it opens from the side
+  panel, search, the Compare table or the overview's lists, and the "All India / state / mandi" bar under the top bar
+  shows where you are. Pages that aren't about one crop (home, about) hide the crop switcher, side panel and search
 - **Price chart,** drawn as plain SVG: price in ink, forecast and likely range in marigold, the usual price for the season
   (10th to 90th percentile of the same weeks in the past 5 years) in grey, an optional "same weeks last year" line, and
   arrivals as bars underneath on the same time axis, heavier-than-usual weeks darker. One hover line runs through both
@@ -185,12 +186,13 @@ into cards.
 - **How this week compares:** 52-week range and where today sits, change vs the same week last year, typical weekly
   move, and how prices moved in the same 4 weeks of past years. **Latest daily report** from the live feed, with a "Live"
   chip on the board when this week's price comes from it
-- **Model accuracy page:** does it beat "no change" (error, 95% interval, chance it's luck, direction, average miss),
-  do the likely ranges hold before and after calibration, where it works best, whether the rise warning's chances are
-  honest (ROC-AUC, Brier score, reliability chart), year by year, by state, and what following the advice earned
-- **About page:** method, how to read the advice, data and updates, risks, terms, privacy, licences and contact, with a
-  section rail (React Bits *LineSidebar*) that follows your reading
-- **Light:** the app depends only on React, an icon set and one font; charts are hand-written SVG (Recharts, about
+- **About page** (the info button): method; **how accurate it is**, with every test result (does it beat "no change"
+  with error, 95% interval, chance it's luck, direction and average miss; do the likely ranges hold before and after
+  calibration; where it works best; whether the rise warning's chances are honest, with ROC-AUC, Brier score and a
+  reliability chart; year by year; by state; and what following the advice earned); how to read the advice, data and
+  updates, risks, terms, privacy, licences and contact. A section rail (React Bits *LineSidebar*) follows your
+  reading, and old links to the accuracy page open its section
+- **Light:** the app depends only on React, an icon set and two fonts; charts are hand-written SVG (Recharts, about
   115 kB compressed, was removed in November 2026). All the JavaScript is about 110 kB compressed, each page loads its
   own code, the next pages' code loads while the browser is idle, and the API compresses JSON and caches built files for
   a year
@@ -317,7 +319,7 @@ flowchart TB
 | Models | scikit-learn (HistGradientBoosting, quantile loss), joblib |
 | Training | Jupyter, pandas, NumPy, XGBoost, matplotlib, seaborn |
 | API | FastAPI, Uvicorn |
-| Web app | React 19, Vite, hand-written SVG charts, React Bits (Waves, VariableProximity, Counter, SpotlightCard, BlurText, ShinyText, ClickSpark, LineSidebar), lucide icons; Archivo (one variable font, width axis) |
+| Web app | React 19, Vite, hand-written SVG charts, React Bits (Waves, VariableProximity, Counter, SpotlightCard, BlurText, ShinyText, ClickSpark, LineSidebar), lucide icons; Bricolage Grotesque and Big Shoulders (variable fonts) |
 | Live data | data.gov.in API, Supabase (Postgres, Edge Functions, pg_cron, pg_net), GitHub Actions |
 | Hosting | Vercel (FastAPI, Python 3.12) |
 | Checks | pytest, Ruff, ESLint (React and hooks rules, zero warnings), Playwright browser tests, GitHub Actions CI |

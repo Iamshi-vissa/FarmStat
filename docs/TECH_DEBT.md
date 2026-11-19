@@ -41,7 +41,7 @@ bigger number means fix sooner. Items fixed in this review are listed at the end
    training). The weekly retrain changes the model but keeps the old shifts. They are small and stable (the 4-week low end
    moves about 11% in log terms), so the risk is low. *Fix:* re-run `evaluate.py` and `calibrate_ranges.py` monthly, or
    after any model change, in a scheduled workflow.
-7. **Two result sets.** The app's accuracy page now reads only the re-run (`reports/evaluation.json`), but the
+7. **Two result sets.** The app's accuracy section (in About) now reads only the re-run (`reports/evaluation.json`), but the
    README's first tables still quote the notebook (ROC-AUC 0.746 vs 0.732). Both are explained, but readers stumble. *Fix:* make `scripts/evaluate.py`
    the only source and have the notebook load its output.
 

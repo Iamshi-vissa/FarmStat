@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Search, Store } from 'lucide-react';
+import { ChevronDown, Info, Search, Store } from 'lucide-react';
 import CropSwitch from './components/CropSwitch.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import MarketView, { MarketSkeleton, loadMarketChart } from './components/MarketView.jsx';
@@ -17,17 +17,21 @@ import { useScrollEnd } from './hooks.js';
 
 // Pages other than the mandi page load on demand, so the first screen only downloads what it needs.
 const CompareView = lazy(() => import('./components/CompareView.jsx'));
-const AccuracyView = lazy(() => import('./components/AccuracyView.jsx'));
 const AboutView = lazy(() => import('./components/AboutView.jsx'));
 const loadOverview = () => import('./components/OverviewView.jsx');
 const OverviewView = lazy(loadOverview);
 
-const VIEWS = ['home', 'overview', 'market', 'compare', 'accuracy', 'about'];
+const VIEWS = ['home', 'overview', 'market', 'compare', 'about'];
 const NEEDS_CROP = ['overview', 'market', 'compare'];   // pages about one crop; without a crop they show the home page
 // Pages in the top bar. The mandi page has no tab: a mandi is opened from the list, search, a table or a ranking.
-const TABS = [['home', 'All crops'], ['overview', 'India overview'], ['compare', 'Compare mandis'], ['accuracy', 'Model accuracy'], ['about', 'About']];
+// About (with the test results) opens from the info button at the right of the top bar.
+const TABS = [['home', 'All crops'], ['overview', 'India overview'], ['compare', 'Compare mandis']];
 const viewFor = h => (VIEWS.includes(h.view) ? h.view : h.mandi ? 'market' : h.crop ? 'overview' : 'home');
-const readHash = () => Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
+// Old links to the accuracy page (#view=accuracy) open its section of the About page.
+const readHash = () => {
+  const h = Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
+  return h.view === 'accuracy' ? { ...h, view: 'about', section: h.section || 'accuracy' } : h;
+};
 const Wait = ({ label = 'Loading…' }) => <div className="loading" role="status">{label}</div>;
 const SPARKS = [T.forecast, T.forest];   // marigold and mandi green
 
@@ -172,7 +176,6 @@ export default function App() {
     switch (page_) {
       case 'home': return <HomeView meta={meta} onCrop={startCrop} />;
       case 'about': return <AboutView meta={meta} section={section} onSection={setSection} />;
-      case 'accuracy': return <AccuracyView />;
       case 'market':
         if (!market) return <ChooseFirst what="mandi" crop={crop} state={state} />;
         if (!listReady || !mandis.some(m => m.market === market)) return <MarketSkeleton label={`Loading ${placeName(market)}`} />;
@@ -187,8 +190,8 @@ export default function App() {
     }
   }
 
-  // Pages that aren't about one crop (home, accuracy, about) stand on their own: no crop switcher, mandi panel or search.
-  const plain = !cropMeta || page_ === 'about' || page_ === 'accuracy';
+  // Pages that aren't about one crop (home, about) stand on their own: no crop switcher, mandi panel or search.
+  const plain = !cropMeta || page_ === 'about';
   const tabs = TABS.filter(([v]) => cropMeta || !NEEDS_CROP.includes(v)).map(([value, label]) => ({ value, label }));
   const pageTabs = <Tabs items={tabs} value={page_} onChange={goTo} label="Page" className="tabs" tabRef={tabsRef} />;
 
@@ -203,6 +206,9 @@ export default function App() {
           <Brand />
           {pageTabs}
           {!plain && <SearchButton crop={crop} onPick={openMarket} />}
+          <a className="info-btn" href="#view=about" aria-current={page_ === 'about' ? 'page' : undefined}
+            aria-label="About FarmStat: how it works and how accurate it is" title="About FarmStat and its accuracy">
+            <Info size={19} aria-hidden="true" /></a>
         </header>
         {!plain && (
           <div className="context">
@@ -211,7 +217,7 @@ export default function App() {
               onMandi={() => (market && view !== 'market' ? goTo('market') : openSidePanel())} />
           </div>
         )}
-        {page_ !== 'about' && page_ !== 'accuracy' && <Notice />}
+        {page_ !== 'about' && <Notice />}
         <div className="page-wrap">
           <FieldLines />
           <div className="page">

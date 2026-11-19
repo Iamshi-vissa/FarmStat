@@ -11,9 +11,9 @@ const ABOUT = {
   Potato: 'Forecast 1, 2 and 4 weeks ahead, with sell or hold advice',
   Arecanut: 'Today’s price by variety, with its usual range of movement',
 };
-// The headline's letters thicken and widen under the pointer, along Archivo's weight and width axes.
-const HEAD_FROM = { wght: 800, wdth: 118 };
-const HEAD_TO = { wght: 900, wdth: 122 };
+// The headline's letters thicken and widen under the pointer, along Bricolage Grotesque's weight and width axes.
+const HEAD_FROM = { wght: 720, wdth: 82 };
+const HEAD_TO = { wght: 800, wdth: 100 };
 
 // The first page: nothing is chosen yet. How FarmStat is used, then the four crops on one ruled board, each with this
 // week's India median, its last 26 weeks and this week's calls.
@@ -58,7 +58,7 @@ export default function HomeView({ meta, onCrop }) {
       </ul>
 
       <p className="home-foot">
-        Every forecast was tested on 2023–2026 prices the model never saw. <a href="#view=accuracy">See how accurate it is</a>
+        Every forecast was tested on 2023–2026 prices the model never saw. <a href="#view=about&section=accuracy">See how accurate it is</a>
         {' '}or <a href="#view=about">read how it works</a>.
       </p>
     </>

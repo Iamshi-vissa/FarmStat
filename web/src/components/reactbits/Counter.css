@@ -1,5 +1,6 @@
 .counter__face { display: inline-flex; white-space: nowrap; }
 .counter__ch, .counter__strip > span { display: block; height: 1em; line-height: 1em; }
+.counter__strip > span { text-align: center; }   /* a face without tabular figures: each digit sits in the middle of its reel */
 /* clip, not hidden: a clipping box keeps its text baseline, so the reels line up with the signs around them */
 .counter__reel { display: block; height: 1em; overflow: hidden; overflow: clip; }
 .counter__strip { display: flex; flex-direction: column; transform: translateY(calc(var(--d) * -1em));

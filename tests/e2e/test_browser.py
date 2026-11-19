@@ -95,7 +95,8 @@ def test_home_asks_for_a_crop_first(page, base):
     assert "crop=" not in page.evaluate("location.hash")   # nothing is chosen for the visitor
     assert page.locator(".crop-pick").count() == 4
     assert page.locator(".side").count() == 0 and page.locator(".search-any").count() == 0   # no crop: nothing to search
-    assert [t.inner_text() for t in page.locator("[role=tab]").all()] == ["All crops", "Model accuracy", "About"]
+    assert [t.inner_text() for t in page.locator("[role=tab]").all()] == ["All crops"]   # About is the info button
+    assert page.locator(".topbar .info-btn").count() == 1
     page.click(".crop-pick:has-text('Tomato')")
     page.wait_for_selector(".state-bars")
     assert heading(page) == "Tomato across India"
@@ -108,7 +109,7 @@ def test_home_asks_for_a_crop_first(page, base):
 @pytest.mark.parametrize("hash_, ready, title", [
     ("#crop=Onion&view=market&state=Maharashtra&mandi=Lasalgaon", ".chart-panel", "Lasalgaon"),
     ("#crop=Tomato&view=compare&state=Maharashtra", ".table", "Where to sell tomato"),
-    ("#crop=Onion&view=accuracy", ".stats", "How accurate is it?"),
+    ("#crop=Onion&view=accuracy", "#accuracy .stats", "Mandi prices, a few weeks ahead"),   # old link: About's results
     ("#crop=Onion&view=about", ".doc-body", "Mandi prices, a few weeks ahead"),
     ("#crop=Arecanut&view=overview", ".state-bars", "Arecanut across India"),
     ("#crop=Arecanut&view=compare&state=Karnataka", ".table", "Where to sell arecanut"),   # no mandi chosen yet
@@ -218,8 +219,8 @@ def test_back_button_stays_in_the_app(page, base):
     page.wait_for_selector(".state-bars")
     page.click(".crops >> text=Tomato")
     page.wait_for_selector("main h1:has-text('Tomato across India')")
-    page.click("[role=tab]:has-text('Model accuracy')")
-    page.wait_for_selector(".stats")
+    page.click(".topbar .info-btn")
+    page.wait_for_selector("#accuracy .stats")
     page.go_back()
     page.wait_for_selector("main h1:has-text('Tomato across India')")
     assert "crop=Tomato" in page.evaluate("location.hash") and "view=overview" in page.evaluate("location.hash")
