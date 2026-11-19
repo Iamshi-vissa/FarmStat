@@ -52,7 +52,7 @@ export default function Tabs({ items, value, onChange, label, variant = 'line', 
         return (
           <button key={item.value} ref={n => { nodes.current[i] = n; }} type="button" id={`${base}-${item.value}`}
             {...(isTabs ? { role: 'tab', 'aria-selected': on } : { 'aria-pressed': on })}
-            tabIndex={on ? 0 : -1} disabled={item.disabled} title={item.title}
+            tabIndex={on || (index < 0 && i === 0) ? 0 : -1} disabled={item.disabled} title={item.title}
             onClick={() => onChange(item.value)}>
             {/* the bold copy reserves width so the row doesn't shift when the weight changes */}
             <span className="ftabs-label"><span aria-hidden="true" className="ftabs-ghost">{item.label}</span><span>{item.label}</span></span>

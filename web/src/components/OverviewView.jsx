@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { MousePointerClick, Search } from 'lucide-react';
-import RateBoard from './RateBoard.jsx';
+import RateBoard, { Price, Verdict, priceWeek } from './RateBoard.jsx';
 import Delta from './Delta.jsx';
 import { MarketSkeleton } from './MarketView.jsx';
 import { openSearch, openSidePanel } from '../events.js';
 import { api } from '../api.js';
-import { date, pct, pct0, placeName, rupees, weeks } from '../format.js';
+import { pct, pct0, placeName, rupees, weeks } from '../format.js';
 import { T } from '../theme.js';
 
 // The first screen for a weekly crop, before any state or mandi is chosen: the crop across India this week.
@@ -27,41 +27,47 @@ export default function OverviewView({ crop, onState, onPick }) {
   const pick = r => onPick(r.state, r.market);
   const chooseState = s => { onState(s); openSidePanel(); };
   const unit = crop === 'Arecanut' ? 'mandi-varieties' : 'mandis';
+  const cells = [
+    { key: 'now', label: 'Median price this week', value: <Price v={d.median} />, valueLabel: `${rupees(d.median)} per quintal`,
+      sub: d.median_prev ? <><Delta value={d.median / d.median_prev - 1} /><span>vs last week ({rupees(d.median_prev)})</span></> : null,
+      extra: d.trend ? <Trend points={d.trend} /> : null, note: priceWeek(d.week) },
+    { key: 'yoy', label: 'Compared with a year ago', value: d.median_year_ago ? pct(d.median / d.median_year_ago - 1, 0) : '–',
+      note: d.median_year_ago ? `The median was ${rupees(d.median_year_ago)} in the same week last year` : 'Not enough history a year back' },
+    // a crop with no forecast (arecanut) gets no forecast cells, rather than cells that say so
+    ...(d.naive ? [] : [
+      { key: 'move', label: `Expected in ${weeks(d.horizon)}`, value: pct(d.move), note: 'Median expected change across mandis with a forecast' },
+      { key: 'rise', label: 'Likely to rise 5% or more', value: pct0(d.rise_share), note: 'Share of mandis where the chance is 50% or higher' },
+    ]),
+  ];
+  const total = (calls.Hold ?? 0) + (calls['Your call'] ?? 0) + (calls['Sell now'] ?? 0);
+  const verdict = d.naive ? (
+    <Verdict action="Your call" word="No forecast" label="This week across India" headline="Today’s price is the best guide"
+      detail={`No model beat “no change” for ${crop.toLowerCase()}, so each mandi shows the usual range of movement instead of a forecast.`}
+      footnote="Choose a mandi to see its own range." />
+  ) : (
+    <Verdict action="Your call" label="This week’s calls across India" word={`${calls.Hold ?? 0} say hold`}
+      headline={`${calls['Sell now'] ?? 0} say sell now, ${calls['Your call'] ?? 0} have no clear signal.`}
+      detail="Choose a mandi for its own call and the reasons behind it." footnote="Estimates, not guarantees.">
+      {total > 0 && <CallsBar calls={calls} total={total} />}
+    </Verdict>
+  );
+
   return (
     <>
-      <RateBoard title={`${crop} across India`} where={`Median of ${d.series.toLocaleString('en-IN')} ${unit} in ${d.states_count} states`}
-        priceLabel={`week of ${date(d.week)}`} price={d.median} slipKey={`overview-${crop}`}
-        advice={d.naive
-          ? { action: 'Information', label: 'This week across India', headline: 'Today’s price is the best guide',
-              detail: `No model beat “no change” for ${crop.toLowerCase()}, so mandi pages show the usual range of movement instead of a forecast.`,
-              footnote: 'Choose a mandi to see its own range.' }
-          : { action: 'Information', label: 'Calls across India',
-              headline: `${calls.Hold ?? 0} mandis say hold, ${calls['Sell now'] ?? 0} say sell now`,
-              detail: `${calls['Your call'] ?? 0} have no clear signal either way. Choose a mandi for its own call and the reasons behind it.`,
-              chance: d.rise_share, chanceLabel: `Mandis likely to rise 5%+ in ${weeks(d.horizon)}`,
-              footnote: 'Estimates, not guarantees.' }} />
+      <RateBoard title={`${crop} across India`} cells={cells} verdict={verdict}
+        where={[`Median of ${d.series.toLocaleString('en-IN')} ${unit} in ${d.states_count} states`]} />
 
       <p className="start-hint">
         <MousePointerClick size={16} aria-hidden="true" />
-        <span>To see one mandi’s forecast, choose a state below or
-          {' '}<button type="button" className="linklike" onClick={openSearch}><Search size={14} aria-hidden="true" /> search all mandis</button>.</span>
+        <span>To see one mandi’s forecast, choose a state below or{' '}
+          <button type="button" className="linklike" onClick={openSearch}><Search size={14} aria-hidden="true" />search {crop.toLowerCase()} mandis</button>.</span>
       </p>
-
-      <div className="kpis">
-        <Kpi label="Median price this week" value={rupees(d.median)} trend={d.trend}
-          note={d.median_prev ? <><Delta value={d.median / d.median_prev - 1} /> <span>vs last week ({rupees(d.median_prev)})</span></> : null} />
-        <Kpi label="Compared with a year ago" value={d.median_year_ago ? pct(d.median / d.median_year_ago - 1, 0) : '–'}
-          note={d.median_year_ago ? `Median was ${rupees(d.median_year_ago)} in the same week last year` : 'Not enough history a year back'} />
-        <Kpi label={`Expected in ${weeks(d.horizon)}`} value={d.move == null ? 'No forecast' : pct(d.move)}
-          note={d.move == null ? 'Shown as the usual range at each mandi' : 'Median expected change across mandis with a forecast'} />
-        <Kpi label="Likely to rise 5% or more" value={d.rise_share == null ? '–' : pct0(d.rise_share)}
-          note={d.rise_share == null ? 'No rise warning for this crop' : `Share of mandis where the chance is 50% or higher`} />
-      </div>
 
       <section className="panel" aria-labelledby="states-title">
         <div className="panel-head"><div><h2 id="states-title">Prices by state</h2>
-          <p className="sub">Median modal price of mandis that reported in the last 3 weeks. Select a state to see its mandis.</p></div></div>
-        <StateBars rows={d.states} onPick={chooseState} />
+          <p className="sub">Median modal price of mandis that reported in the last 3 weeks{d.naive ? '' : ', and the median expected change'}.
+            Select a state to see its mandis.</p></div></div>
+        <StateBars rows={d.states} onPick={chooseState} noMove={d.naive} />
       </section>
 
       <div className="grid-3">
@@ -73,19 +79,22 @@ export default function OverviewView({ crop, onState, onPick }) {
   );
 }
 
-// KPI tile: label, a big number, a plain-language note and (optionally) a 26-week trend line.
-// KPI tile: label, value, a trend line where there is one, and a note.
-function Kpi({ label, value, note, trend }) {
+// The week's calls as one bar: hold, no clear signal and sell now, with the counts written out beside it.
+function CallsBar({ calls, total }) {
+  const parts = [['hold', 'Hold', calls.Hold ?? 0], ['call', 'No clear signal', calls['Your call'] ?? 0], ['sell', 'Sell now', calls['Sell now'] ?? 0]];
   return (
-    <div className="kpi">
-      <div className="kpi-label">{label}</div>
-      <div className="kpi-value num">{value}</div>
-      {trend && <Trend points={trend} />}
-      {note && <div className="kpi-note">{note}</div>}
-    </div>
+    <>
+      <div className="calls-bar" role="img" aria-label={parts.map(([, l, n]) => `${l}: ${n}`).join(', ')}>
+        {parts.map(([k, , n]) => n > 0 && <span key={k} className={k} style={{ flex: n / total }} />)}
+      </div>
+      <div className="calls-legend" aria-hidden="true">
+        {parts.map(([k, l, n]) => <span key={k}><i className={k} />{l} <b>{n}</b></span>)}
+      </div>
+    </>
   );
 }
 
+// The national median over the past 26 weeks, under the price.
 function Trend({ points }) {
   const v = points.map(p => p.price).filter(x => x != null);
   if (v.length < 3) return null;
@@ -93,22 +102,22 @@ function Trend({ points }) {
   const xy = v.map((y, i) => [(i / (v.length - 1)) * (w - 8) + 4, h - 4 - ((y - min) / span) * (h - 8)]);
   const [lx, ly] = xy[xy.length - 1];
   return (
-    <svg className="kpi-trend" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" role="img"
+    <svg className="board-trend" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" role="img"
       aria-label={`Weekly median over ${v.length} weeks, from ${rupees(v[0])} to ${rupees(v[v.length - 1])}`}>
-      <polyline points={xy.map(p => p.join(',')).join(' ')} fill="none" stroke={T.forest} strokeWidth="1.75"
+      <polyline points={xy.map(p => p.join(',')).join(' ')} fill="none" stroke={T.ink} strokeWidth="1.5"
         vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-      <circle cx={lx} cy={ly} r="3" fill={T.forest} />
+      <circle cx={lx} cy={ly} r="3" fill={T.ink} />
     </svg>
   );
 }
 
-function StateBars({ rows, onPick }) {
+function StateBars({ rows, onPick, noMove = false }) {
   const [all, setAll] = useState(false);
   const max = Math.max(...rows.map(r => r.median ?? 0));
   const shown = all ? rows : rows.slice(0, 10);
   return (
     <>
-    <ol className="state-bars">
+    <ol className={`state-bars${noMove ? ' no-move' : ''}`}>
       {shown.map(r => (
         <li key={r.state}>
           <button type="button" onClick={() => onPick(r.state)}
@@ -116,7 +125,7 @@ function StateBars({ rows, onPick }) {
             <span className="sb-name">{r.state}<small>{r.mandis} {r.mandis === 1 ? 'mandi' : 'mandis'}</small></span>
             <span className="sb-track"><span className="sb-fill" style={{ width: `${((r.median ?? 0) / max) * 100}%` }} /></span>
             <span className="sb-value num">{rupees(r.median)}</span>
-            <span className="sb-move">{r.move != null ? <Delta value={r.move} title="Median expected change" /> : <span className="delta flat">–</span>}</span>
+            {!noMove && <span className="sb-move">{r.move != null ? <Delta value={r.move} title="Median expected change" /> : <span className="delta flat">–</span>}</span>}
           </button>
         </li>
       ))}

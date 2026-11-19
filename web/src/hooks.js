@@ -43,3 +43,18 @@ export function useAppEvent(name, handler) {
     return () => window.removeEventListener(name, handler);
   }, [name, handler]);
 }
+
+// The rendered width of an element, kept up to date (charts draw to it). Starts at `fallback` before the first measure.
+export function useWidth(fallback = 720) {
+  const [node, setNode] = useState(null);
+  const [width, setWidth] = useState(fallback);
+  useEffect(() => {
+    if (!node) return undefined;
+    const read = () => setWidth(w => { const n = Math.round(node.clientWidth); return n > 0 && n !== w ? n : w; });
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, [node]);
+  return [setNode, width];
+}

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useWidth } from '../hooks.js';
 import { T } from '../theme.js';
 import { api } from '../api.js';
 import { pct, pct0, rupees, weeks } from '../format.js';
 
-// Skill bar: blue to the right when better than "no change", rust to the left when worse.
+// Skill bar: green to the right when better than "no change", brick to the left when worse.
 function SkillBar({ v, scale = 0.15 }) {
   const w = `${Math.min(100, (Math.abs(v) / scale) * 100)}%`;
   return (
@@ -21,14 +21,53 @@ function Interval({ v, lo, hi, min = -0.05, max = 0.15 }) {
   return (
     <svg className="ci" viewBox="0 0 100 14" preserveAspectRatio="none" role="img"
       aria-label={`${pct(v)}, 95% interval ${pct(lo)} to ${pct(hi)}`}>
-      <line x1={x(0)} x2={x(0)} y1="0" y2="14" stroke={T.context} strokeWidth="1" vectorEffect="non-scaling-stroke" />
-      <line x1={x(lo)} x2={x(hi)} y1="7" y2="7" stroke={T.forest} strokeWidth="2" vectorEffect="non-scaling-stroke" />
-      <circle cx={x(v)} cy="7" r="3.2" fill={T.forest} vectorEffect="non-scaling-stroke" />
+      <line x1={x(0)} x2={x(0)} y1="0" y2="14" stroke={T.ink3} strokeWidth="1" vectorEffect="non-scaling-stroke" />
+      <line x1={x(lo)} x2={x(hi)} y1="7" y2="7" stroke={T.ink} strokeWidth="2" vectorEffect="non-scaling-stroke" />
+      <circle cx={x(v)} cy="7" r="3.2" fill={T.ink} vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
 
 const luck = p => (p == null ? '–' : p < 0.001 ? 'under 0.1%' : p < 0.01 ? `${(p * 100).toFixed(1)}%` : `${Math.round(p * 100)}%`);
+
+// Predicted chance (x) against how often a rise followed (y), both 0-80%, with the honest diagonal. Plain SVG.
+function ReliabilityChart({ rows }) {
+  const [ref, width] = useWidth(560);
+  const [hi, setHi] = useState(null);
+  const m = { l: 44, r: 16, t: 12, b: 40 }, h = 240;
+  const pw = width - m.l - m.r, ph = h - m.t - m.b;
+  const x = v => m.l + (v / 80) * pw, y = v => m.t + (1 - v / 80) * ph;
+  const ticks = [0, 20, 40, 60, 80];
+  const d = rows.map((r, i) => `${i ? 'L' : 'M'}${x(r.predicted).toFixed(1)} ${y(r.observed).toFixed(1)}`).join('');
+  const p = hi != null ? rows[hi] : null;
+  return (
+    <div className="pchart" ref={ref}>
+      <svg width={width} height={h} role="img" aria-label={`Predicted against observed chance of a rise: ${rows.map(r => `${r.predicted}% predicted, ${r.observed}% rose`).join('; ')}`}
+        onPointerLeave={() => setHi(null)}>
+        {ticks.map(v => <g key={v}>
+          <line x1={m.l} x2={m.l + pw} y1={y(v)} y2={y(v)} stroke={T.grid} />
+          <line x1={x(v)} x2={x(v)} y1={m.t} y2={m.t + ph} stroke={T.grid} />
+          <text x={m.l - 8} y={y(v)} dy="0.32em" textAnchor="end" className="ax">{v}%</text>
+          <text x={x(v)} y={m.t + ph + 16} textAnchor="middle" className="ax">{v}%</text>
+        </g>)}
+        <text x={m.l + pw / 2} y={h - 4} textAnchor="middle" className="ax">Predicted chance</text>
+        <line x1={x(0)} y1={y(0)} x2={x(80)} y2={y(80)} stroke={T.context} strokeDasharray="4 3" />
+        <path d={d} fill="none" stroke={T.ink} strokeWidth={2} />
+        {rows.map((r, i) => (
+          <circle key={r.predicted} cx={x(r.predicted)} cy={y(r.observed)} r={hi === i ? 6 : 4.5} fill={T.ink} stroke={T.panel} strokeWidth={2}
+            onPointerEnter={() => setHi(i)} onPointerDown={() => setHi(i)} style={{ cursor: 'default' }} />
+        ))}
+      </svg>
+      {p && (
+        <div className="chart-tip pchart-tip" style={x(p.predicted) > width / 2 ? { right: width - x(p.predicted) + 12 } : { left: x(p.predicted) + 12 }}>
+          <div className="tip-when">Predicted about {p.predicted}%</div>
+          <div className="tip-row"><strong>{p.observed}%</strong><span>actually rose 5%+</span></div>
+          <div className="tip-row"><span>{p.rows.toLocaleString('en-IN')} mandi-weeks</span></div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Weeks grouped by the rise warning's predicted chance, against how often a 5%+ rise followed.
 function Reliability({ rw }) {
@@ -37,23 +76,9 @@ function Reliability({ rw }) {
     <section className="panel" aria-labelledby="rel-title">
       <div className="panel-head"><div><h2 id="rel-title">Does a “47% chance of a rise” mean 47%?</h2>
         <p className="sub">Predicted chance of a 5%+ rise in 2 weeks against how often it happened. On the dashed line the
-          warning is honest. ROC-AUC {rw.roc_auc.toFixed(2)}; a rise follows {pct0(rw.base_rate)} of weeks on average.</p></div></div>
-      <ResponsiveContainer width="100%" height={240}>
-        <LineChart data={rows} margin={{ top: 12, right: 16, bottom: 16, left: 0 }}>
-          <CartesianGrid stroke={T.grid} />
-          <XAxis type="number" dataKey="predicted" domain={[0, 80]} ticks={[0, 20, 40, 60, 80]} tickFormatter={v => `${v}%`}
-            tick={{ fontSize: 12, fill: T.ink3 }} tickLine={false} axisLine={false}
-            label={{ value: 'Predicted chance', position: 'insideBottom', offset: -8, fontSize: 12, fill: T.ink3 }} />
-          <YAxis domain={[0, 80]} ticks={[0, 20, 40, 60, 80]} tickFormatter={v => `${v}%`} tick={{ fontSize: 12, fill: T.ink3 }}
-            tickLine={false} axisLine={false} width={44} />
-          <ReferenceLine segment={[{ x: 0, y: 0 }, { x: 80, y: 80 }]} stroke={T.context} strokeDasharray="4 3" />
-          <Tooltip isAnimationActive={false} content={({ active, payload }) => active && payload?.[0] ? (
-            <div className="chart-tip"><div className="tip-when">Predicted about {payload[0].payload.predicted}%</div>
-              <div className="tip-row"><strong>{payload[0].payload.observed}%</strong><span>actually rose 5%+</span></div>
-              <div className="tip-row"><span>{payload[0].payload.rows.toLocaleString('en-IN')} mandi-weeks</span></div></div>) : null} />
-          <Line dataKey="observed" stroke={T.forest} strokeWidth={2} dot={{ r: 4, fill: T.forest }} isAnimationActive={false} />
-        </LineChart>
-      </ResponsiveContainer>
+          warning is honest. ROC-AUC {rw.roc_auc.toFixed(2)}; Brier score {rw.brier.toFixed(3)} against {rw.brier_base_rate.toFixed(3)} for always
+          quoting the average ({pct0(rw.base_rate)} of weeks are followed by a rise).</p></div></div>
+      <ReliabilityChart rows={rows} />
     </section>
   );
 }
@@ -104,7 +129,8 @@ export default function AccuracyView() {
           <table className="table">
             <thead><tr><th>Ahead</th><th className="r">FarmStat</th><th className="r">No change</th>
               <th className="ci-head">Less error <span>95% interval, 0 = no gain</span></th>
-              <th className="r">Chance it’s luck</th><th className="r">Direction right</th></tr></thead>
+              <th className="r">Chance it’s luck</th><th className="r">Direction right</th>
+              {two.mape != null && <th className="r">Average miss</th>}<th className="r wide-cell">Forecasts</th></tr></thead>
             <tbody>{hs.map(h => {
               const r = H[h];
               return (
@@ -114,7 +140,9 @@ export default function AccuracyView() {
                     ? <span className="ci-cell"><Interval v={r.skill_vs_naive} lo={r.skill_95ci[0]} hi={r.skill_95ci[1]} />
                       <span className="num">{pct(r.skill_vs_naive)}</span></span>
                     : <span className="num">{pct(r.skill_vs_naive)}</span>}</td>
-                  <td className="r num">{luck(r.p_value)}</td><td className="r num">{pct0(r.direction_acc)}</td></tr>
+                  <td className="r num">{luck(r.p_value)}</td><td className="r num">{pct0(r.direction_acc)}</td>
+                  {two.mape != null && <td className="r num">{pct0(r.mape)} of price</td>}
+                  <td className="r num wide-cell">{r.rows ? r.rows.toLocaleString('en-IN') : '–'}</td></tr>
               );
             })}</tbody>
           </table>
@@ -180,6 +208,37 @@ export default function AccuracyView() {
           )}
         </div>
       )}
+
+      <div className="grid-2 even">
+        {Object.keys(m.backtest).length > 0 && (
+          <section className="panel" aria-labelledby="advice-title">
+            <div className="panel-head"><div><h2 id="advice-title">Does following the advice pay?</h2>
+              <p className="sub">Extra rupees per quintal from following the sell-or-hold call instead of always selling at once,
+                after storage losses (onion 4%, potato 3%, tomato 15% over 4 weeks; tomato held at most a week).
+                Always holding lost money.</p></div></div>
+            <div className="table-wrap"><table className="table">
+              <thead><tr><th>Crop</th><th className="r">Extra per quintal</th></tr></thead>
+              <tbody>{Object.entries(m.backtest).map(([c, v]) => (
+                <tr key={c}><td>{c}</td><td className="r num"><strong>+{rupees(v)}</strong></td></tr>
+              ))}</tbody>
+            </table></div>
+          </section>
+        )}
+        {m.by_state.length > 0 && (
+          <section className="panel" aria-labelledby="state-title">
+            <div className="panel-head"><div><h2 id="state-title">By state</h2>
+              <p className="sub">2 weeks ahead, the {m.by_state.length} states with the most forecasts in the test.</p></div></div>
+            <div className="table-wrap"><table className="table">
+              <thead><tr><th>State</th><th>vs “no change”</th><th className="r">Direction right</th></tr></thead>
+              <tbody>{m.by_state.map(g => (
+                <tr key={g.group}><td>{g.group}</td>
+                  <td><span className="skill-cell"><SkillBar v={g.skill_vs_naive} /><span className="num">{pct(g.skill_vs_naive)}</span></span></td>
+                  <td className="r num">{pct0(g.direction_acc)}</td></tr>
+              ))}</tbody>
+            </table></div>
+          </section>
+        )}
+      </div>
     </>
   );
 }

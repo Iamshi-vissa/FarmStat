@@ -13,11 +13,11 @@ interactive docs are at `/docs`. On Vercel the same app is served from the site'
 
 | Endpoint | Returns |
 |---|---|
-| `GET /api/meta` | Crops, how many series each has per state, data dates, horizons, model version |
+| `GET /api/meta` | Crops (with this week's India median, last week's, and the week, for the home page), how many series each has per state, data dates, horizons, model version |
 | `GET /api/mandis?crop=&state=` | Every active mandi for a weekly crop in one state, with forecasts, advice and a 12-week sparkline |
 | `GET /api/series?crop=&state=&market=&weeks=104` | One mandi's history (8 to 520 weeks) and its 1/2/4-week forecast |
 | `GET /api/overview?crop=` | The crop across India: median price, 26-week trend, change on last week and last year, calls by type, prices by state, biggest expected rises and falls, top prices |
-| `GET /api/index` | Every active series in one compact list, for search |
+| `GET /api/index` | Every active series in one compact list `[crop, state, market, district, price]`; the app's search shows the chosen crop's rows |
 | `GET /api/accuracy` | The independent walk-forward test from `scripts/evaluate.py` (per horizon: error, "no change" error, skill with 95% interval, Diebold–Mariano p-value, direction, range coverage before and after calibration; by crop and mandi type; by year; rise-warning reliability), plus the farmer back-test and arecanut range coverage |
 | `GET /api/live?crop=&state=&market=` | The mandi's daily reports: the last 45 report days among its 400 most recent rows |
 | `GET /api/live/status` | Last fetch, last retrain and latest price date in the live feed |

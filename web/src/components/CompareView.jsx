@@ -5,6 +5,7 @@ import DotStrip from './DotStrip.jsx';
 import { quantile } from '../stats.js';
 import { date, pct0, placeName, rupees, weeks } from '../format.js';
 
+const ADVICE = { Hold: 'hold', 'Sell now': 'sell' };
 const varietyOf = m => (m.includes('(') ? m.slice(m.lastIndexOf('(') + 1, -1) : null);
 
 function SortTh({ id, label, sort, setSort, right, className = '' }) {
@@ -94,7 +95,7 @@ export default function CompareView({ crop, state, market, mandis, onMarket, onO
                   {!naive && <td className="r num">{rupees(r[`p50_${h}`])}</td>}
                   {!naive && <td className="r"><Delta value={r.change} /></td>}
                   {!naive && <td className="r num">{pct0(r.prob_rise)}</td>}
-                  {!naive && <td>{r.advice === 'Hold' ? `Hold ~${weeks(r.hold_weeks)}` : r.advice}</td>}
+                  {!naive && <td><span className={`advice-word ${ADVICE[r.advice] ?? 'call'}`}>{r.advice === 'Hold' ? `Hold ~${weeks(r.hold_weeks)}` : r.advice}</span></td>}
                 </tr>
               ))}
             </tbody>

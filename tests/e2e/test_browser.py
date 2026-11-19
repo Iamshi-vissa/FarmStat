@@ -88,11 +88,20 @@ def peek(pg) -> str:
     return pg.evaluate("document.querySelector('.side').dataset.peek")
 
 
-def test_home_is_the_india_overview(page, base):
+def test_home_asks_for_a_crop_first(page, base):
     page.goto(base)
+    page.wait_for_selector(".crop-choice")
+    assert heading(page) == "Which crop are you selling?"
+    assert "crop=" not in page.evaluate("location.hash")   # nothing is chosen for the visitor
+    assert page.locator(".crop-pick").count() == 4
+    assert page.locator(".side").count() == 0 and page.locator(".search-any").count() == 0   # no crop: nothing to search
+    assert [t.inner_text() for t in page.locator("[role=tab]").all()] == ["All crops", "Model accuracy", "About"]
+    page.click(".crop-pick:has-text('Tomato')")
     page.wait_for_selector(".state-bars")
-    assert heading(page) == "Onion across India"
-    assert "mandi=" not in page.evaluate("location.hash")   # nothing is chosen for the visitor
+    assert heading(page) == "Tomato across India"
+    assert "Mandi" not in [t.inner_text() for t in page.locator("[role=tab]").all()]
+    page.click(".topbar .brand")
+    page.wait_for_selector(".crop-choice")
     assert no_sideways_scroll(page)
 
 
@@ -110,13 +119,18 @@ def test_every_page_renders(page, base, hash_, ready, title):
     assert no_sideways_scroll(page)
 
 
-@pytest.mark.parametrize("hash_", ["#crop=Cashew&view=overview", "#crop=Sugarcane", "#crop=Onion&view=nonsense",
-                                   "#crop=Onion&view=market&state=Maharashtra&mandi=Nowhere",
-                                   "#crop=Onion&view=overview&state=Atlantis"])
-def test_old_or_unknown_links_open_the_overview(page, base, hash_):
+@pytest.mark.parametrize("hash_, ready, title", [
+    ("#crop=Cashew&view=overview", ".crop-choice", "Which crop are you selling?"),
+    ("#crop=Sugarcane", ".crop-choice", "Which crop are you selling?"),
+    ("#view=market&state=Maharashtra&mandi=Lasalgaon", ".crop-choice", "Which crop are you selling?"),
+    ("#crop=Onion&view=nonsense", ".state-bars", "Onion across India"),
+    ("#crop=Onion&view=market&state=Maharashtra&mandi=Nowhere", ".state-bars", "Onion across India"),
+    ("#crop=Onion&view=overview&state=Atlantis", ".state-bars", "Onion across India"),
+])
+def test_old_or_unknown_links_fall_back(page, base, hash_, ready, title):
     page.goto(base + hash_)
-    page.wait_for_selector(".state-bars")
-    assert heading(page) == "Onion across India"
+    page.wait_for_selector(ready)
+    assert heading(page) == title
 
 
 def test_compare_lists_every_mandi_in_the_state(page, base):
@@ -130,7 +144,7 @@ def test_compare_lists_every_mandi_in_the_state(page, base):
 
 
 def test_side_panel_opens_on_rest_and_closes(page, base):
-    page.goto(base)
+    page.goto(base + "#crop=Onion&view=overview")
     page.wait_for_selector(".state-bars")
     page.mouse.move(30, 400)
     page.mouse.move(700, 400)
@@ -149,8 +163,27 @@ def test_side_panel_opens_on_rest_and_closes(page, base):
     assert peek(page) == "false"
 
 
+def test_search_finds_only_the_crops_mandis(page, base):
+    page.goto(base + "#crop=Tomato&view=overview")
+    page.wait_for_selector(".state-bars")
+    page.keyboard.press("Control+k")
+    page.wait_for_selector(".cmdk")
+    page.keyboard.type("model accuracy")      # pages and other crops are not search results
+    page.wait_for_timeout(300)
+    assert page.locator(".cmdk [role=option]").count() == 0
+    page.fill(".cmdk input", "")
+    page.wait_for_selector(".cmdk [role=option]")
+    n = len(page.evaluate("fetch('/api/index').then(r => r.json()).then(d => d.rows.filter(r => r[0] === 'Tomato'))"))
+    shown = page.locator(".cmdk [role=option]").count()
+    assert 0 < shown <= n
+    page.keyboard.type("kolar")
+    page.keyboard.press("Enter")
+    page.wait_for_selector(".chart-panel")
+    assert "crop=Tomato" in page.evaluate("location.hash") and "Kolar" in heading(page)
+
+
 def test_search_finds_a_mandi_and_cancel_closes(page, base):
-    page.goto(base)
+    page.goto(base + "#crop=Onion&view=overview")
     page.wait_for_selector(".state-bars")
     page.keyboard.press("Control+k")
     page.wait_for_selector(".cmdk")
@@ -167,17 +200,20 @@ def test_search_finds_a_mandi_and_cancel_closes(page, base):
 
 def test_back_button_stays_in_the_app(page, base):
     page.goto(base)
+    page.wait_for_selector(".crop-choice")
+    page.click(".crop-pick:has-text('Onion')")
     page.wait_for_selector(".state-bars")
+    page.click(".crops >> text=Tomato")
+    page.wait_for_selector("main h1:has-text('Tomato across India')")
     page.click("[role=tab]:has-text('Model accuracy')")
     page.wait_for_selector(".stats")
-    page.click(".topbar >> text=Tomato")
-    page.wait_for_timeout(800)
     page.go_back()
-    page.wait_for_timeout(800)
-    assert "crop=Onion" in page.evaluate("location.hash") and "view=accuracy" in page.evaluate("location.hash")
+    page.wait_for_selector("main h1:has-text('Tomato across India')")
+    assert "crop=Tomato" in page.evaluate("location.hash") and "view=overview" in page.evaluate("location.hash")
     page.go_back()
-    page.wait_for_selector(".state-bars")
-    assert heading(page) == "Onion across India"
+    page.wait_for_selector("main h1:has-text('Onion across India')")
+    page.go_back()
+    page.wait_for_selector(".crop-choice")
 
 
 def test_about_hides_the_app_features(page, base):
@@ -187,7 +223,9 @@ def test_about_hides_the_app_features(page, base):
     page.keyboard.press("Control+k")
     page.wait_for_timeout(300)
     assert page.locator(".cmdk").count() == 0
-    page.click("[role=tab]:has-text('India overview')")
+    page.click("[role=tab]:has-text('All crops')")
+    page.wait_for_selector(".crop-choice")
+    page.click(".crop-pick:has-text('Onion')")
     page.wait_for_selector(".state-bars")
     assert page.locator(".side").count() == 1
 
@@ -199,12 +237,13 @@ def test_phone_layout_and_drop_down(browser, base):
     errors = []
     pg.on("pageerror", lambda e: errors.append(str(e)))
     try:
-        for hash_, ready in [("", ".state-bars"), ("#crop=Onion&view=market&state=Maharashtra&mandi=Lasalgaon", ".chart-panel"),
+        for hash_, ready in [("", ".crop-choice"), ("#crop=Onion&view=overview", ".state-bars"),
+                             ("#crop=Onion&view=market&state=Maharashtra&mandi=Lasalgaon", ".chart-panel"),
                              ("#crop=Onion&view=compare&state=Maharashtra", ".table"), ("#crop=Onion&view=accuracy", ".stats")]:
             pg.goto(base + hash_)
             pg.wait_for_selector(ready)
             assert no_sideways_scroll(pg), hash_
-        pg.goto(base)
+        pg.goto(base + "#crop=Onion&view=overview")
         pg.wait_for_selector(".state-bars")
         pg.tap(".side-toggle")
         assert pg.evaluate("document.querySelector('.side').dataset.open") == "true"
@@ -214,3 +253,16 @@ def test_phone_layout_and_drop_down(browser, base):
         assert not errors, errors
     finally:
         ctx.close()
+
+
+def test_chart_hover_shows_the_week(page, base):
+    page.goto(base + "#crop=Onion&view=market&state=Maharashtra&mandi=Lasalgaon")
+    page.wait_for_selector(".pchart svg")
+    page.evaluate("document.querySelector('.pchart').scrollIntoView({block: 'center'})")
+    box = page.locator(".pchart svg").bounding_box()
+    page.mouse.move(box["x"] + box["width"] * 0.5, box["y"] + 120)
+    page.wait_for_selector(".pchart-tip")
+    assert "Week of" in page.inner_text(".pchart-tip")
+    page.mouse.move(box["x"] + box["width"] * 0.5, box["y"] - 60)   # leaving the chart hides it
+    page.wait_for_timeout(200)
+    assert page.locator(".pchart-tip").count() == 0

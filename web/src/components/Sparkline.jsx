@@ -1,3 +1,4 @@
+import { T } from '../theme.js';
 // Tiny trend line for list rows: last 12 weekly prices, de-emphasised ink, latest point marked.
 export default function Sparkline({ values = [], width = 64, height = 22 }) {
   const v = values.filter(x => x != null);
@@ -7,9 +8,9 @@ export default function Sparkline({ values = [], width = 64, height = 22 }) {
   const [lx, ly] = pts[pts.length - 1];
   return (
     <svg width={width} height={height} aria-hidden="true">
-      <polyline points={pts.map(p => p.join(',')).join(' ')} fill="none" stroke="#a3a9b5" strokeWidth="1.5"
+      <polyline points={pts.map(p => p.join(',')).join(' ')} fill="none" stroke={T.context} strokeWidth="1.5"
         strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx={lx} cy={ly} r="2.5" fill="#1c2230" />
+      <circle cx={lx} cy={ly} r="2.5" fill={T.ink} />
     </svg>
   );
 }

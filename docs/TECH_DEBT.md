@@ -81,3 +81,7 @@ bigger number means fix sooner. Items fixed in this review are listed at the end
   schedule, notebook); the Streamlit app retired; the Compare and mandi pages trimmed of panels that repeated the
   overview or the main chart; the Accuracy page reads one source; browser tests (`tests/e2e`) added and run in CI;
   unknown API paths return 404 instead of the app page; old links to removed crops open the overview.
+- **Redesign and weight cut (November 2026):** the app opens on a crop choice (nothing pre-selected); search finds only
+  the chosen crop's mandis; the Mandi tab is gone (a mandi opens from the panel, search, Compare or the overview);
+  Recharts replaced by hand-written SVG charts and three of four font families dropped, taking the app's JavaScript
+  from about 225 kB to 107 kB compressed; the split-flap board, paper slip and contour image removed.

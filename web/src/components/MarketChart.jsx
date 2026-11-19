@@ -1,7 +1,7 @@
 import Tabs from './ui/Tabs.jsx';
 import { useMemo, useState } from 'react';
 import { Info, LineChart, Table2 } from 'lucide-react';
-import PriceChart, { ArrivalsChart, ChartTable, buildRows } from './PriceChart.jsx';
+import PriceChart, { ChartTable, buildRows } from './PriceChart.jsx';
 import PriceStats from './PriceStats.jsx';
 import LiveReports from './LiveReports.jsx';
 import { useNarrow } from '../hooks.js';
@@ -23,7 +23,6 @@ export default function MarketChart({ crop, state, market, data, maxHold }) {
     const history = data.history.filter(h => new Date(h.week) >= cutoff);
     return buildRows({ history, full: data.history, forecast: data.forecast, showLastYear: lastYear, showSeason: season });
   }, [data, range, lastYear, season]);
-  const hasArrivals = chart.rows.some(r => r.arrivals != null);
 
   return (
     <>
@@ -55,17 +54,8 @@ export default function MarketChart({ crop, state, market, data, maxHold }) {
           {lastYear && <span className="key"><i className="ctx" />A year earlier</span>}
           {season && <span className="key"><i className="season" />Usual range, same weeks of the past 5 years</span>}
         </div>
-      {asTable ? <ChartTable rows={chart.rows} naive={naive} /> : (
-        <>
-          <PriceChart rows={chart.rows} naive={naive} syncId="mandi" horizonLabel="in 4 weeks" height={narrow ? 260 : 340} compact={narrow} />
-          {hasArrivals && (
-            <div className="subchart">
-              <div className="subchart-title">Arrivals, tonnes per week <span>darker bars = heavier than usual, which tends to push prices down</span></div>
-              <ArrivalsChart rows={chart.rows} syncId="mandi" height={narrow ? 100 : 130} compact={narrow} />
-            </div>
-          )}
-        </>
-      )}
+      {asTable ? <ChartTable rows={chart.rows} naive={naive} />
+        : <PriceChart rows={chart.rows} naive={naive} horizonLabel="in 4 weeks" height={narrow ? 260 : 340} compact={narrow} />}
       {crop === 'Tomato' && <p className="note">Tomatoes spoil quickly, so advice never suggests holding longer than {weeks(maxHold ?? 1)}.</p>}
       {naive && crop === 'Arecanut' && (
         <div className="callout"><Info size={16} aria-hidden="true" />

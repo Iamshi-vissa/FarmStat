@@ -1,23 +1,18 @@
-import { useMemo } from 'react';
-import {
-  Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine,
-  ResponsiveContainer, Tooltip, XAxis, YAxis
-} from 'recharts';
+import { useMemo, useState } from 'react';
 import { compactRupees, date, pct, rupees } from '../format.js';
 import { niceTicks } from '../stats.js';
+import { useWidth } from '../hooks.js';
 import { T } from '../theme.js';
 
-// Chart tokens (validated pair: ink for actual price, blue for forecast; grey for context)
+// The mandi price chart, drawn as plain SVG (no charting library): price in ink, forecast and likely range in marigold,
+// the usual range for the season in grey, and arrivals as bars underneath on the same time axis. One hover line runs
+// through both, with every value at that week in a tooltip.
 const C = { ink: T.ink, fc: T.forecast, ctx: T.context, grid: T.grid, axis: T.ink3, surface: T.panel };
-const AXIS = { fontSize: 12, fill: C.axis };
-const MARGIN = { top: 26, right: 112, bottom: 4, left: 4 };
-const MARGIN_COMPACT = { top: 26, right: 70, bottom: 4, left: 0 };
-const Y_WIDTH = 64;
-const Y_WIDTH_COMPACT = 50;
 const DAY = 864e5;
 const ts = s => new Date(s).getTime();
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// One tick per month (or every 2/3/6/12 months on long ranges), labelled "Mar", with the year on January and the first tick.
+// One tick per month (or every 2/3/6/12 months on long ranges), with the year on January and the first tick.
 function monthTicks(t0, t1, maxTicks = 8) {
   const start = new Date(t0); start.setDate(1); start.setHours(0, 0, 0, 0);
   if (start.getTime() < t0) start.setMonth(start.getMonth() + 1);
@@ -26,92 +21,59 @@ function monthTicks(t0, t1, maxTicks = 8) {
   const step = [1, 2, 3, 6, 12, 24].find(k => all.length / k <= maxTicks) ?? 24;
   const ticks = all.filter(t => step === 1 || (new Date(t).getMonth() % Math.min(step, 12) === 0
     && (step < 24 || new Date(t).getFullYear() % 2 === 0)));
-  ticks.yearly = step >= 12;
-  return ticks;
+  return ticks.map((t, i) => {
+    const d = new Date(t);
+    const label = step >= 12 ? String(d.getFullYear())
+      : d.getMonth() === 0 || i === 0 ? `${MONTHS[d.getMonth()]} ${d.getFullYear()}` : MONTHS[d.getMonth()];
+    return { t, label };
+  });
 }
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const monthTickFor = ticks => (t, i) => {
-  const d = new Date(t);
-  if (ticks.yearly) return String(d.getFullYear());
-  return d.getMonth() === 0 || i === 0 ? `${MONTHS[d.getMonth()]} ${d.getFullYear()}` : MONTHS[d.getMonth()];
-};
 
 // One number style per axis: all in lakh, all in thousands, or all in full.
 const axisRupeesFor = ticks => {
-  const max = Math.max(...(ticks ?? [0]));
+  const max = Math.max(...ticks);
   if (max >= 100000) return v => `₹${(v / 100000).toLocaleString('en-IN', { maximumFractionDigits: 2 })}L`;
   if (max >= 10000) return v => `₹${(v / 1000).toLocaleString('en-IN', { maximumFractionDigits: 1 })}k`;
   return v => `₹${v.toLocaleString('en-IN')}`;
 };
 
-// Text on the plot gets a surface-coloured halo so it stays legible over lines and the band.
-function EndLabel({ viewBox, lines, align = 'start' }) {
-  if (!viewBox) return null;
-  const x = viewBox.x + (align === 'start' ? 10 : -10);
-  return (
-    <text x={x} y={viewBox.y} textAnchor={align} dominantBaseline="middle" style={{ paintOrder: 'stroke' }}
-      stroke={C.surface} strokeWidth={4} strokeLinejoin="round">
-      {lines.map((l, i) => (
-        <tspan key={i} x={x} dy={i === 0 ? (lines.length > 1 ? '-0.55em' : 0) : '1.2em'}
-          fontSize={i === 0 ? 13 : 11} fontWeight={i === 0 ? 600 : 400} fill={i === 0 ? C.ink : C.axis}>{l}</tspan>
-      ))}
-    </text>
-  );
+// "M x y L x y …" through the points that have a value, starting a new piece wherever a value is missing (unless joined).
+function linePath(rows, x, y, get, join = false) {
+  let d = '', open = false;
+  for (const r of rows) {
+    const v = get(r);
+    if (v == null) { if (!join) open = false; continue; }
+    d += `${open ? 'L' : 'M'}${x(r.t).toFixed(1)} ${y(v).toFixed(1)}`;
+    open = true;
+  }
+  return d;
 }
-
-// Label at the top of a vertical reference line, right-aligned to it.
-function TopLabel({ viewBox, lines }) {
-  if (!viewBox) return null;
-  const x = viewBox.x - 8, y = viewBox.y - 14;
-  return (
-    <text x={x} y={y} textAnchor="end" style={{ paintOrder: 'stroke' }} stroke={C.surface} strokeWidth={4} strokeLinejoin="round">
-      <tspan fontSize={13} fontWeight={600} fill={C.ink}>{lines[0]}</tspan>
-      <tspan dx={6} fontSize={11} fill={C.axis}>{lines[1]}</tspan>
-    </text>
-  );
+// A band between two edges, over the rows that have it.
+function bandPath(rows, x, y, get) {
+  const pts = rows.filter(r => get(r));
+  if (pts.length < 2) return '';
+  const top = pts.map((r, i) => `${i ? 'L' : 'M'}${x(r.t).toFixed(1)} ${y(get(r)[1]).toFixed(1)}`).join('');
+  const bottom = pts.slice().reverse().map(r => `L${x(r.t).toFixed(1)} ${y(get(r)[0]).toFixed(1)}`).join('');
+  return `${top}${bottom}Z`;
 }
+const halo = { paintOrder: 'stroke', stroke: C.surface, strokeWidth: 4, strokeLinejoin: 'round' };
 
-function Tip({ active, payload, naive }) {
-  if (!active || !payload?.length) return null;
-  const d = payload[0].payload;
-  const when = `Week of ${date(d.t)}`;
-  const Row = ({ color, dash, value, label }) => (
-    <div className="tip-row">
-      <svg width="14" height="8" aria-hidden="true"><line x1="0" y1="4" x2="14" y2="4" stroke={color} strokeWidth="2" strokeDasharray={dash} /></svg>
-      <strong className="num">{value}</strong><span>{label}</span>
-    </div>
-  );
-  return (
-    <div className="chart-tip">
-      <div className="tip-when">{when}{d.future ? ' (forecast)' : ''}{d.gap ? ' (no reports)' : ''}</div>
-      {d.price != null && <Row color={C.ink} value={rupees(d.price)} label={d.wow != null ? `${pct(d.wow)} vs previous` : 'price'} />}
-      {d.p50 != null && !d.isNow && !naive && <Row color={C.fc} dash="4 3" value={rupees(d.p50)} label="forecast" />}
-      {d.band && !d.isNow && <Row color="rgba(42,120,214,0.35)" value={`${rupees(d.band[0])} – ${rupees(d.band[1])}`} label={naive ? 'usual range' : 'likely range'} />}
-      {d.lastYear != null && <Row color={C.ctx} value={rupees(d.lastYear)} label="a year earlier" />}
-      {d.season && <Row color="rgba(163,166,158,0.6)" value={`${rupees(d.season[0])} – ${rupees(d.season[1])}`} label={`usual in ${seasonWord(d.t)}`} />}
-    </div>
-  );
-}
-
-const seasonWord = t => `${['early', 'mid', 'late'][Math.min(2, Math.floor((new Date(t).getDate() - 1) / 10))]} ${new Date(t).toLocaleString('en-IN', { month: 'short' })}`;
+const seasonWord = t => `${['early', 'mid', 'late'][Math.min(2, Math.floor((new Date(t).getDate() - 1) / 10))]} ${MONTHS[new Date(t).getMonth()]}`;
+const weekOfYear = d => Math.floor((d - new Date(d.getFullYear(), 0, 1)) / (7 * DAY));
 
 // Seasonal context: for each date, the 10th-90th percentile of prices in the same weeks (±1) of the previous
 // 5 years. Needs at least 3 such weeks.
-const weekOfYear = d => Math.floor((d - new Date(d.getFullYear(), 0, 1)) / (7 * DAY));
-
 function seasonalBands(rows, full) {
   const pts = full.filter(h => h.price != null).map(h => {
     const d = new Date(h.week);
     return { y: d.getFullYear(), k: weekOfYear(d), p: h.price };
   });
-  const span = 1, wrap = 52;
   const cache = new Map();
   rows.forEach(r => {
-    const d = new Date(r.t), y = d.getFullYear();
-    const k = weekOfYear(d);
+    const d = new Date(r.t), y = d.getFullYear(), k = weekOfYear(d);
     const key = `${y}-${k}`;
     if (!cache.has(key)) {
-      const near = pts.filter(x => x.y < y && x.y >= y - 5 && Math.min(Math.abs(x.k - k), wrap - Math.abs(x.k - k)) <= span)
+      const near = pts.filter(x => x.y < y && x.y >= y - 5 && Math.min(Math.abs(x.k - k), 52 - Math.abs(x.k - k)) <= 1)
         .map(x => x.p).sort((a, b) => a - b);
       const q = f => near[Math.min(near.length - 1, Math.max(0, Math.round((near.length - 1) * f)))];
       cache.set(key, near.length >= 3 ? [q(0.1), q(0.9)] : null);
@@ -122,11 +84,9 @@ function seasonalBands(rows, full) {
 
 export function buildRows({ history, full = history, forecast, showLastYear, showSeason }) {
   const byT = new Map(full.map(h => [ts(h.week), h.price]));
-  const shift = t => t - 364 * DAY;   // the same week one year earlier
   const rows = history.map((h, i) => {
-    const t = ts(h.week);
     const prev = history[i - 1]?.price;
-    return { t, price: h.price, wow: prev ? h.price / prev - 1 : null, arrivals: h.arrivals_t ?? null };
+    return { t: ts(h.week), price: h.price, wow: prev ? h.price / prev - 1 : null, arrivals: h.arrivals_t ?? null };
   });
   forecast.forEach(f => {
     const t = ts(f.week);
@@ -134,131 +94,193 @@ export function buildRows({ history, full = history, forecast, showLastYear, sho
     if (!row) { row = { t, future: true }; rows.push(row); }
     Object.assign(row, { p50: f.p50, band: [f.p10, f.p90], isNow: f.h === 0 });
   });
-  if (showLastYear) rows.forEach(r => { r.lastYear = byT.get(shift(r.t)) ?? null; });
+  if (showLastYear) rows.forEach(r => { r.lastYear = byT.get(r.t - 364 * DAY) ?? null; });
   // break the line where reports stop for more than 3 weeks, instead of drawing a straight bridge
-  const maxGap = 21 * DAY;
   const real = rows.filter(r => r.price != null).sort((a, b) => a.t - b.t);
   for (let i = 1; i < real.length; i++) {
-    if (real[i].t - real[i - 1].t > maxGap) rows.push({ t: (real[i].t + real[i - 1].t) / 2, gap: [real[i - 1].t, real[i].t] });
+    if (real[i].t - real[i - 1].t > 21 * DAY) rows.push({ t: (real[i].t + real[i - 1].t) / 2, gap: [real[i - 1].t, real[i].t] });
   }
   rows.sort((a, b) => a.t - b.t);
   if (showSeason) seasonalBands(rows, full);
   return { rows };
 }
 
-// Price history (ink + soft wash), forecast median (blue dashed), likely range (blue band) in a shaded forecast zone,
-// optional "same weeks last year" context line, and direct labels for today's price and the furthest forecast.
-export default function PriceChart({ rows, naive = false, height = 340, syncId, horizonLabel, compact = false }) {
+export default function PriceChart({ rows, naive = false, height = 340, horizonLabel, compact = false }) {
+  const [ref, width] = useWidth();
+  const [hover, setHover] = useState(null);
   const now = rows.find(r => r.isNow);
   const last = rows[rows.length - 1];
+  const points = useMemo(() => rows.filter(r => !r.gap), [rows]);
+
+  const arr = useMemo(() => {
+    const vals = rows.filter(r => !r.future && r.arrivals != null).map(r => r.arrivals);
+    if (!vals.length) return null;
+    const sorted = [...vals].sort((a, b) => a - b);
+    return { median: sorted[Math.floor(sorted.length / 2)], ...niceTicks(0, Math.max(...vals), 2) };
+  }, [rows]);
   const { domain, ticks } = useMemo(() => {
-    const vals = rows.flatMap(r => [r.price, r.lastYear, ...(r.band ?? []), ...(r.season ?? [])]).filter(v => v != null);
+    const vals = rows.flatMap(r => [r.price, r.lastYear, r.p50, ...(r.band ?? []), ...(r.season ?? [])]).filter(v => v != null);
     return niceTicks(Math.min(...vals), Math.max(...vals));
   }, [rows]);
-  const xDomain = [rows[0]?.t, last?.t];
-  const xt = monthTicks(...xDomain, compact ? 4 : 8);
+
+  const m = compact ? { l: 46, r: 66, t: 30, b: 24 } : { l: 64, r: 104, t: 30, b: 24 };
+  const arrH = arr ? (compact ? 72 : 96) : 0;
+  const arrTop = height + 40;                     // the arrivals panel starts under the price axis and its title
+  const total = arr ? arrTop + arrH + m.b : height;
+  const pw = Math.max(10, width - m.l - m.r), ph = height - m.t - m.b;
+  const t0 = rows[0]?.t ?? 0, t1 = last?.t ?? 1;
+  const x = t => m.l + ((t - t0) / (t1 - t0 || 1)) * pw;
+  const y = v => m.t + (1 - (v - domain[0]) / (domain[1] - domain[0] || 1)) * ph;
+  const ya = v => arrTop + (1 - v / (arr?.domain[1] || 1)) * arrH;
+  const yTicks = ticks ?? [];
+  const fmtY = axisRupeesFor(yTicks.length ? yTicks : [domain[1]]);
+  const xTicks = monthTicks(t0, t1, compact ? 4 : 8);
+  const barW = Math.max(1.5, Math.min(8, (pw / Math.max(1, points.length)) * 0.6));
+
+  // nearest week to the pointer (rows are sorted by time)
+  const onMove = e => {
+    const box = e.currentTarget.getBoundingClientRect();
+    const px = ((e.clientX - box.left) / box.width) * width;
+    if (px < m.l - 8 || px > m.l + pw + 8) { setHover(null); return; }
+    const t = t0 + ((px - m.l) / pw) * (t1 - t0);
+    let best = points[0];
+    for (const r of points) if (Math.abs(r.t - t) < Math.abs(best.t - t)) best = r;
+    setHover(h => (h === best ? h : best));
+  };
+
+  const summary = now ? `Price ${rupees(now.price)} in the latest week${last?.future && !naive ? `, forecast ${rupees(last.p50)} ${horizonLabel ?? ''}` : ''}.`
+    : 'Weekly price chart.';
+  const tipLeft = hover ? x(hover.t) : 0;
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <ComposedChart data={rows} margin={compact ? MARGIN_COMPACT : MARGIN} syncId={syncId}>
-        <defs>
-          <linearGradient id="priceWash" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={C.ink} stopOpacity={0.1} />
-            <stop offset="100%" stopColor={C.ink} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        {rows.filter(r => r.gap).map(r => (
-          <ReferenceArea key={r.t} x1={r.gap[0]} x2={r.gap[1]} fill={C.ctx} fillOpacity={0.08} stroke="none" ifOverflow="hidden"
-            label={{ value: `No reports for ${Math.round((r.gap[1] - r.gap[0]) / (7 * DAY))} weeks`, position: 'insideTop', fontSize: 11, fill: C.axis }} />
+    <div className="pchart" ref={ref}>
+      <svg width={width} height={total} viewBox={`0 0 ${width} ${total}`} role="img" aria-label={summary}
+        onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setHover(null)}>
+        {/* grid and axes */}
+        {yTicks.map(v => (
+          <g key={v}>
+            <line x1={m.l} x2={m.l + pw} y1={y(v)} y2={y(v)} stroke={C.grid} />
+            <text x={m.l - 8} y={y(v)} dy="0.32em" textAnchor="end" className="ax">{fmtY(v)}</text>
+          </g>
         ))}
-        {now && last && last.t > now.t && (
-          <ReferenceArea x1={now.t} x2={last.t} fill={C.fc} fillOpacity={0.05} stroke="none" ifOverflow="visible"
-            label={{ value: naive ? 'Next 4 weeks' : 'Forecast', position: 'insideTopLeft', dx: 6, dy: -20, fontSize: 11, fill: C.axis }} />
+        {xTicks.map(k => <text key={k.t} x={x(k.t)} y={height - 6} textAnchor="middle" className="ax">{k.label}</text>)}
+
+        {/* weeks with no reports, and the forecast zone */}
+        {rows.filter(r => r.gap).map(r => (
+          <g key={r.t}>
+            <rect x={x(r.gap[0])} y={m.t} width={Math.max(0, x(r.gap[1]) - x(r.gap[0]))} height={ph} fill={C.ctx} opacity={0.1} />
+            {x(r.gap[1]) - x(r.gap[0]) > 90 && <text x={(x(r.gap[0]) + x(r.gap[1])) / 2} y={m.t + 14} textAnchor="middle" className="ax">
+              No reports for {Math.round((r.gap[1] - r.gap[0]) / (7 * DAY))} weeks</text>}
+          </g>
+        ))}
+        {now && last.t > now.t && <>
+          <rect x={x(now.t)} y={m.t} width={x(last.t) - x(now.t)} height={ph} fill={C.fc} opacity={0.05} />
+          <text x={x(now.t) + 6} y={m.t - 8} className="ax">{naive ? 'Next 4 weeks' : 'Forecast'}</text>
+        </>}
+
+        {/* context first, then the range, then the lines on top */}
+        <path d={bandPath(rows, x, y, r => r.season)} fill={C.ctx} opacity={0.16} />
+        <path d={linePath(rows, x, y, r => r.lastYear, true)} fill="none" stroke={C.ctx} strokeWidth={2} />
+        <path d={bandPath(rows, x, y, r => r.band)} fill={C.fc} opacity={0.24} />
+        <path d={linePath(rows, x, y, r => r.price)} fill="none" stroke={C.ink} strokeWidth={2} strokeLinejoin="round" />
+        {!naive && <path d={linePath(rows, x, y, r => r.p50, true)} fill="none" stroke={C.fc} strokeWidth={2} strokeDasharray="5 4" />}
+        {!naive && rows.filter(r => r.future).map(r => (
+          <circle key={r.t} cx={x(r.t)} cy={y(r.p50)} r={3.5} fill={C.fc} stroke={C.surface} strokeWidth={2} />
+        ))}
+
+        {/* today and the furthest forecast, labelled directly */}
+        {now && <>
+          <line x1={x(now.t)} x2={x(now.t)} y1={m.t} y2={m.t + ph} stroke={C.axis} />
+          <circle cx={x(now.t)} cy={y(now.price)} r={5} fill={C.ink} stroke={C.surface} strokeWidth={2} />
+          <text x={x(now.t) - 8} y={m.t - 8} textAnchor="end" style={halo}>
+            <tspan fontSize={13} fontWeight={700} fill={C.ink}>{rupees(now.price)}</tspan>
+            {!compact && <tspan dx={6} className="ax">latest week</tspan>}
+          </text>
+        </>}
+        {last?.future && (
+          <text x={x(last.t) + 10} y={y(naive ? now?.price ?? last.band[0] : last.p50)} style={halo}>
+            <tspan x={x(last.t) + 10} dy="-0.2em" fontSize={13} fontWeight={700} fill={C.ink}>
+              {naive ? `${compactRupees(last.band[0])}–${compactRupees(last.band[1])}` : rupees(last.p50)}</tspan>
+            <tspan x={x(last.t) + 10} dy="1.25em" className="ax">{horizonLabel}</tspan>
+          </text>
         )}
-        <CartesianGrid stroke={C.grid} vertical={false} />
-        <XAxis dataKey="t" type="number" scale="time" domain={xDomain} ticks={xt} tickFormatter={monthTickFor(xt)}
-          tick={AXIS} tickLine={false} axisLine={{ stroke: C.grid }} interval={0} />
-        <YAxis domain={domain} ticks={ticks} tickFormatter={axisRupeesFor(ticks)} tick={AXIS} tickLine={false} axisLine={false}
-          width={compact ? Y_WIDTH_COMPACT : Y_WIDTH} allowDataOverflow />
-        <Tooltip content={<Tip naive={naive} />} cursor={{ stroke: C.axis, strokeWidth: 1 }} isAnimationActive={false} />
-        <Area dataKey="season" stroke={C.ctx} strokeOpacity={0.35} strokeDasharray="2 3" fill={C.ctx} fillOpacity={0.14}
-          isAnimationActive={false} connectNulls activeDot={false} />
-        <Area dataKey="price" stroke="none" fill="url(#priceWash)" isAnimationActive={false} connectNulls={false} activeDot={false} />
-        <Line dataKey="lastYear" stroke={C.ctx} strokeWidth={2} dot={false} isAnimationActive={false} connectNulls activeDot={false} />
-        <Area dataKey="band" stroke="none" fill={C.fc} fillOpacity={0.16} isAnimationActive={false} connectNulls activeDot={false} />
-        <Line dataKey="price" stroke={C.ink} strokeWidth={2} dot={false} isAnimationActive={false} connectNulls={false}
-          activeDot={{ r: 4.5, fill: C.ink, stroke: C.surface, strokeWidth: 2 }} />
-        {!naive && (
-          <Line dataKey="p50" stroke={C.fc} strokeWidth={2} strokeDasharray="5 4" connectNulls isAnimationActive={false}
-            dot={{ r: 4, fill: C.fc, stroke: C.surface, strokeWidth: 2 }} activeDot={{ r: 5, stroke: C.surface, strokeWidth: 2 }} />
-        )}
-        {now && (
-          <ReferenceLine x={now.t} stroke={C.axis} strokeWidth={1}
-            label={<TopLabel lines={[rupees(now.price), compact ? '' : 'latest week']} />} />
-        )}
-        {now && <ReferenceDot x={now.t} y={now.price} r={5} fill={C.ink} stroke={C.surface} strokeWidth={2} ifOverflow="visible" />}
-        {last && last.future && (
-          <ReferenceDot x={last.t} y={naive ? now?.price : last.p50} r={naive ? 0 : 5} fill={C.fc} stroke={C.surface}
-            strokeWidth={2} ifOverflow="visible"
-            label={<EndLabel lines={naive
-              ? [`${compactRupees(last.band[0])}–${compactRupees(last.band[1])}`, horizonLabel ?? '']
-              : [rupees(last.p50), horizonLabel ?? '']} />} />
-        )}
-      </ComposedChart>
-    </ResponsiveContainer>
+
+        {/* arrivals under the price, same time axis */}
+        {arr && <g>
+          <text x={m.l} y={arrTop - 12} className="ax-title">Arrivals, tonnes per week
+            {!compact && <tspan className="ax" dx={8}>darker bars are heavier than usual, which tends to push prices down</tspan>}</text>
+          {arr.ticks?.map(v => (
+            <g key={v}>
+              <line x1={m.l} x2={m.l + pw} y1={ya(v)} y2={ya(v)} stroke={C.grid} />
+              <text x={m.l - 8} y={ya(v)} dy="0.32em" textAnchor="end" className="ax">
+                {v >= 1000 ? `${(v / 1000).toLocaleString('en-IN')}k t` : `${v} t`}</text>
+            </g>
+          ))}
+          {points.filter(r => !r.future && r.arrivals != null).map(r => (
+            <rect key={r.t} x={x(r.t) - barW / 2} y={ya(r.arrivals)} width={barW} height={Math.max(0, arrTop + arrH - ya(r.arrivals))}
+              rx={Math.min(2, barW / 2)} fill={r.arrivals > arr.median * 1.3 ? T.arrivalsHeavy : T.arrivals} />
+          ))}
+          <line x1={m.l} x2={m.l + pw} y1={ya(arr.median)} y2={ya(arr.median)} stroke={C.axis} />
+          <text x={m.l + pw + 6} y={ya(arr.median)} dy="0.32em" className="ax">typical</text>
+        </g>}
+
+        {/* hover line through both panels */}
+        {hover && <g pointerEvents="none">
+          <line x1={x(hover.t)} x2={x(hover.t)} y1={m.t} y2={arr ? arrTop + arrH : m.t + ph} stroke={C.ink} strokeOpacity={0.35} />
+          {hover.price != null && <circle cx={x(hover.t)} cy={y(hover.price)} r={4.5} fill={C.ink} stroke={C.surface} strokeWidth={2} />}
+          {hover.future && !naive && <circle cx={x(hover.t)} cy={y(hover.p50)} r={4.5} fill={C.fc} stroke={C.surface} strokeWidth={2} />}
+        </g>}
+      </svg>
+      {hover && (
+        <div className="chart-tip pchart-tip" style={tipLeft > m.l + pw / 2 ? { right: width - tipLeft + 14 } : { left: tipLeft + 14 }}>
+          <Tip d={hover} naive={naive} median={arr?.median} />
+        </div>
+      )}
+    </div>
   );
 }
 
-// Arrivals as small bars under the price chart: same x-scale and margins, hover synced with the price chart.
-export function ArrivalsChart({ rows, syncId, height = 130, compact = false }) {
-  const data = rows.map(r => ({ t: r.t, arrivals: r.future ? null : r.arrivals }));
-  if (!data.some(d => d.arrivals != null)) return null;
-  const vals = data.map(d => d.arrivals).filter(v => v != null);
-  const sorted = [...vals].sort((a, b) => a - b);
-  const median = sorted[Math.floor(sorted.length / 2)];
-  const { ticks, domain } = niceTicks(0, Math.max(...vals), 2);
-  const xa = monthTicks(data[0].t, data[data.length - 1].t, compact ? 4 : 8);
+function Tip({ d, naive, median }) {
+  const Row = ({ color, dash, value, label, band }) => (
+    <div className="tip-row">
+      <svg width="14" height="10" aria-hidden="true">{band
+        ? <rect x="0" y="1" width="14" height="8" rx="2" fill={color} opacity={0.35} />
+        : <line x1="0" y1="5" x2="14" y2="5" stroke={color} strokeWidth="2" strokeDasharray={dash} />}</svg>
+      <strong className="num">{value}</strong><span>{label}</span>
+    </div>
+  );
+  const heavy = median && d.arrivals != null ? (d.arrivals > median * 1.3 ? 'heavier than usual' : d.arrivals < median * 0.7 ? 'lighter than usual' : 'arrivals') : 'arrivals';
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ ...(compact ? MARGIN_COMPACT : MARGIN), top: 6 }} syncId={syncId} barCategoryGap={1}>
-        <CartesianGrid stroke={C.grid} vertical={false} />
-        <XAxis dataKey="t" type="number" scale="time" domain={[data[0].t, data[data.length - 1].t]}
-          ticks={xa} tickFormatter={monthTickFor(xa)} interval={0}
-          tick={AXIS} tickLine={false} axisLine={{ stroke: C.grid }} />
-        <YAxis domain={domain} ticks={ticks} tick={AXIS} tickLine={false} axisLine={false} width={compact ? Y_WIDTH_COMPACT : Y_WIDTH}
-          tickFormatter={v => (v >= 1000 ? `${(v / 1000).toLocaleString('en-IN')}k t` : `${v} t`)} />
-        <Tooltip cursor={{ fill: 'rgba(22,24,19,0.06)' }} isAnimationActive={false}
-          content={({ active, payload }) => active && payload?.[0]?.value != null ? (
-            <div className="chart-tip"><div className="tip-when">Week of {date(payload[0].payload.t)}</div>
-              <div className="tip-row"><strong className="num">{Math.round(payload[0].value).toLocaleString('en-IN')} t</strong>
-                <span>{payload[0].value > median * 1.3 ? 'heavier than usual' : payload[0].value < median * 0.7 ? 'lighter than usual' : 'arrivals'}</span></div></div>
-          ) : null} />
-        <ReferenceLine y={median} stroke={C.axis} strokeDasharray="0" strokeWidth={1}
-          label={{ value: 'typical', position: 'right', fontSize: 11, fill: C.axis }} />
-        <Bar dataKey="arrivals" maxBarSize={8} radius={[3, 3, 0, 0]} isAnimationActive={false}>
-          {data.map(d => <Cell key={d.t} fill={d.arrivals > median * 1.3 ? T.arrivalsHeavy : T.arrivals} />)}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+    <>
+      <div className="tip-when">Week of {date(d.t)}{d.future ? ' (forecast)' : ''}</div>
+      {d.price != null && <Row color={C.ink} value={rupees(d.price)} label={d.wow != null ? `${pct(d.wow)} vs previous` : 'price'} />}
+      {d.p50 != null && !d.isNow && !naive && <Row color={C.fc} dash="4 3" value={rupees(d.p50)} label="forecast" />}
+      {d.band && !d.isNow && <Row band color={C.fc} value={`${rupees(d.band[0])} – ${rupees(d.band[1])}`} label={naive ? 'usual range' : 'likely range'} />}
+      {d.lastYear != null && <Row color={C.ctx} value={rupees(d.lastYear)} label="a year earlier" />}
+      {d.season && <Row band color={C.ctx} value={`${rupees(d.season[0])} – ${rupees(d.season[1])}`} label={`usual in ${seasonWord(d.t)}`} />}
+      {d.arrivals != null && !d.future && <Row color={T.arrivalsHeavy} value={`${Math.round(d.arrivals).toLocaleString('en-IN')} t`} label={heavy} />}
+    </>
   );
 }
 
 // The same numbers as a table, for screen readers and anyone who prefers rows to lines.
 export function ChartTable({ rows, naive }) {
   const list = rows.filter(r => !r.gap).reverse().slice(0, 30);
+  const season = rows.some(r => r.season), arrivals = rows.some(r => r.arrivals != null);
   return (
     <div className="table-wrap" style={{ maxHeight: 340 }}>
       <table className="table">
         <thead><tr><th>Week of</th><th className="r">Price</th><th className="r">Change</th>
-          <th className="r">{naive ? 'Usual range' : 'Forecast (likely range)'}</th>{rows.some(r => r.season) && <th className="r">Usual for the season</th>}{rows.some(r => r.arrivals != null) && <th className="r">Arrivals</th>}</tr></thead>
+          <th className="r">{naive ? 'Usual range' : 'Forecast (likely range)'}</th>{season && <th className="r">Usual for the season</th>}
+          {arrivals && <th className="r">Arrivals</th>}</tr></thead>
         <tbody>{list.map(r => (
           <tr key={r.t}>
             <td className="num">{date(r.t)}</td>
             <td className="r num">{r.price != null ? rupees(r.price) : '–'}</td>
             <td className="r num">{r.wow != null ? pct(r.wow) : '–'}</td>
             <td className="r num">{r.band && !r.isNow ? `${naive ? '' : `${rupees(r.p50)} (`}${rupees(r.band[0])} – ${rupees(r.band[1])}${naive ? '' : ')'}` : '–'}</td>
-            {rows.some(x => x.season) && <td className="r num">{r.season ? `${rupees(r.season[0])} – ${rupees(r.season[1])}` : '–'}</td>}
-            {rows.some(x => x.arrivals != null) && <td className="r num">{r.arrivals != null ? `${Math.round(r.arrivals).toLocaleString('en-IN')} t` : '–'}</td>}
+            {season && <td className="r num">{r.season ? `${rupees(r.season[0])} – ${rupees(r.season[1])}` : '–'}</td>}
+            {arrivals && <td className="r num">{r.arrivals != null ? `${Math.round(r.arrivals).toLocaleString('en-IN')} t` : '–'}</td>}
           </tr>
         ))}</tbody>
       </table>

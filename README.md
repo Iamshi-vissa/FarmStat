@@ -3,7 +3,7 @@
 Forecasts onion, tomato and potato prices in mandis across 24 Indian states, 1, 2 and 4 weeks ahead, tells the farmer whether to sell now or hold, and shows arecanut prices with their usual range.
 
 <p align="center">
-  <img src="docs/web-overview.png" width="860" alt="FarmStat first screen: onion across India, with the national rate board, the calls slip, KPI cards and prices by state, beside the two-button side rail">
+  <img src="docs/web-overview.png" width="860" alt="FarmStat's first page: which crop are you selling? Onion, tomato, potato and arecanut on a ruled price board, each with this week's India median">
 </p>
 
 ## CONTENTS
@@ -36,6 +36,18 @@ weekly reports from about 980 mandis in 24 states. For each crop and mandi it gi
 
 The final test covers **January 2023 to July 2026**. The model was **re-trained at the start of each year** on past
 data only, exactly as it would be in use, and these years were never used to make any modelling choice.
+
+**At a glance** (about 170,000 forecasts per horizon; full tables in
+[reports/model_evaluation.md](reports/model_evaluation.md)):
+
+- **Beats "no change" at every horizon:** 7.7% less error at 1 week, 8.0% at 2 weeks, 6.5% at 4 weeks
+- **Not luck at 1 and 2 weeks:** Diebold-Mariano p < 0.001 and p = 0.006 (at 4 weeks p = 0.14, so that gain could be chance)
+- **Direction right about 2 times in 3:** 67%, 67%, 66%
+- **Ranges hold as promised:** 81%, 80% and 80% of real prices fall inside the calibrated 80% range
+- **Rise warning:** ROC-AUC 0.73, and its chances match reality (a predicted 45% was followed by a rise 42% of the time)
+- **Following the advice paid:** +₹22 per quintal onion, +₹44 tomato, +₹11 potato vs always selling at once, after storage losses
+- **Best for:** potato (11.8% less error), tomato (10.6%) and onion (8.4%) in established mandis; weakest for onion in new
+  mandis (3.2% worse), which the app flags
 
 | Forecast | Average error | Error vs "no change" forecast | Up/down right | Range contains real price |
 |---|---|---|---|---|
@@ -105,87 +117,77 @@ Finding out *when a model doesn't help*, and saying so, is part of the result.
 
 ## FEATURES
 
-- **Starts with India, not a guess:** nothing is pre-selected. The first screen shows the crop across India this week:
-  the national median price on the rate board with its 26-week trend, the change on last week and last year, the
-  median expected move, how many mandis say hold or sell, prices by state, and the mandis most likely to rise or fall.
-  Every row is a way in: a state opens its mandi list, a mandi opens its page
-- Pick a crop, a **state** and a **mandi** to see this week's price, the 1/2/4-week forecast and two years of history
-  with the forecast range
-- **A side panel that stays out of the way:** on desktop a slim rail on the left holds just two buttons: the side panel
-  and search (pages are switched with the tabs at the top). Resting the pointer on the rail slides out the state
-  picker and mandi list; passing over it does nothing. The panel closes when the pointer leaves, on a click outside,
-  with <kbd>Esc</kbd> or with its close button, and the pin button docks it beside the page. Ported from a 21st.dev
-  rail-panel sidebar. On phones it is a
-  "Choose a mandi" drop-down under the header that closes when you pick a mandi or tap anywhere else
-- Sell / hold advice that subtracts storage losses (onion 4%, potato 3%, tomato 15% per 4 weeks)
-- Never advises holding tomatoes for more than a week, because they spoil
-- Arrivals chart for every mandi
-- **Compare tab:** the spread of prices across the chosen state's mandis (select a dot to highlight a mandi) and a
-  sortable table of every mandi, whose names open that mandi's page. With no mandi chosen it names the top-paying mandi
-  and the state median
+- **Starts with a choice, not a guess:** the first page asks which crop you are selling and shows the four crops with
+  this week's India median price. Nothing is pre-selected
+- **Then the crop across India:** the national median on the rate board with its 26-week trend, the change on last week
+  and last year, the median expected move, how many mandis say hold or sell, prices by state, and the mandis most likely
+  to rise or fall. Every row is a way in: a state opens its mandi list, a mandi opens its page
+- **Then your mandi:** this week's price, the 1, 2 and 4-week forecast with its likely range, the week's call with the
+  chance of a 5%+ rise, and up to five years of history
+- **Search the crop's mandis** (<kbd>Ctrl</kbd>/<kbd>⌘</kbd> <kbd>K</kbd>): finds any of the chosen crop's mandis by
+  mandi, district or state name, every word matched (`kolar` finds tomato in Kolar when tomato is chosen). It finds
+  mandis only, never crops or pages
+- **A side panel that stays out of the way:** on desktop a slim rail on the left holds the state and mandi list and
+  search. Resting the pointer on it slides the list out; it closes when the pointer leaves, on a click outside, with
+  <kbd>Esc</kbd> or its close button, and the pin button docks it. On phones it is a "Choose a mandi" drop-down
+- Sell / hold advice that subtracts storage losses (onion 4%, potato 3%, tomato 15% per 4 weeks); tomatoes are never
+  held more than a week
+- **Compare mandis:** the spread of prices across a state's mandis and a sortable table of every mandi
 - Warning on mandis with less than 3 years of history
-- Accuracy tab with the test results, so users can see how far to trust the forecasts
-- **Arecanut:** every mandi and variety (Rashi, Chali, Bette…), compared only with the same variety
+- **Model accuracy page** with every test result, so users can see how far to trust the forecasts
+- **Arecanut:** every mandi and variety (Rashi, Chali, Bette…), compared only with the same variety, with its usual range
+  instead of a forecast
 - **Readable mandi names:** Agmarknet names like `Junnar(Alephata)` are shown as "Junnar (Alephata)"; links and
   searches keep the original name
 
 ## WEB APP
 
-An analytical web interface built with React, using [React Bits](https://reactbits.dev) components, on top of a
-FastAPI service that serves the models.
+A React interface on top of a FastAPI service that serves the forecasts.
 
-- **Mandi rate board:** the current price on split-flap tiles (React Bits *SplitFlapText*) over a contour-map
-  background (pre-rendered once with React Bits *Topography*, served as a 32 KB image) on a forest-green board, like the price boards in a mandi
-- **Advice slip (parchi):** the week's sell / hold call on a paper slip pinned to the board, with a stamped verdict and
-  the chance of a 5%+ rise
-- **Crop switcher** with a sliding forest-green thumb, and **forecast tiles** with a range bar for each horizon
-- **Search anywhere** (<kbd>Ctrl</kbd>/<kbd>⌘</kbd> <kbd>K</kbd>): one box that finds any of the ~1,400 mandi series in
-  India by mandi, district, state or crop, every word matched (`kolar tom` = tomato mandis in Kolar), plus pages; ported
-  from a [21st.dev](https://21st.dev) command-palette component, restyled with FarmStat's tokens and animated with CSS.
-  It has a clear button and a Cancel button. The palette code and the mandi index (18 kB compressed) load the first
-  time it opens
-- **Tabs with a sliding indicator** for views and chart ranges, ported from a 21st.dev tabs component (arrow, Home and
-  End keys, roving focus)
-- **Searchable mandi list** with a 12-week sparkline and expected change for every mandi, sortable by name, price or outlook
-- **Price chart:** history with a soft wash, a shaded forecast zone with the median and likely range, a band showing the
-  usual price for the season (10th to 90th percentile of the same weeks in the past 5 years), labelled latest and 4-week
-  prices, round axis values, 3M / 6M / 1Y / 2Y / 5Y ranges, an optional "same weeks last year" line, gaps in reporting
-  shaded and labelled instead of bridged, and a table view of the same numbers. The range and display controls sit on
-  one row and the legend on its own quieter row below
-- **Latest daily report:** for every mandi in the live feed, the latest report and its date, that day's
-  lowest-to-highest lot and the change since the previous report; a "Live" chip on the rate board and the feed's
-  freshness in the sidebar
+<p align="center">
+  <img src="docs/web-mandi.png" width="860" alt="A mandi page: Lasalgaon onion, with the week's call, the ruled price board of this week and the 1, 2 and 4-week forecasts, and the price chart with the forecast in marigold">
+</p>
+
+**Design.** The idea comes from the mandi's own bhav board: a white board ruled into a grid, with the day's prices in
+thick condensed figures. On each page that ruled board is the one loud element (the price and its forecasts, or the four
+crops on the home page); everything else sits quietly on the page, separated by space and thin rules rather than boxed
+into cards.
+
+- **Colour:** a faintly green neutral paper and ink; mandi green for the brand and "hold", brick for "sell now" and falling
+  prices, and marigold (the flower strung over mandi gates) for the forecast and its likely range. Built in OKLCH; text
+  passes WCAG AA, and the marigold and brick pair is checked for colour-blind separation
+- **Type:** one family, Archivo, in three widths: wide for headings, normal for text, condensed and heavy for the big
+  numbers, with tabular figures wherever numbers line up. One variable font file
+- **Pages:** All crops (home), India overview, Compare mandis, Model accuracy and About. A mandi page has no tab of its
+  own: it opens from the side panel, search, the Compare table or the overview's lists, and the "All India / state /
+  mandi" bar under the top bar shows where you are. Pages that aren't about one crop (home, accuracy, about) hide the
+  crop switcher, side panel and search
+- **Price chart,** drawn as plain SVG: price in ink, forecast and likely range in marigold, the usual price for the season
+  (10th to 90th percentile of the same weeks in the past 5 years) in grey, an optional "same weeks last year" line, and
+  arrivals as bars underneath on the same time axis, heavier-than-usual weeks darker. One hover line runs through both
+  with every value for that week; reporting gaps are shaded and labelled instead of bridged; 3M to 5Y ranges and a table
+  view of the same numbers
 - **How this week compares:** 52-week range and where today sits, change vs the same week last year, typical weekly
-  move, and how prices moved in the same 4 weeks of past years
-- **Arrivals chart** under the price chart on the same time axis, with hover synced between the two and heavier-than-usual
-  weeks shaded darker
-- **Model accuracy page:** one story from the independent test: does it beat "no change" (error, 95% interval and the
-  chance it's luck), do the likely ranges hold before and after calibration, where it works best by crop and mandi
-  type, whether the rise warning's chances are honest, and year by year
-- **About page:** overview, method, how to read the advice, data and updates, a risk table, terms and disclaimer,
-  privacy, licences and contact, with a section rail (*LineSidebar*) that follows your reading. It stands on its own:
-  the crop switcher, side panel, search and notice are hidden there, and the tabs lead back into the app
-- **Colour:** forest-green and neutral ramps graded in OKLCH, so each step looks evenly lighter or darker; every text
-  colour passes WCAG AA, and the chart pair (blue forecast, orange fall) is checked for colour-blind separation
-- **Type, one face per job:** Bricolage Grotesque for headlines, Archivo for the interface and tables, Big Shoulders Display
-  for big numbers and the rate board, Newsreader for the paper slip and the About page
-- **Fast:** each page loads its own code, the charting library loads in parallel with the board, and the contour map
-  is a 32 KB image rendered once ahead of time, so no WebGL runs in the browser and the page never stalls after loading.
-  The API compresses JSON (32 kB to 7 kB for a mandi list) and the built files are cached for a year. The first screen
-  needs about 90 kB of compressed JavaScript and shows the board in about half a second
-- **Even layout:** every page is one vertical stack with a single gap, so cards in a row line up and side-by-side
-  cards are the same height
-- **Responsive:** on phones the mandi list folds into a drop-down under the header, crop and tab rows scroll sideways,
-  charts use tighter margins, the Compare table folds the district under the mandi name, and wide tables scroll inside
-  their panel
-- **Small things:** a one-time notice that prices are estimates, links to the terms and risks from every page,
-  <kbd>/</kbd> to search mandis, loading skeletons, and a skip link for keyboard users
-- **Links you can share, and a Back button that works:** the crop, state, mandi, tab and About section are kept in the
-  address bar. Each tab, crop or mandi you open is a step in the browser history, so Back returns to the previous page
-  instead of leaving FarmStat; the app's own corrections (a mandi that doesn't sell the new crop) don't add steps.
-  An old or broken link (a crop FarmStat no longer covers, an unknown mandi) opens the India overview instead of failing
-- **Tested in a browser on every push:** a Playwright suite opens every page at desktop and phone size and checks
-  navigation, the side panel, search, Back and Forward, and that nothing errors (`tests/e2e`)
+  move, and how prices moved in the same 4 weeks of past years. **Latest daily report** from the live feed, with a "Live"
+  chip on the board when this week's price comes from it
+- **Model accuracy page:** does it beat "no change" (error, 95% interval, chance it's luck, direction, average miss),
+  do the likely ranges hold before and after calibration, where it works best, whether the rise warning's chances are
+  honest (ROC-AUC, Brier score, reliability chart), year by year, by state, and what following the advice earned
+- **About page:** method, how to read the advice, data and updates, risks, terms, privacy, licences and contact, with a
+  section rail (React Bits *LineSidebar*) that follows your reading
+- **Light:** the app depends only on React, an icon set and one font; charts are hand-written SVG (Recharts, about
+  115 kB compressed, was removed in November 2026). All the JavaScript is about 107 kB compressed, each page loads its
+  own code, the next pages' code loads while the browser is idle, and the API compresses JSON and caches built files for
+  a year
+- **Responsive:** on phones the mandi list folds into a drop-down, the board becomes a price row over three forecast
+  cells, crop and tab rows scroll sideways with an edge fade, charts use tighter margins, and wide tables scroll
+- **Links you can share, and a Back button that works:** the crop, state, mandi, page and About section are kept in the
+  address bar. Each page, crop or mandi you open is a step in the browser history; the app's own corrections don't add
+  steps. An old or broken link (a crop FarmStat no longer covers, an unknown mandi) opens the home page or the crop's
+  overview instead of failing
+- **Tested in a browser on every push:** a Playwright suite opens every page at desktop and phone size and checks the
+  home page, search (mandis of the chosen crop only), the side panel, the chart tooltip, Back and Forward, fallbacks
+  for broken links, and that nothing errors (`tests/e2e`)
 
 ## HOW THE MODEL WAS BUILT
 
@@ -300,7 +302,7 @@ flowchart TB
 | Models | scikit-learn (HistGradientBoosting, quantile loss), joblib |
 | Training | Jupyter, pandas, NumPy, XGBoost, matplotlib, seaborn |
 | API | FastAPI, Uvicorn |
-| Web app | React 19, Vite, Recharts, React Bits (SplitFlapText, LineSidebar; Topography pre-rendered to an image); Bricolage Grotesque, Archivo, Big Shoulders Display, Newsreader |
+| Web app | React 19, Vite, hand-written SVG charts, React Bits (LineSidebar), lucide icons; Archivo (one variable font, width axis) |
 | Live data | data.gov.in API, Supabase (Postgres, Edge Functions, pg_cron, pg_net), GitHub Actions |
 | Hosting | Vercel (FastAPI, Python 3.12) |
 | Checks | pytest, Ruff, ESLint (React and hooks rules, zero warnings), Playwright browser tests, GitHub Actions CI |
@@ -348,11 +350,12 @@ How the web code is organised:
 | Where | What goes there |
 |---|---|
 | `App.jsx` | Crop, state, mandi and page choice, the address bar, and one `page()` switch that picks the view |
-| `components/*View.jsx` | One file per page (overview, mandi, compare, accuracy, about) |
+| `components/*View.jsx` | One file per page (home, overview, mandi, compare, accuracy, about) |
+| `components/RateBoard.jsx`, `PriceChart.jsx` | The ruled price board with the week's call, and the SVG price and arrivals chart |
 | `components/Sidebar.jsx`, `Chrome.jsx` | The state and mandi panel, and the rail, hover panel and notice it sits in |
 | `components/ui/` | Ported 21st.dev components (command palette, tabs) |
-| `components/reactbits/` | React Bits components |
-| `hooks.js` | `useMedia`, `useNarrow`, `useDesktop`, `useScrollEnd`, `useAppEvent` |
+| `components/reactbits/` | React Bits *LineSidebar* (the About page's section rail) |
+| `hooks.js` | `useMedia`, `useNarrow`, `useDesktop`, `useScrollEnd`, `useAppEvent`, `useWidth` (charts) |
 | `events.js` | `openSearch()` and `openSidePanel()`, callable from any component |
 | `storage.js` | Settings kept in the browser (pinned panel, notice seen) |
 | `api.js`, `format.js`, `stats.js`, `theme.js` | API calls, number and name formatting, statistics and round axis ticks, chart colours |
@@ -474,5 +477,5 @@ Open Government Data License – India.
 
 ## LICENSE
 
-MIT. See [LICENSE](LICENSE). The React Bits components in `web/src/components/reactbits/` are © David Haz under the
+MIT. See [LICENSE](LICENSE). The React Bits component in `web/src/components/reactbits/` is © David Haz under the
 MIT + Commons Clause licence included in that folder.

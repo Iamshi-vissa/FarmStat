@@ -1,56 +1,75 @@
-import { memo, useEffect, useState } from 'react';
-import contours from '../assets/board-contours.webp';
-import SplitFlapText from './reactbits/SplitFlapText.jsx';
-import AdviceSlip from './AdviceSlip.jsx';
-import { date, plain } from '../format.js';
-import { T } from '../theme.js';
+import { date, pct0, rupees } from '../format.js';
 
-// The mandi rate board: the current modal price on split-flap tiles over a faint contour map,
-// with the week's advice on a paper slip (parchi) pinned to it.
-export default function RateBoard({ title, where, priceLabel, price, advice, slipKey, live }) {
-  const text = plain(price);
+// The rate board, modelled on the bhav board at a mandi gate: the place and the week's call on top, then one ruled row
+// of big condensed figures (this week's price first, then what's expected). It is the one loud element on a page.
+export default function RateBoard({ title, where = [], verdict, cells, busy = false }) {
   return (
-    <section className="board" aria-label="Current price and advice">
-      <BoardBackground />
-      <div className="board-left">
-        <div className="board-place">
-          <h1 className="board-market">{title}</h1>
-          <span className="board-where">{where}</span>
+    <section className="board" aria-label="Price and advice" aria-busy={busy || undefined}>
+      <div className="board-head">
+        <div className="board-title">
+          <h1>{title}</h1>
+          <p className="board-where">{where.filter(Boolean).map((w, i) => <span key={i}>{w}</span>)}</p>
         </div>
-        <div className="board-price">
-          <span className="board-rupee" aria-hidden="true">₹</span>
-          <span className="board-digits" role="img" aria-label={`₹${text}`}>
-            {text.split(',').map((group, i) => (
-              <span key={`${title}-${i}`} className="board-group" aria-hidden="true">
-                {i > 0 && <span className="board-sep">,</span>}
-                <SplitFlapText text={group} loop={false} padTo={group.length} align="right"
-                  charset="0123456789" fontSize={50} tileColor={T.boardTile} textColor={T.chalk} tileRadius={6} gap={4}
-                  flipsPerChar={6} stagger={0.05} glare={0.15} />
-              </span>
-            ))}
-          </span>
-          <span className="board-unit"><strong>per quintal</strong>{priceLabel}</span>
-          {live && <span className="live-chip" title="This week's price comes from the live daily feed"><i aria-hidden="true" />Live</span>}
-        </div>
+        {verdict}
       </div>
-      {advice && <AdviceSlip key={slipKey ?? title} {...advice} />}
+      <div className="board-grid" style={{ '--cols': cells.length - 1 }}>
+        {cells.map((c, i) => (
+          <div key={c.key ?? i} className={`board-cell${i === 0 ? ' lead' : ''}`}>
+            <div className="board-label">{c.label}</div>
+            <div className={`board-value${c.range ? ' range' : ''}`} aria-label={c.valueLabel}>{c.value}</div>
+            {c.sub && <div className="board-sub">{c.sub}</div>}
+            {c.extra}
+            {c.note && <div className="board-note">{c.note}</div>}
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
 
-// The contour map is decoration: a pre-rendered image (drawn once with React Bits Topography) used as a mask and
-// tinted with the contour colour, so no WebGL runs in the visitor's browser and nothing blocks the page.
-const BoardBackground = memo(function BoardBackground() {
-  const [on, setOn] = useState(false);
-  useEffect(() => {
-    if (navigator.connection?.saveData) return undefined;
-    let live = true;
-    const img = new Image();
-    img.onload = () => { if (live) setOn(true); };
-    img.src = contours;
-    return () => { live = false; };
-  }, []);
-  return <div className={`board-bg${on ? ' on' : ''}`} aria-hidden="true" />;
-});
+// The price as it's painted on the board: the figure, then "per quintal" in small type.
+export const Price = ({ v, unit = '/ q' }) => (
+  <>{rupees(v)}<small>{unit}</small></>
+);
 
-export const priceWeek = w => `week of ${date(w)}`;
+const TONE = { Hold: 'hold', 'Sell now': 'sell' };
+
+// The week's call: one word in the tone colour (green hold, brick sell, ink otherwise), the reason, and the chance of a rise.
+export function Verdict({ action, word, headline, detail, chance, chanceLabel, footnote, label = 'This week’s call', children }) {
+  return (
+    <div className={`verdict ${TONE[action] ?? 'call'}`} role="status" aria-label={`${label}: ${word ?? action}. ${headline}`}>
+      <span className="verdict-label">{label}</span>
+      <strong className="verdict-word">{word ?? action}</strong>
+      <p className="verdict-head">{headline}</p>
+      {detail && <p className="verdict-detail">{detail}</p>}
+      {children}
+      {chance != null && (
+        <div className="meter">
+          <div className="meter-row"><span>{chanceLabel}</span><strong className="num">{pct0(chance)}</strong></div>
+          <div className="meter-track" role="img" aria-label={`${chanceLabel}: ${pct0(chance)}`}>
+            <div className="meter-fill" style={{ width: `${Math.round(chance * 100)}%` }} />
+          </div>
+        </div>
+      )}
+      <div className="verdict-foot">
+        <span>{footnote ?? 'An estimate, not a guarantee.'}</span>
+        <a href="#view=about&section=risks">Read the risks</a>
+      </div>
+    </div>
+  );
+}
+
+// Likely range on a shared scale: marigold band = 10th to 90th percentile, tick = forecast, dot = today.
+export function RangeBar({ lo, mid, hi, now, min, max }) {
+  const pos = v => `${((v - min) / (max - min || 1)) * 100}%`;
+  return (
+    <div className="rangebar" role="img" aria-label={`Likely between ${rupees(lo)} and ${rupees(hi)}; today ${rupees(now)}`}>
+      <div className="rangebar-track" />
+      <div className="rangebar-band" style={{ left: pos(lo), width: `calc(${pos(hi)} - ${pos(lo)})` }} />
+      {mid != null && <div className="rangebar-mid" style={{ left: pos(mid) }} />}
+      <div className="rangebar-now" style={{ left: pos(now) }} title="Today" />
+    </div>
+  );
+}
+
+export const priceWeek = w => `Week of ${date(w)}`;

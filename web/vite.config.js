@@ -12,7 +12,6 @@ export default defineConfig({
         // long-lived vendor files: they rarely change, so browsers keep them cached between releases
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
-          if (/recharts|d3-|victory|lodash|decimal\.js|react-smooth|fast-equals|eventemitter3|tiny-invariant|react-is/.test(id)) return 'charts';
           if (/react-dom|scheduler|\/react\//.test(id)) return 'react';
           return undefined;
         }

@@ -5,17 +5,13 @@ import { SEARCH } from '../events.js';
 import { useAppEvent } from '../hooks.js';
 import { placeName, rupees } from '../format.js';
 
-// "Search all mandis": one box that finds any mandi in India for any crop, or jumps to a page.
-// The palette code and the mandi index (one compact list) load only when it is first opened.
+// Search the chosen crop's mandis: one box that finds any of them in India by mandi, district or state name.
+// The palette code and the mandi index (one compact list for all crops) load only when it is first opened.
 const Palette = lazy(() => import('./ui/CommandPalette.jsx'));
-const PAGES = [
-  { id: 'p-accuracy', label: 'Model accuracy', hint: 'How well the forecasts did on weeks the model never saw', group: 'Pages', keywords: 'error backtest validation skill', view: 'accuracy' },
-  { id: 'p-about', label: 'About FarmStat', hint: 'Method, terms and risks', group: 'Pages', keywords: 'terms risks method data', view: 'about' },
-];
 let indexPromise;
 const loadIndex = () => (indexPromise ??= api('index').catch(e => { indexPromise = null; throw e; }));
 
-export default function SearchButton({ crops, onPick }) {
+export default function SearchButton({ crop, onPick }) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState(null);
   const mac = useMemo(() => /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent), []);
@@ -33,26 +29,23 @@ export default function SearchButton({ crops, onPick }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [show]);
 
-  const items = useMemo(() => {
-    const cropItems = crops.map(c => ({ id: `c-${c.id}`, label: c.id, group: 'Crops', crop: c.id,
-      hint: `${c.series.toLocaleString('en-IN')} mandi series across India`, view: 'overview' }));
-    const mandis = (rows ?? []).map(([crop, state, market, district, price]) => ({
-      id: `m-${crop}-${state}-${market}`, label: placeName(market), hint: `${district}, ${state}`, group: `${crop} mandis`,
-      aside: rupees(price), keywords: `${market} ${district} ${state} ${crop}`, crop, state, market, view: 'market' }));
-    return [...cropItems, ...PAGES, ...mandis];
-  }, [crops, rows]);
+  const items = useMemo(() => (rows ?? []).filter(r => r[0] === crop).map(([, state, market, district, price]) => ({
+    id: `m-${state}-${market}`, label: placeName(market), hint: `${district}, ${state}`,
+    aside: rupees(price), keywords: `${market} ${district} ${state}`, state, market,
+  })), [crop, rows]);
+  const what = `${crop.toLowerCase()} mandis`;
 
   return (
     <>
       <button type="button" className="search-any" onClick={show} onPointerEnter={() => { loadIndex().catch(() => {}); import('./ui/CommandPalette.jsx'); }}
-        aria-keyshortcuts={mac ? 'Meta+K' : 'Control+K'} aria-haspopup="dialog" aria-label="Search all mandis" title="Search all mandis">
-        <Search size={15} aria-hidden="true" /><span>Search all mandis</span><kbd>{mac ? '⌘' : 'Ctrl'} K</kbd>
+        aria-keyshortcuts={mac ? 'Meta+K' : 'Control+K'} aria-haspopup="dialog" aria-label={`Search ${what}`} title={`Search ${what}`}>
+        <Search size={15} aria-hidden="true" /><span>Search {what}</span><kbd>{mac ? '⌘' : 'Ctrl'} K</kbd>
       </button>
       {open && (
         <Suspense fallback={null}>
-          <Palette open={open} items={items} loading={rows === null} placeholder="Mandi, district, state or crop"
-            emptyLabel="No mandi matches. Try the district or state name."
-            onClose={() => setOpen(false)} onSelect={it => { setOpen(false); onPick(it); }} />
+          <Palette open={open} items={items} loading={rows === null} placeholder={`Search ${what} by mandi, district or state`}
+            emptyLabel={`No ${crop.toLowerCase()} mandi matches. Try the district or state name.`}
+            onClose={() => setOpen(false)} onSelect={it => { setOpen(false); onPick(it.state, it.market); }} />
         </Suspense>
       )}
     </>

@@ -185,9 +185,11 @@ class FarmData:
         for c in CROPS:
             sub = lt[lt["crop"] == c]
             if len(sub):
+                ov = self.overview(c) or {}   # this week's India median, for the crop choice on the home page
                 crops.append(dict(id=c, kind="weekly", series=len(sub),
                                   states=[dict(name=s, count=int(n)) for s, n in sub.groupby("state").size().items()],
-                                  data_until=_clean(sub["week"].max()), naive=bool(sub["naive"].all())))
+                                  data_until=_clean(sub["week"].max()), naive=bool(sub["naive"].all()),
+                                  median=ov.get("median"), median_prev=ov.get("median_prev"), week=ov.get("week")))
         return dict(crops=crops, n_mandis=int(pd.DataFrame({"s": lt["state"], "b": base}).drop_duplicates().shape[0]),
                     n_states=int(lt["state"].nunique()), horizons=self.horizons,
                     max_hold_weeks=MAX_HOLD_WEEKS, version=self.version)
@@ -287,16 +289,17 @@ class FarmData:
                 hz = {h: dict(MAE_Rs=r["MAE_Rs"], naive_MAE_Rs=r["naive_MAE_Rs"], skill_vs_naive=r["skill_vs_naive"],
                               skill_95ci=r.get("skill_95ci"), p_value=r.get("diebold_mariano", {}).get("p_value"),
                               direction_acc=r["direction_acc"], coverage_10_90=r["coverage_10_90"],
-                              coverage_conformal=r.get("coverage_10_90_conformal"))
+                              coverage_conformal=r.get("coverage_10_90_conformal"), rows=r.get("rows"),
+                              rmse_Rs=r.get("RMSE_Rs"), mape=r.get("MAPE"))
                       for h, r in ev["horizons"].items()}
                 out.update(test_years=ev["test_years"], horizons=hz, segments=ev["by_crop_and_type"],
-                           by_year=ev["by_year"], rise_warning=ev["rise_warning"])
+                           by_year=ev["by_year"], by_state=ev.get("by_state", []), rise_warning=ev["rise_warning"])
             else:   # training metrics only (the independent test has not been run)
                 start, end = m["test_period"].split(" to ")
                 hz = {h: dict(MAE_Rs=r["MAE_Rs"], naive_MAE_Rs=r["MAE_Rs"] / (1 - r["skill_vs_naive"]),
                               skill_vs_naive=r["skill_vs_naive"], direction_acc=r["direction_acc"],
                               coverage_10_90=r["coverage_10_90"]) for h, r in m["horizons"].items()}
                 out.update(test_years=list(range(int(start[:4]), int(end[:4]) + 1)), horizons=hz, segments=[], by_year=[],
-                           rise_warning=None)
+                           by_state=[], rise_warning=None)
             self._accuracy = json.loads(json.dumps(out, default=_clean))
         return self._accuracy

@@ -11,12 +11,13 @@ const PIN_KEY = 'farmstat-panel-pinned';
 const PEEK_GRACE = 220;   // ms the panel stays while the pointer travels from the rail into it
 const PEEK_INTENT = 140;  // ms the pointer must rest on the rail before the panel opens (passing over it does nothing)
 
+// The name, which also leads back to the home page (the crop choice).
 export function Brand() {
   return (
-    <div className="brand">
+    <a className="brand" href="#view=home" aria-label="FarmStat home: choose a crop">
       <span className="brand-glyph" aria-hidden="true">₹</span>
       <span><span className="brand-mark">FarmStat</span><span className="brand-sub">mandi price forecasts</span></span>
-    </div>
+    </a>
   );
 }
 
@@ -126,7 +127,6 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
       onBlur={e => { if (!pinned && !aside.current?.contains(e.relatedTarget)) hideSoon(); }}
       onKeyDown={e => { if (e.key === 'Escape' && peek && !pinned && aside.current?.contains(document.activeElement)) buttons.current[active]?.focus(); }}>
       <nav className="rail" aria-label="Mandis and search" onKeyDown={onRailKeys}>
-        <span className="brand-glyph rail-brand" aria-hidden="true">₹</span>
         <div className="rail-list">
           <span className="rail-marker" ref={marker} aria-hidden="true" />
           {rail.map(r => (
@@ -147,6 +147,7 @@ export function SideShell({ label, current, placeholder, footer, rail = [], chil
       <div className="side-panel" aria-hidden={hidden ? 'true' : undefined} inert={hidden}>
         <div className="side-head">
           <Brand />
+          <span className="side-title">{label}</span>
           {!pinned && (
             <button type="button" className="side-close" onClick={hide} aria-label="Close the panel" title="Close (Esc)">
               <X size={18} aria-hidden="true" />

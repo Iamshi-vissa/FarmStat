@@ -1,18 +1,14 @@
-// Colours used from JavaScript (charts, canvas). Same values as the tokens in styles.css (OKLCH-graded ramps).
+// Colours used from JavaScript (charts and small SVGs). Same values as the tokens in styles.css.
 export const T = {
-  ink: '#242620',          // neutral-900
-  ink2: '#4e514a',         // neutral-700
-  ink3: '#63665f',         // neutral-600
-  grid: '#e9ebe5',         // neutral-150
-  panel: '#f9fbf8',        // neutral-50
-  context: '#a3a69e',      // neutral-400: "a year earlier", reference lines
-  arrivals: '#cccfc8',     // neutral-300
-  arrivalsHeavy: '#7e827a',// neutral-500
-  forest: '#2b7b47',       // forest-600
-  forestLight: '#6bb781',  // forest-400
-  contour: '#6bb781',      // forest-400, rate board contour lines
-  boardTile: '#04190b',    // split-flap tiles, a step below forest-950
-  chalk: '#f5ead1',
-  forecast: '#2a78d6',     // validated pair with drop
-  drop: '#c2410c'
+  ink: '#16211a',
+  ink2: '#465048',
+  ink3: '#636c64',
+  grid: '#e3e8e3',          // rule-2
+  panel: '#fbfdfb',         // the page surface (halo behind marks)
+  context: '#a1a69f',       // "a year earlier", reference lines, the usual seasonal range
+  arrivals: '#cdd2cc',
+  arrivalsHeavy: '#636c64',
+  forest: '#1d5e35',        // mandi green: brand, hold, the chosen mandi
+  forecast: '#c67700',      // marigold: forecast line and likely range
+  drop: '#b34124'           // brick: falls, sell now
 };
