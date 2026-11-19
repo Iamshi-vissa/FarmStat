@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import BlurText from './reactbits/BlurText.jsx';
+import { Count } from './RateBoard.jsx';
 import { useWidth } from '../hooks.js';
 import { T } from '../theme.js';
 import { api } from '../api.js';
@@ -98,7 +100,7 @@ export default function AccuracyView() {
   return (
     <>
       <div className="page-head">
-        <h1>How accurate is it?</h1>
+        <BlurText as="h1" text="How accurate is it?" />
         <p>Every number here comes from {years} data the model never trained on. It was retrained at the start of each year,
           as it would be in real use, and compared with the simplest forecast possible: “next week’s price will be the same
           as this week’s”. Onion, tomato and potato, every mandi.</p>
@@ -106,17 +108,17 @@ export default function AccuracyView() {
 
       <div className="stats">
         <div className="stat"><div className="stat-label">Less error than “no change”</div>
-          <div className="stat-value num">{pct0(two.skill_vs_naive)}</div>
+          <div className="stat-value num"><Count to={two.skill_vs_naive} format={pct0} /></div>
           <div className="stat-note">2 weeks ahead</div></div>
         <div className="stat"><div className="stat-label">Direction right, up or down</div>
-          <div className="stat-value num">{pct0(two.direction_acc)}</div>
+          <div className="stat-value num"><Count to={two.direction_acc} format={pct0} /></div>
           <div className="stat-note">2 weeks ahead</div></div>
         <div className="stat"><div className="stat-label">Likely range held the real price</div>
-          <div className="stat-value num">{pct0(calibrated ? two.coverage_conformal : two.coverage_10_90)}</div>
+          <div className="stat-value num"><Count to={calibrated ? two.coverage_conformal : two.coverage_10_90} format={pct0} /></div>
           <div className="stat-note">target 80%, 2 weeks ahead</div></div>
         {m.backtest.Tomato != null && (
           <div className="stat"><div className="stat-label">Extra earned by following the advice</div>
-            <div className="stat-value num">{rupees(m.backtest.Tomato)}</div>
+            <div className="stat-value num"><Count to={m.backtest.Tomato} /></div>
             <div className="stat-note">tomato, per quintal, after storage losses</div></div>
         )}
       </div>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import BlurText from './reactbits/BlurText.jsx';
 import { ArrowDownUp } from 'lucide-react';
 import Delta from './Delta.jsx';
 import DotStrip from './DotStrip.jsx';
@@ -49,7 +50,7 @@ export default function CompareView({ crop, state, market, mandis, onMarket, onO
   return (
     <>
       <div className="page-head">
-        <h1>Where to sell {crop.toLowerCase()}{variety ? ` (${variety})` : ''}</h1>
+        <BlurText key={`${crop}${variety}`} as="h1" text={`Where to sell ${crop.toLowerCase()}${variety ? ` (${variety})` : ''}`} />
         <p>
           {lead}
           {variety && ' Arecanut varieties have very different prices, so only the same variety is compared.'}

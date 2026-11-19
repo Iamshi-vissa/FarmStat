@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { Info } from 'lucide-react';
-import RateBoard, { Price, RangeBar, Verdict, priceWeek } from './RateBoard.jsx';
+import RateBoard, { Count, Price, RangeBar, Verdict, priceWeek } from './RateBoard.jsx';
 import Delta from './Delta.jsx';
 import { api } from '../api.js';
 import { compactRupees, placeName, rupees, weeks } from '../format.js';
@@ -41,7 +41,7 @@ export default function MarketView({ crop, state, market, meta }) {
       extra: <RangeBar lo={f.p10} hi={f.p90} now={L.price} min={min} max={max} />,
       note: 'How far prices moved in 8 of 10 past weeks',
     } : {
-      key: f.h, label: <>In {weeks(f.h)}</>, value: rupees(f.p50),
+      key: f.h, label: <>In {weeks(f.h)}</>, value: <Count to={f.p50} />, valueLabel: rupees(f.p50),
       sub: <Delta value={f.p50 / L.price - 1} title="Change from this week" />,
       extra: <RangeBar lo={f.p10} mid={f.p50} hi={f.p90} now={L.price} min={min} max={max} />,
       note: <><span className="wide-only">Likely {rupees(f.p10)} to {rupees(f.p90)}</span>

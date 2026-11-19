@@ -158,6 +158,12 @@ into cards.
   passes WCAG AA, and the marigold and brick pair is checked for colour-blind separation
 - **Type:** one family, Archivo, in three widths: wide for headings, normal for text, condensed and heavy for the big
   numbers, with tabular figures wherever numbers line up. One variable font file
+- **Motion, from [React Bits](https://reactbits.dev),** each used in one place and switched off for visitors who ask
+  for reduced motion: *SpotlightCard* (a marigold light follows the pointer across the crop board and the forecast
+  cells), *CountUp* (prices count to their value, and from the old price to the new when you switch mandi, like a rate
+  board being updated), *BlurText* (page headings come into focus once), *ShinyText* (one sheen across the week's call)
+  and *ClickSpark* (sparks when you pick a crop). CountUp and BlurText are ported to plain JavaScript and CSS so they
+  don't need the `motion` library; together the effects add about 8 kB compressed
 - **Pages:** All crops (home), India overview, Compare mandis, Model accuracy and About. A mandi page has no tab of its
   own: it opens from the side panel, search, the Compare table or the overview's lists, and the "All India / state /
   mandi" bar under the top bar shows where you are. Pages that aren't about one crop (home, accuracy, about) hide the
@@ -176,7 +182,7 @@ into cards.
 - **About page:** method, how to read the advice, data and updates, risks, terms, privacy, licences and contact, with a
   section rail (React Bits *LineSidebar*) that follows your reading
 - **Light:** the app depends only on React, an icon set and one font; charts are hand-written SVG (Recharts, about
-  115 kB compressed, was removed in November 2026). All the JavaScript is about 107 kB compressed, each page loads its
+  115 kB compressed, was removed in November 2026). All the JavaScript is about 115 kB compressed, each page loads its
   own code, the next pages' code loads while the browser is idle, and the API compresses JSON and caches built files for
   a year
 - **Responsive:** on phones the mandi list folds into a drop-down, the board becomes a price row over three forecast
@@ -302,7 +308,7 @@ flowchart TB
 | Models | scikit-learn (HistGradientBoosting, quantile loss), joblib |
 | Training | Jupyter, pandas, NumPy, XGBoost, matplotlib, seaborn |
 | API | FastAPI, Uvicorn |
-| Web app | React 19, Vite, hand-written SVG charts, React Bits (LineSidebar), lucide icons; Archivo (one variable font, width axis) |
+| Web app | React 19, Vite, hand-written SVG charts, React Bits (SpotlightCard, CountUp, BlurText, ShinyText, ClickSpark, LineSidebar), lucide icons; Archivo (one variable font, width axis) |
 | Live data | data.gov.in API, Supabase (Postgres, Edge Functions, pg_cron, pg_net), GitHub Actions |
 | Hosting | Vercel (FastAPI, Python 3.12) |
 | Checks | pytest, Ruff, ESLint (React and hooks rules, zero warnings), Playwright browser tests, GitHub Actions CI |
@@ -354,7 +360,7 @@ How the web code is organised:
 | `components/RateBoard.jsx`, `PriceChart.jsx` | The ruled price board with the week's call, and the SVG price and arrivals chart |
 | `components/Sidebar.jsx`, `Chrome.jsx` | The state and mandi panel, and the rail, hover panel and notice it sits in |
 | `components/ui/` | Ported 21st.dev components (command palette, tabs) |
-| `components/reactbits/` | React Bits *LineSidebar* (the About page's section rail) |
+| `components/reactbits/` | React Bits components (SpotlightCard, CountUp, BlurText, ShinyText, ClickSpark, LineSidebar); changes from the originals are noted at the top of each file |
 | `hooks.js` | `useMedia`, `useNarrow`, `useDesktop`, `useScrollEnd`, `useAppEvent`, `useWidth` (charts) |
 | `events.js` | `openSearch()` and `openSidePanel()`, callable from any component |
 | `storage.js` | Settings kept in the browser (pinned panel, notice seen) |
@@ -477,5 +483,5 @@ Open Government Data License – India.
 
 ## LICENSE
 
-MIT. See [LICENSE](LICENSE). The React Bits component in `web/src/components/reactbits/` is © David Haz under the
+MIT. See [LICENSE](LICENSE). The React Bits components in `web/src/components/reactbits/` are © David Haz under the
 MIT + Commons Clause licence included in that folder.

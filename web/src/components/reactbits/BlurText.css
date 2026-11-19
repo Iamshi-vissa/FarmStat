@@ -1,0 +1,7 @@
+.blur-text__word { display: inline-block; animation: blur-text-in 0.7s cubic-bezier(.2, .8, .2, 1) both; will-change: filter, opacity; }
+@keyframes blur-text-in {
+  0% { opacity: 0; filter: blur(10px); transform: translateY(-0.2em); }
+  60% { opacity: 0.8; filter: blur(2px); transform: translateY(0.03em); }
+  100% { opacity: 1; filter: blur(0); transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .blur-text__word { animation: none; } }

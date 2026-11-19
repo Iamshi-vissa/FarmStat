@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MousePointerClick, Search } from 'lucide-react';
-import RateBoard, { Price, Verdict, priceWeek } from './RateBoard.jsx';
+import RateBoard, { Count, Price, Verdict, priceWeek } from './RateBoard.jsx';
 import Delta from './Delta.jsx';
 import { MarketSkeleton } from './MarketView.jsx';
 import { openSearch, openSidePanel } from '../events.js';
@@ -31,12 +31,12 @@ export default function OverviewView({ crop, onState, onPick }) {
     { key: 'now', label: 'Median price this week', value: <Price v={d.median} />, valueLabel: `${rupees(d.median)} per quintal`,
       sub: d.median_prev ? <><Delta value={d.median / d.median_prev - 1} /><span>vs last week ({rupees(d.median_prev)})</span></> : null,
       extra: d.trend ? <Trend points={d.trend} /> : null, note: priceWeek(d.week) },
-    { key: 'yoy', label: 'Compared with a year ago', value: d.median_year_ago ? pct(d.median / d.median_year_ago - 1, 0) : '–',
+    { key: 'yoy', label: 'Compared with a year ago', value: d.median_year_ago ? <Count to={d.median / d.median_year_ago - 1} format={v => pct(v, 0)} /> : '–',
       note: d.median_year_ago ? `The median was ${rupees(d.median_year_ago)} in the same week last year` : 'Not enough history a year back' },
     // a crop with no forecast (arecanut) gets no forecast cells, rather than cells that say so
     ...(d.naive ? [] : [
-      { key: 'move', label: `Expected in ${weeks(d.horizon)}`, value: pct(d.move), note: 'Median expected change across mandis with a forecast' },
-      { key: 'rise', label: 'Likely to rise 5% or more', value: pct0(d.rise_share), note: 'Share of mandis where the chance is 50% or higher' },
+      { key: 'move', label: `Expected in ${weeks(d.horizon)}`, value: <Count to={d.move} format={v => pct(v)} />, note: 'Median expected change across mandis with a forecast' },
+      { key: 'rise', label: 'Likely to rise 5% or more', value: <Count to={d.rise_share} format={pct0} />, note: 'Share of mandis where the chance is 50% or higher' },
     ]),
   ];
   const total = (calls.Hold ?? 0) + (calls['Your call'] ?? 0) + (calls['Sell now'] ?? 0);

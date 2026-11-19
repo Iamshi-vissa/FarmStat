@@ -5,6 +5,8 @@ import Sidebar from './components/Sidebar.jsx';
 import MarketView, { MarketSkeleton, loadMarketChart } from './components/MarketView.jsx';
 import { Brand, Notice } from './components/Chrome.jsx';
 import HomeView from './components/HomeView.jsx';
+import ClickSpark from './components/reactbits/ClickSpark.jsx';
+import { T } from './theme.js';
 import Tabs from './components/ui/Tabs.jsx';
 import SearchButton from './components/SearchAnywhere.jsx';
 import { api } from './api.js';
@@ -190,6 +192,9 @@ export default function App() {
   const pageTabs = <Tabs items={tabs} value={page_} onChange={goTo} label="Page" className="tabs" tabRef={tabsRef} />;
 
   return (
+    // React Bits ClickSpark: marigold sparks when a crop is picked (on the home page or the crop switch), nowhere else
+    <ClickSpark selector=".crop-pick, .crops button" sparkColor={[T.forecast, T.forest]} sparkSize={9} sparkRadius={26}
+      sparkCount={10} duration={480} style={{ height: 'auto', minHeight: '100vh' }}>
     <div className={`app${plain ? ' app-plain' : ''}`}>
       <a className="skip" href="#main">Skip to content</a>
       {!plain && side}
@@ -214,6 +219,7 @@ export default function App() {
         </div>
       </main>
     </div>
+    </ClickSpark>
   );
 }
 

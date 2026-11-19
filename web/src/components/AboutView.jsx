@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import BlurText from './reactbits/BlurText.jsx';
 import { AlertTriangle } from 'lucide-react';
 import LineSidebar from './reactbits/LineSidebar.jsx';
 import { date } from '../format.js';
@@ -82,7 +83,7 @@ export default function AboutView({ meta, section, onSection }) {
 
       <article className="doc-body">
         <header className="doc-hero" id="overview">
-          <h1>Mandi prices, a few weeks ahead</h1>
+          <BlurText as="h1" text="Mandi prices, a few weeks ahead" />
           <p>FarmStat estimates where onion, tomato and potato prices are heading in {fmt(meta.n_mandis)} mandis across{' '}
             {meta.n_states} states, and turns the estimate into plain sell or hold advice. It is a free, open-source student
             project built on public Government of India price data.</p>
