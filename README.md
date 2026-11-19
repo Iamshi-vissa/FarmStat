@@ -522,7 +522,7 @@ to and how well it did:
 | Learning | Algorithms used |
 |---|---|
 | Supervised regression | Histogram gradient boosting (the production model, absolute-error and quantile loss), XGBoost, Random Forest, Linear, Ridge, Lasso, K-Nearest Neighbours, SVR (RBF kernel), Decision Tree |
-| Supervised classification | Gradient-boosting classifier (the 5%-rise warning), Random Forest, Logistic Regression |
+| Supervised classification | Gradient-boosting classifier (the 5%-rise warning), Random Forest, Logistic Regression; confusion matrices in the models report ([figure](docs/report/confusion_matrices.png), `scripts/confusion_matrices.py`) |
 | Unsupervised | PCA (dimensionality reduction), K-Means (market regimes, k chosen by elbow and silhouette) |
 | Uncertainty | Quantile regression at the 10th, 50th and 90th percentiles; split-conformal calibration of the ranges |
 | Tuning and validation | GridSearchCV on walk-forward folds; walk-forward test 2023–2026 with yearly retraining; Diebold–Mariano tests and block bootstrap |

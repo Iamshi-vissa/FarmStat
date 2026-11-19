@@ -99,6 +99,45 @@ Trained on 2003–2022, tested on 2023–2026.
 | Logistic regression | Linear, C = 0.3 | 0.711 | 0.694 | 0.578 | 0.461 | 0.513 |
 | Always "no rise" | Baseline | 0.500 | 0.651 | – | 0.000 | – |
 
+### Confusion matrices
+
+The same split (trained before 2023, tested on 168,637 two-week forecasts from January 2023 to July 2026), recomputed
+by `scripts/confusion_matrices.py` (numbers in `reports/confusion_matrices.json`). A rise is called when the
+probability is 0.5 or more. 58,872 of the test weeks (34.9%) rose by 5% or more. TN and TP are correct "no rise" and
+"rise" calls, FP a rise called that didn't come (a false alarm), FN a rise that was missed. Specificity is the share
+of non-rises correctly called.
+
+![Confusion matrices](confusion_matrices.png)
+
+| Model | True negatives (TN) | False positives (FP) | False negatives (FN) | True positives (TP) |
+|---|---|---|---|---|
+| Gradient boosting | 89,109 | 20,656 | 27,691 | 31,181 |
+| Random forest | 94,622 | 15,143 | 34,052 | 24,820 |
+| Logistic regression | 89,951 | 19,814 | 31,713 | 27,159 |
+| Always "no rise" | 109,765 | 0 | 58,872 | 0 |
+
+| Model | Accuracy | Precision | Recall | Specificity | F1 | ROC-AUC |
+|---|---|---|---|---|---|---|
+| Gradient boosting | 71.3% | 60.2% | 53.0% | 81.2% | 0.563 | 0.746 |
+| Random forest | 70.8% | 62.1% | 42.2% | 86.2% | 0.502 | 0.731 |
+| Logistic regression | 69.4% | 57.8% | 46.1% | 81.9% | 0.513 | 0.711 |
+| Always "no rise" | 65.1% | – | 0.0% | 100% | 0 | 0.500 |
+
+Gradient boosting catches the most real rises (53%) while keeping false alarms to 19% of the weeks that didn't rise,
+which is why it is the one in the app. Random forest is the most cautious: fewest false alarms, but it misses 58% of
+rises.
+
+**Direction of the price forecast.** The production regressor's settings, same split, counting only the 142,851
+weeks where the price moved more than 2%:
+
+| | Predicted down | Predicted up | Recall |
+|---|---|---|---|
+| **Actually went down** | 46,080 | 26,949 | 63.1% |
+| **Actually went up** | 18,933 | 50,889 | 72.9% |
+| **Precision** | 70.9% | 65.4% | Accuracy 67.9% |
+
+(In the walk-forward test, retrained every year, direction accuracy was 67.1% at two weeks.)
+
 In the independent re-run the gradient-boosting classifier had a ROC-AUC of 0.73 and a Brier score of 0.193, against
 0.227 for always quoting the 35% base rate, and its probabilities matched observed frequencies closely.
 

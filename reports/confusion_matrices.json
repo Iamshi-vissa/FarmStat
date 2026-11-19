@@ -1,0 +1,66 @@
+{
+ "test_rows": 168637,
+ "rises": 58872,
+ "classifiers": {
+  "Gradient Boosting": {
+   "TN": 89109,
+   "FP": 20656,
+   "FN": 27691,
+   "TP": 31181,
+   "accuracy": 0.7133072813202322,
+   "precision": 0.6015201497000212,
+   "recall": 0.5296405761652399,
+   "specificity": 0.8118161526898374,
+   "F1": 0.5632965702878718,
+   "roc_auc": 0.746125844725028
+  },
+  "Random Forest": {
+   "TN": 94622,
+   "FP": 15143,
+   "FN": 34052,
+   "TP": 24820,
+   "accuracy": 0.7082787288673305,
+   "precision": 0.6210744939068639,
+   "recall": 0.4215926076912624,
+   "specificity": 0.8620416344007653,
+   "F1": 0.5022512267921283,
+   "roc_auc": 0.7311201062830947
+  },
+  "Logistic Regression": {
+   "TN": 89951,
+   "FP": 19814,
+   "FN": 31713,
+   "TP": 27159,
+   "accuracy": 0.6944502096218504,
+   "precision": 0.5781832116322142,
+   "recall": 0.461322869955157,
+   "specificity": 0.819487086047465,
+   "F1": 0.5131843733761633,
+   "roc_auc": 0.7112122169706871
+  },
+  "Always \"no rise\"": {
+   "TN": 109765,
+   "FP": 0,
+   "FN": 58872,
+   "TP": 0,
+   "accuracy": 0.6508951179159971,
+   "precision": 0.0,
+   "recall": 0.0,
+   "specificity": 1.0,
+   "F1": 0.0,
+   "roc_auc": 0.5
+  }
+ },
+ "direction": {
+  "moved_rows": 142851,
+  "down_called_down": 46080,
+  "down_called_up": 26949,
+  "up_called_down": 18933,
+  "up_called_up": 50889,
+  "accuracy": 0.6788121889241238,
+  "precision_up": 0.6537809296230633,
+  "recall_up": 0.7288390478645699,
+  "precision_down": 0.7087813206589452,
+  "recall_down": 0.630982212545701
+ }
+}
