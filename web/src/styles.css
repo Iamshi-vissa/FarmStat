@@ -718,3 +718,42 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
   .risk-table td { padding: 2px 0; border: 0; }
 }
 @media (hover: none) { .search-any kbd { display: none; } }
+
+/* ── mandi-green bars ─────────────────────────────────────────────────────
+   The top bar and the icon rail are painted in the brand's mandi green, like the green-and-white boards over a mandi
+   gate; the chosen page is underlined in marigold. White text on --bar is 8.9:1, the 74% white for other tabs 6.1:1. */
+:root { --bar: #18512e; --bar-2: #113d21; --bar-ink-2: rgba(255, 255, 255, .74); --bar-line: rgba(255, 255, 255, .16); --marigold-lit: #f2b04a; }
+.topbar { background: var(--bar); color: #fff; border-bottom-color: var(--bar-2); backdrop-filter: none; }
+.topbar .brand-glyph, .side-head .brand-glyph { background: #fff; color: var(--bar); }
+.topbar .brand-sub { color: var(--bar-ink-2); }
+.topbar .ftabs-line button { color: var(--bar-ink-2); }
+.topbar .ftabs-line button:hover { color: #fff; }
+.topbar .ftabs-line button[aria-selected="true"] { color: #fff; }
+.topbar .ftabs-line .ftabs-bar { background: var(--marigold-lit); }
+.topbar :focus-visible { outline-color: var(--marigold-lit); }
+.topbar .search-any { background: rgba(255, 255, 255, .08); border-color: var(--bar-line); color: var(--bar-ink-2); }
+.topbar .search-any:hover { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .34); color: #fff; }
+.topbar .search-any kbd { background: transparent; border-color: var(--bar-line); color: var(--bar-ink-2); }
+.rail { background: var(--bar-2); border-right-color: var(--bar-2); color: var(--bar-ink-2); }
+.rail-btn:hover { color: #fff; background: rgba(255, 255, 255, .1); }
+.rail-btn[aria-current="page"] { color: var(--bar); }
+.rail-marker::before { background: var(--marigold-lit); }
+.rail-marker::after { background: #fff; box-shadow: none; }
+.rail-pin[aria-pressed="true"] { color: var(--bar); background: #fff; }
+.rail :focus-visible { outline-color: var(--marigold-lit); }
+/* the crop and place bar under it: a pale wash of the same green */
+.context { background: #eef5ef; border-bottom-color: #dbe7dd; }
+.context .crops { background: #dfeae1; }
+
+/* the field-lines backdrop behind each page's title (components/reactbits/FieldLines.jsx) */
+.page-wrap { position: relative; isolation: isolate; }
+.field-lines { position: absolute; inset: 0 0 auto 0; height: 440px; z-index: -1; pointer-events: none;
+  -webkit-mask-image: linear-gradient(#000 30%, transparent); mask-image: linear-gradient(#000 30%, transparent); }
+.field-lines canvas { display: block; width: 100%; height: 100%; }
+
+@media (max-width: 860px) {
+  .topbar { background: var(--bar); }
+  .side-head { background: var(--bar); color: #fff; }
+  .side-toggle { background: rgba(255, 255, 255, .1); border-color: var(--bar-line); color: #fff; }
+  .field-lines { height: 300px; }
+}

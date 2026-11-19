@@ -10,7 +10,7 @@ Forecasts onion, tomato and potato prices in mandis across 24 Indian states, 1, 
 
 [About](#about) · [Results](#results) · [Features](#features) · [Web app](#web-app) · [How the model was built](#how-the-model-was-built) ·
 [Live data](#live-data) · [Architecture](#architecture) · [Tech stack](#tech-stack) · [Getting started](#getting-started) ·
-[Project structure](#project-structure) · [Data](#data) · [Status and limitations](#status-and-limitations)
+[Project structure](#project-structure) · [Data](#data) · [Status and limitations](#status-and-limitations) · [Report](#report)
 
 ## ABOUT
 
@@ -154,14 +154,17 @@ crops on the home page); everything else sits quietly on the page, separated by 
 into cards.
 
 - **Colour:** a faintly green neutral paper and ink; mandi green for the brand and "hold", brick for "sell now" and falling
-  prices, and marigold (the flower strung over mandi gates) for the forecast and its likely range. Built in OKLCH; text
+  prices, and marigold (the flower strung over mandi gates) for the forecast and its likely range. The top bar and the
+  icon rail are painted mandi green with the chosen page underlined in marigold, like the green-and-white boards over a
+  mandi gate, and the crop bar under them is a pale wash of the same green. Built in OKLCH; text
   passes WCAG AA, and the marigold and brick pair is checked for colour-blind separation
 - **Type:** one family, Archivo, along its width axis: wide for headings (signboard lettering), normal for reading,
   condensed and heavy for the big numbers, with tabular figures wherever numbers line up. One type scale for the whole
   app (a display size for the home headline, one page-title size, section and list headings, 15px reading text, 17px
   lead paragraphs, 13px labels, notes never under 12px). One variable font file
 - **Motion, from [React Bits](https://reactbits.dev),** each used in one place and switched off for visitors who ask
-  for reduced motion: *VariableProximity* (the home headline thickens and widens under the pointer along Archivo's
+  for reduced motion: *Waves*, laid flat as faint green field furrows behind each page's title that part around the
+  pointer (drawn only while on screen, about 30 frames a second), *VariableProximity* (the home headline thickens and widens under the pointer along Archivo's
   weight and width axes; each letter keeps its resting width, so the line never rewraps), *Counter* (every digit on a
   board is a reel that rolls to its value, and from the old price to the new when you switch crop or mandi, like the
   flaps of a rate board), *SpotlightCard* (a marigold light follows the pointer across the crop board and the forecast
@@ -314,7 +317,7 @@ flowchart TB
 | Models | scikit-learn (HistGradientBoosting, quantile loss), joblib |
 | Training | Jupyter, pandas, NumPy, XGBoost, matplotlib, seaborn |
 | API | FastAPI, Uvicorn |
-| Web app | React 19, Vite, hand-written SVG charts, React Bits (VariableProximity, Counter, SpotlightCard, BlurText, ShinyText, ClickSpark, LineSidebar), lucide icons; Archivo (one variable font, width axis) |
+| Web app | React 19, Vite, hand-written SVG charts, React Bits (Waves, VariableProximity, Counter, SpotlightCard, BlurText, ShinyText, ClickSpark, LineSidebar), lucide icons; Archivo (one variable font, width axis) |
 | Live data | data.gov.in API, Supabase (Postgres, Edge Functions, pg_cron, pg_net), GitHub Actions |
 | Hosting | Vercel (FastAPI, Python 3.12) |
 | Checks | pytest, Ruff, ESLint (React and hooks rules, zero warnings), Playwright browser tests, GitHub Actions CI |
@@ -366,7 +369,7 @@ How the web code is organised:
 | `components/RateBoard.jsx`, `PriceChart.jsx` | The ruled price board with the week's call, and the SVG price and arrivals chart |
 | `components/Sidebar.jsx`, `Chrome.jsx` | The state and mandi panel, and the rail, hover panel and notice it sits in |
 | `components/ui/` | Ported 21st.dev components (command palette, tabs) |
-| `components/reactbits/` | React Bits components (VariableProximity, Counter, SpotlightCard, BlurText, ShinyText, ClickSpark, LineSidebar); changes from the originals are noted at the top of each file |
+| `components/reactbits/` | React Bits components (FieldLines from Waves, VariableProximity, Counter, SpotlightCard, BlurText, ShinyText, ClickSpark, LineSidebar); changes from the originals are noted at the top of each file |
 | `hooks.js` | `useMedia`, `useNarrow`, `useDesktop`, `useScrollEnd`, `useAppEvent`, `useWidth` (charts) |
 | `events.js` | `openSearch()` and `openSidePanel()`, callable from any component |
 | `storage.js` | Settings kept in the browser (pinned panel, notice seen) |
@@ -442,6 +445,7 @@ scripts/evaluate.py                 independent validation: walk-forward, Diebol
 scripts/calibrate_ranges.py         learns the range calibration from the back-tests -> models/range_calibration.json
 reports/                            evaluation.json and model_evaluation.md written by scripts/evaluate.py
 docs/FarmStat_presentation.pptx     10-slide project presentation (generator: docs/deck/build_presentation.js)
+docs/report/                        project report in IEEE format (PDF and Word)
 models/farmstat_model.joblib        trained weekly models (+ arecanut ranges)
 models/metrics.json                 test results
 models/range_calibration.json       how far to move each end of the forecast ranges (from scripts/calibrate_ranges.py)
@@ -486,6 +490,19 @@ Open Government Data License – India.
 - **Cashew and sugarcane were dropped** in November 2026. Cashew has only monthly state averages for five states and
   its best model only tied with "no change"; sugarcane is mostly sold to mills at the government FRP, so a mandi
   forecast doesn't help. Both are in the git history.
+
+## REPORT
+
+The full write-up, in IEEE conference format, is in [docs/report/FarmStat_Report.pdf](docs/report/FarmStat_Report.pdf)
+(editable: [FarmStat_Report.docx](docs/report/FarmStat_Report.docx)):
+
+> **FarmStat: Probabilistic Forecasting of Weekly Mandi Prices and Sell-or-Hold Advice for Onion, Tomato and Potato in India**
+> Vamshi Bharath Vissa (20241CSE1097), School of Computer Science and Engineering, Presidency University, Bengaluru
+
+It covers the data and cleaning, the 38 features, the model comparison, quantile forecasts with shrinkage and
+split-conformal calibration, the rise warning and advice rule, the 2023–2026 walk-forward test (Diebold–Mariano tests,
+bootstrap intervals, results by crop, mandi type, year and state), two case studies, arecanut, a comparison with six
+published Indian studies, and the limitations.
 
 ## LICENSE
 

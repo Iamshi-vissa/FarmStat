@@ -6,6 +6,7 @@ import MarketView, { MarketSkeleton, loadMarketChart } from './components/Market
 import { Brand, Notice } from './components/Chrome.jsx';
 import HomeView from './components/HomeView.jsx';
 import ClickSpark from './components/reactbits/ClickSpark.jsx';
+import FieldLines from './components/reactbits/FieldLines.jsx';
 import { T } from './theme.js';
 import Tabs from './components/ui/Tabs.jsx';
 import SearchButton from './components/SearchAnywhere.jsx';
@@ -211,10 +212,13 @@ export default function App() {
           </div>
         )}
         {page_ !== 'about' && page_ !== 'accuracy' && <Notice />}
-        <div className="page">
-          <Suspense fallback={page_ === 'market' || page_ === 'overview' ? <MarketSkeleton label="Loading" /> : <Wait />}>
-            {page()}
-          </Suspense>
+        <div className="page-wrap">
+          <FieldLines />
+          <div className="page">
+            <Suspense fallback={page_ === 'market' || page_ === 'overview' ? <MarketSkeleton label="Loading" /> : <Wait />}>
+              {page()}
+            </Suspense>
+          </div>
         </div>
       </main>
     </div>
