@@ -175,10 +175,17 @@ class FarmData:
         # row positions of each series, so a mandi's history is a lookup instead of a scan of every row
         self._rows = self.prices.groupby(KEY, sort=False).indices
         self._overview: dict[str, dict | None] = {}
+        self._meta: dict | None = None
         self._accuracy: dict | None = None
 
     # ── weekly crops ────────────────────────────────────────────────────────
     def meta(self) -> dict:
+        """Crops, their states and this week's India picture (computed once: every request checks its crop here)."""
+        if self._meta is None:
+            self._meta = self._build_meta()
+        return self._meta
+
+    def _build_meta(self) -> dict:
         lt = self.latest
         base = lt["market"].str.replace(r" \(.*\)$", "", regex=True)
         crops = []
@@ -261,14 +268,14 @@ class FarmData:
         for st, g in fresh.groupby("state"):
             m = g[~g["naive"].astype(bool)]
             top = g.sort_values("price", ascending=False).iloc[0]
-            states.append(dict(state=st, median=_clean(g["price"].median()), mandis=int(len(g)),
+            states.append(dict(state=st, median=_clean(g["price"].median()), mandis=len(g),
                                move=_clean(m["move"].median()) if len(m) else None,
                                top_market=top["market"], top_price=_clean(top["price"])))
         states.sort(key=lambda d: -(d["median"] or 0))
         cols = ["state", "district", "market", "price", "move", "prob_rise", "advice", "new_mandi"]
         movers = modelled[(modelled["week"] >= week - pd.Timedelta(weeks=2)) & ~modelled["warming"].astype(bool)]
         return dict(
-            crop=crop, week=_clean(week), horizon=h, series=int(len(lt)), states_count=int(lt["state"].nunique()),
+            crop=crop, week=_clean(week), horizon=h, series=len(lt), states_count=int(lt["state"].nunique()),
             median=_clean(fresh["price"].median()), median_prev=_clean(prev),
             median_year_ago=_clean(year["price"].median()) if len(year) else None,
             move=_clean(modelled["move"].median()) if len(modelled) else None,

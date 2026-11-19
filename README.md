@@ -1,5 +1,8 @@
 # FARMSTAT
 
+**Status: complete and deployed.** The project is finished and live; the web app updates itself from the
+government's daily mandi price feed.
+
 Forecasts onion, tomato and potato prices in mandis across 24 Indian states, 1, 2 and 4 weeks ahead, tells the farmer whether to sell now or hold, and shows arecanut prices with their usual range.
 
 <p align="center">
@@ -153,6 +156,9 @@ thick condensed figures. On each page that ruled board is the one loud element (
 crops on the home page); everything else sits quietly on the page, separated by space and thin rules rather than boxed
 into cards.
 
+- **Logo:** drawn as if by hand with a felt pen: an onion with its sprout on a wobbly white tile, slightly tilted,
+  with a marigold squiggle under the name (an inline SVG in `components/Chrome.jsx`, and the same drawing as the
+  favicon)
 - **Colour:** a faintly green neutral paper and ink; mandi green for the brand and "hold", brick for "sell now" and falling
   prices, and marigold (the flower strung over mandi gates) for the forecast and its likely range. The top bar and the
   icon rail are painted mandi green with the chosen page underlined in marigold, like the green-and-white boards over a
@@ -448,7 +454,7 @@ scripts/evaluate.py                 independent validation: walk-forward, Diebol
 scripts/calibrate_ranges.py         learns the range calibration from the back-tests -> models/range_calibration.json
 reports/                            evaluation.json and model_evaluation.md written by scripts/evaluate.py
 docs/FarmStat_presentation.pptx     10-slide project presentation (generator: docs/deck/build_presentation.js)
-docs/report/                        project report in IEEE format (PDF and Word)
+docs/report/                        project report in IEEE format (PDF and Word), and the models report
 models/farmstat_model.joblib        trained weekly models (+ arecanut ranges)
 models/metrics.json                 test results
 models/range_calibration.json       how far to move each end of the forecast ranges (from scripts/calibrate_ranges.py)
@@ -506,6 +512,21 @@ It covers the data and cleaning, the 38 features, the model comparison, quantile
 split-conformal calibration, the rise warning and advice rule, the 2023–2026 walk-forward test (Diebold–Mariano tests,
 bootstrap intervals, results by crop, mandi type, year and state), two case studies, arecanut, a comparison with six
 published Indian studies, and the limitations.
+
+### MODELS AND LEARNING METHODS
+
+[docs/report/FarmStat_Models_Report.md](docs/report/FarmStat_Models_Report.md) (also as
+[PDF](docs/report/FarmStat_Models_Report.pdf)) lists every model the project used, the kind of learning each belongs
+to and how well it did:
+
+| Learning | Algorithms used |
+|---|---|
+| Supervised regression | Histogram gradient boosting (the production model, absolute-error and quantile loss), XGBoost, Random Forest, Linear, Ridge, Lasso, K-Nearest Neighbours, SVR (RBF kernel), Decision Tree |
+| Supervised classification | Gradient-boosting classifier (the 5%-rise warning), Random Forest, Logistic Regression |
+| Unsupervised | PCA (dimensionality reduction), K-Means (market regimes, k chosen by elbow and silhouette) |
+| Uncertainty | Quantile regression at the 10th, 50th and 90th percentiles; split-conformal calibration of the ranges |
+| Tuning and validation | GridSearchCV on walk-forward folds; walk-forward test 2023–2026 with yearly retraining; Diebold–Mariano tests and block bootstrap |
+| Continual learning | Weekly retraining on live data with a champion-versus-challenger check |
 
 ## LICENSE
 

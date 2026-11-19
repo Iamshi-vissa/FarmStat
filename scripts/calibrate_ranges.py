@@ -30,7 +30,7 @@ def main() -> None:
         y = cal[f"y_{h}"]
         check[str(h)] = {"coverage_before": round(float(((y >= cal["q10"]) & (y <= cal["q90"])).mean()), 4),
                          "coverage_after": round(float(((y >= cal["q10"] - lo) & (y <= cal["q90"] + hi)).mean()), 4),
-                         "rows": int(len(cal))}
+                         "rows": len(cal)}
         print(f"h={h}: low end moves {-lo:+.3f}, high end {hi:+.3f} (log return), from {len(cal):,} forecasts in "
               f"{[int(y) for y in years]}")
     if not shifts:

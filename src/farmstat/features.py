@@ -49,10 +49,6 @@ def _weekly_series(g: pd.DataFrame) -> pd.DataFrame:
     return d
 
 
-def _median_frame(series: dict, col: str, transform=np.log) -> pd.DataFrame:
-    return pd.DataFrame({k: transform(s[col]) for k, s in series.items()})
-
-
 def build_dataset(prices: pd.DataFrame, states: list[str] | None = None) -> pd.DataFrame:
     """Feature table: one row per crop, mandi and reported week, plus targets for each horizon."""
     states = states or sorted(prices["state"].unique())

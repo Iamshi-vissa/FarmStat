@@ -29,7 +29,7 @@ from datetime import date, datetime, timedelta
 import numpy as np
 import pandas as pd
 
-from .data import LIVE_FILE  # noqa: F401 (re-exported for the scripts)
+from .data import LIVE_FILE
 
 API = "https://api.data.gov.in/resource/"
 CURRENT = "9ef84268-d588-465a-a308-a864a43d0070"   # current daily price, all mandis (lower-case fields)

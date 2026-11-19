@@ -26,7 +26,6 @@
   --green-tint: #e0f5e5;
   --rise: #21763c;         /* 5.5:1 */
   --brick: #b34124;        /* falls, sell now: 5.6:1 */
-  --brick-tint: #ffe9e3;
   --marigold: #c67700;     /* forecast line and band: 3.4:1 as a graphic */
   --marigold-ink: #925b00; /* marigold text: 5.5:1 */
   --marigold-tint: #fae5c3;
@@ -89,10 +88,15 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
 .topbar .tabs { flex: 1 1 auto; align-self: stretch; }
 .topbar .search-any { align-self: center; margin-left: auto; }
 .brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
-.brand-glyph { width: 30px; height: 30px; border-radius: 7px; flex: none; display: grid; place-items: center;
-  background: var(--green); color: #fff; font-weight: 800; font-size: 1.05rem; line-height: 1; }
-.brand-mark { display: block; font-weight: 800; font-stretch: var(--title); font-size: 1.125rem; letter-spacing: -0.01em; line-height: 1.1; }
-.brand-sub { display: block; color: var(--ink-3); font-size: var(--t-xs); line-height: 1.2; }
+.logo-mark { flex: none; display: block; transform: rotate(-3deg); transition: transform .3s var(--ease); }
+.logo-tile { fill: #fff; }
+.logo-bulb { stroke: var(--green); fill: var(--marigold-tint); }
+.logo-ink { stroke: var(--green); }
+.logo-leaf { stroke: var(--rise); }
+.brand-mark { position: relative; display: block; font-weight: 800; font-stretch: var(--title); font-size: 1.125rem; letter-spacing: -0.01em; line-height: 1.1; }
+.brand-swash { position: absolute; left: 0; right: 4px; bottom: -3px; width: calc(100% - 4px); height: 6px; stroke: var(--marigold-lit); }
+.brand:hover .logo-mark { transform: rotate(3deg); }
+.brand-sub { display: block; margin-top: 2px; color: var(--ink-3); font-size: var(--t-xs); line-height: 1.2; }
 
 /* context bar: crop and where you are (India / state / mandi) */
 .context { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 14px 32px; border-bottom: 1px solid var(--rule-2); }
@@ -731,7 +735,6 @@ kbd { font: 600 0.6875rem/1 var(--font); padding: 3px 5px; border: 1px solid var
    gate; the chosen page is underlined in marigold. White text on --bar is 8.9:1, the 74% white for other tabs 6.1:1. */
 :root { --bar: #18512e; --bar-2: #113d21; --bar-ink-2: rgba(255, 255, 255, .74); --bar-line: rgba(255, 255, 255, .16); --marigold-lit: #f2b04a; }
 .topbar { background: var(--bar); color: #fff; border-bottom-color: var(--bar-2); backdrop-filter: none; }
-.topbar .brand-glyph, .side-head .brand-glyph { background: #fff; color: var(--bar); }
 .topbar .brand-sub { color: var(--bar-ink-2); }
 .topbar .ftabs-line button { color: var(--bar-ink-2); }
 .topbar .ftabs-line button:hover { color: #fff; }

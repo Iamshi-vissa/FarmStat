@@ -113,7 +113,7 @@ def main() -> int:
         new = dict(bundle, quantile_models=final_q, rise_classifier=clf, sklearn_version=sklearn.__version__,
                    version=f"{major}.{minor}.{int(patch) + 1}")
         m = dict(bundle["metrics"])
-        m.update(data_until=f"{ds['week'].max():%Y-%m-%d}", n_rows=int(len(ds)), n_series=int(ds.groupby(KEY).ngroups),
+        m.update(data_until=f"{ds['week'].max():%Y-%m-%d}", n_rows=len(ds), n_series=int(ds.groupby(KEY).ngroups),
                  last_retrain={k: run.get(k) for k in ("holdout_from", "champion_mae", "challenger_mae")})
         new["metrics"] = m
         joblib.dump(new, DEFAULT_MODEL_PATH, compress=3)

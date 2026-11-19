@@ -11,12 +11,39 @@ const PIN_KEY = 'farmstat-panel-pinned';
 const PEEK_GRACE = 220;   // ms the panel stays while the pointer travels from the rail into it
 const PEEK_INTENT = 140;  // ms the pointer must rest on the rail before the panel opens (passing over it does nothing)
 
+// The logo, drawn as if by hand with a felt pen: an onion with its sprout on a wobbly white tile, and a marigold
+// squiggle under the name. Every line is a little uneven and the bulb is gone over twice, like a sketch.
+export function LogoMark({ size = 32 }) {
+  return (
+    <svg className="logo-mark" width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M5.2 3.6C11.4 2.5 20.6 2.9 27.3 3.9 29.1 10.2 29.5 20.8 28.3 27.7 21.1 29.3 10.7 29.4 4.3 28.4 2.7 21.2 2.8 10.4 5.2 3.6Z"
+        className="logo-tile" />
+      <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16.1 11.8C11.3 12.6 8.7 16.4 9.3 20.6 10 24.9 13.5 26.5 16.3 26.4 19.8 26.2 23 23.7 22.8 19.5 22.6 15.5 19.9 12.7 16.1 11.8Z"
+          className="logo-bulb" strokeWidth="1.9" />
+        <path d="M15.7 12.3C11.9 13.4 9.9 16.8 10.2 20.3 10.6 24 13.4 25.8 16 25.9" className="logo-ink" strokeWidth=".9" opacity=".55" />
+        <path d="M16 12.4C13.8 15.6 13.5 21.4 15.8 25.9M16.4 12.5C18.5 15.9 18.7 21.6 16.8 25.8" className="logo-ink" strokeWidth="1.2" />
+        <path d="M16 11.9C15.7 9.1 14.2 6.9 11.7 5.8M16.2 11.7C16.7 8.8 18.4 6.7 21.3 6.1M16.1 11.8C16.3 9.6 16.2 7.5 15.6 5.3"
+          className="logo-leaf" strokeWidth="1.8" />
+        <path d="M14.4 26.6 13.8 28M16.3 26.8 16.4 28.3M18.1 26.3 18.9 27.6" className="logo-ink" strokeWidth="1.1" />
+      </g>
+    </svg>
+  );
+}
+
 // The name, which also leads back to the home page (the crop choice).
 export function Brand() {
   return (
     <a className="brand" href="#view=home" aria-label="FarmStat home: choose a crop">
-      <span className="brand-glyph" aria-hidden="true">₹</span>
-      <span><span className="brand-mark">FarmStat</span><span className="brand-sub">mandi price forecasts</span></span>
+      <LogoMark />
+      <span>
+        <span className="brand-mark">FarmStat
+          <svg className="brand-swash" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M1.5 5.2C14 3.1 27 6.4 40.5 4.3 54 2.4 66.5 5.9 80 4 87.5 3 93.5 3.6 98.5 2.6" fill="none" strokeWidth="2.2" strokeLinecap="round" />
+          </svg>
+        </span>
+        <span className="brand-sub">mandi price forecasts</span>
+      </span>
     </a>
   );
 }

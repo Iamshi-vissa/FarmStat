@@ -54,7 +54,7 @@ SEED = 42
 OUT = ROOT / "reports"
 FIG = ROOT / "docs" / "eval"
 CACHE = OUT / ".cache"   # per (horizon, year) predictions, so an interrupted run resumes
-INK, FC, DROP, GREY, FOREST = "#242620", "#2a78d6", "#c2410c", "#a3a69e", "#2b7b47"
+INK, FC, GREY, FOREST = "#242620", "#2a78d6", "#a3a69e", "#2b7b47"
 
 
 def hgb(params, **kw):
@@ -111,7 +111,7 @@ def metrics(df: pd.DataFrame, h: int, lo="lo", hi="hi") -> dict:
         r = y - df[col].to_numpy()
         pin[q] = float(np.mean(np.maximum(q * r, (q - 1) * r)))
     return {
-        "rows": int(len(df)), "MAE_Rs": float(e_m.mean()), "naive_MAE_Rs": float(e_n.mean()),
+        "rows": len(df), "MAE_Rs": float(e_m.mean()), "naive_MAE_Rs": float(e_n.mean()),
         "RMSE_Rs": float(np.sqrt(np.mean((fc - actual) ** 2))), "MAPE": float(np.mean(e_m / actual)),
         "skill_vs_naive": float(1 - e_m.mean() / e_n.mean()),
         "direction_acc": float(np.mean(np.sign(mid[moved]) == np.sign(y[moved]))),
@@ -236,7 +236,7 @@ def main() -> int:
 
     # charts -------------------------------------------------------------------------------------------------
     plt.rcParams.update({"font.size": 10, "axes.spines.top": False, "axes.spines.right": False, "axes.edgecolor": GREY})
-    fig, ax = plt.subplots(1, 3, figsize=(14, 3.8))
+    _fig, ax = plt.subplots(1, 3, figsize=(14, 3.8))
     hs = [str(h) for h in HORIZONS]
     ax[0].bar([f"{h} wk" for h in hs], [res["horizons"][h]["naive_MAE_Rs"] for h in hs], color=GREY, width=.6, label="No change")
     ax[0].bar([f"{h} wk" for h in hs], [res["horizons"][h]["MAE_Rs"] for h in hs], color=FC, width=.35, label="FarmStat")
@@ -253,7 +253,7 @@ def main() -> int:
     ax[2].set_title("Range contains the real price, % (target 80)"); ax[2].legend(frameon=False, fontsize=8)
     plt.tight_layout(); plt.savefig(FIG / "accuracy.png", dpi=150); plt.close()
 
-    fig, ax = plt.subplots(1, 2, figsize=(10, 3.8))
+    _fig, ax = plt.subplots(1, 2, figsize=(10, 3.8))
     yrs = [r["group"] for r in res["by_year"] if int(r["group"]) in TEST_YEARS]
     ax[0].bar(yrs, [r["skill_vs_naive"] * 100 for r in res["by_year"] if int(r["group"]) in TEST_YEARS], color=FC, width=.55)
     ax[0].axhline(0, color=GREY, lw=1); ax[0].set_title("2-week skill vs no change by year, %")
