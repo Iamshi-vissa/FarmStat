@@ -1,6 +1,6 @@
 # FARMSTAT TECH DEBT REGISTER
 
-Last reviewed 19 Nov 2026. Each item is scored with **Priority = (Impact + Risk) × (6 − Effort)**, each 1–5, so a
+Last reviewed 20 Nov 2026. Each item is scored with **Priority = (Impact + Risk) × (6 − Effort)**, each 1–5, so a
 bigger number means fix sooner. Items fixed in this review are listed at the end.
 
 ## OPEN ITEMS, HIGHEST PRIORITY FIRST
@@ -79,9 +79,21 @@ bigger number means fix sooner. Items fixed in this review are listed at the end
   main-thread stalls after load.
 - **Product rebuild (November 2026):** cashew and sugarcane removed end to end (app, API, monthly model, data, ingest
   schedule, notebook); the Streamlit app retired; the Compare and mandi pages trimmed of panels that repeated the
-  overview or the main chart; the Accuracy page reads one source; browser tests (`tests/e2e`) added and run in CI;
+  overview or the main chart; the accuracy results read one source; browser tests (`tests/e2e`) added and run in CI;
   unknown API paths return 404 instead of the app page; old links to removed crops open the overview.
 - **Redesign and weight cut (November 2026):** the app opens on a crop choice (nothing pre-selected); search finds only
   the chosen crop's mandis; the Mandi tab is gone (a mandi opens from the panel, search, Compare or the overview);
   Recharts replaced by hand-written SVG charts and three of four font families dropped, taking the app's JavaScript
   from about 225 kB to 107 kB compressed; the split-flap board, paper slip and contour image removed.
+- **Final pass (November 2026, project complete):**
+  - Bugs fixed: the Compare page crashed for arecanut with no mandi chosen; "vs last week" compared two different
+    medians (the India trend now uses the headline's definition); "Hold ~null weeks"; the mandi panel closed when a
+    state was chosen, before a mandi could be picked; the panel opened under a still pointer after Back; a misspelt
+    test dependency (`httpx2`) in `requirements-full.txt`.
+  - Dead code removed: unused exports, palette groups, tab options, CSS rules and classes, an unused feature helper,
+    the Streamlit leftovers (`.streamlit/`, its ignore rules) and an orphaned sugarcane figure; the React Bits ports
+    trimmed to the options the app uses, and CountUp replaced by the rolling-digit Counter.
+  - Product: Model accuracy merged into About (opened from an info button), a Back button, mandi-green top bar and
+    rail, field-line backdrop, Bricolage Grotesque and Big Shoulders type, and a hand-drawn logo and favicon.
+  - Checks: `npm run lint` and knip report nothing unused; ruff (CI rules) is clean; 14 Python tests and 24 browser
+    tests pass; every button on every page clicked at desktop and phone widths with no console errors.

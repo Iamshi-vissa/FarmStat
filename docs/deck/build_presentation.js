@@ -73,9 +73,9 @@ pres.addSection({ title: 'Problem and data' });
 s = pres.addSlide({ masterName: 'FS Content', sectionTitle: 'Problem and data' });
 s.addText('Every farmer faces one decision: sell today or hold', { placeholder: 'title' });
 sub(s, 'Prices swing within weeks, and the only guide is today\'s rate board');
-stat(s, 0.5, 1.65, 2.7, '~980', 'mandis with weekly prices, in 24 states', HEX.forest, 'mandis');
+stat(s, 0.5, 1.65, 2.7, '922', 'mandis with weekly prices, in 24 states', HEX.forest, 'mandis');
 stat(s, 0.5, 2.95, 2.7, '3', 'questions FarmStat answers: where is the price going, how sure, and what to do', HEX.forest, 'questions');
-s.addImage({ path: path.join(__dirname, 'market_crop.png'), x: 3.95, y: 1.55, w: 3.55 * 1128 / 760, h: 3.55, objectName: 'app-screenshot', altText: 'FarmStat mandi page: rate board, sell or hold slip, forecast tiles' });
+s.addImage({ path: path.join(__dirname, 'market_crop.png'), x: 3.95, y: 1.55, w: 3.55 * 1128 / 760, h: 3.55, objectName: 'app-screenshot', altText: 'FarmStat mandi page for Lasalgaon onion: this week\'s call, rate board and forecasts' });
 s.addNotes('Onion can double or halve in a season; tomato spoils in days. The app adds a forecast with a range, the chance of a real rise, and a call on a paper slip.');
 
 // 3. Data -------------------------------------------------------------------------------------------------------
@@ -197,10 +197,10 @@ pres.addSection({ title: 'Product' });
 s = pres.addSlide({ masterName: 'FS Content', sectionTitle: 'Product' });
 s.addText('An app that looks like the mandi it serves', { placeholder: 'title' });
 const pts = [
-  ['Rate board', 'Split-flap price on a forest-green board, the way mandis post rates'],
-  ['The parchi', 'Sell or hold printed on a textured paper slip with a stamp'],
+  ['Rate board', 'Prices roll digit by digit on a ruled board, the way mandis post their rates'],
+  ['This week\'s call', 'Hold, sell now or no clear signal, with the chance of a 5%+ rise in 2 weeks'],
   ['Charts with context', 'Forecast band, plus the usual range for the same weeks of 5 past years'],
-  ['Search anywhere', 'Ctrl/⌘ K finds any of 1,388 series by mandi, district, state or crop'],
+  ['Search anywhere', 'Ctrl/⌘ K finds any of a crop\'s mandis by name, district or state'],
 ];
 pts.forEach(([h, b], i) => {
   const y = 1.2 + i * 0.98;
@@ -209,8 +209,8 @@ pts.forEach(([h, b], i) => {
   s.addText(h, { x: 1.0, y, w: 3.4, h: 0.32, fontSize: 15, bold: true, color: HEX.forest9, margin: 0, isTextBox: true, objectName: `point-${i + 1}-head` });
   s.addText(b, { x: 1.0, y: y + 0.33, w: 3.4, h: 0.55, fontSize: 12, color: HEX.ink2, margin: 0, valign: 'top', isTextBox: true, objectName: `point-${i + 1}-body` });
 });
-s.addImage({ path: path.join(__dirname, 'palette_crop.png'), x: 5.5, y: 1.15, w: 3.4 * 640 / 600, h: 3.4, objectName: 'palette-screenshot', altText: 'Search-anywhere palette finding Kolar tomato mandis' });
-s.addText('React 19, Vite, Recharts; FastAPI back end; one Vercel deployment', { x: 5.5, y: 4.65, w: 4.0, h: 0.3, fontSize: 10, color: HEX.ink3, margin: 0, isTextBox: true, objectName: 'stack-note' });
+s.addImage({ path: path.join(__dirname, 'palette_crop.png'), x: 5.5, y: 1.15, w: 3.4 * 640 / 600, h: 3.4, objectName: 'palette-screenshot', altText: 'Search finding the Kolar district tomato mandis' });
+s.addText('React 19 and Vite, hand-drawn SVG charts, React Bits; FastAPI; one Vercel deployment', { x: 5.5, y: 4.65, w: 4.0, h: 0.3, fontSize: 10, color: HEX.ink3, margin: 0, isTextBox: true, objectName: 'stack-note' });
 
 // 10. Live + next ------------------------------------------------------------------------------------------------
 pres.addSection({ title: 'Close' });

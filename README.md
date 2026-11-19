@@ -21,7 +21,7 @@ A farmer at the mandi has one big question: **sell this week, or wait?** Onion a
 halve within a month, and most farmers decide with no forecast at all.
 
 FarmStat learns from **23 years of weekly mandi prices and arrivals** (Agmarknet, Government of India): 625,000
-weekly reports from about 980 mandis in 24 states. For each crop and mandi it gives:
+weekly reports from 922 mandis in 24 states. For each crop and mandi it gives:
 
 - the **expected price** in 1, 2 and 4 weeks
 - a **likely price range**, not just one number
@@ -31,7 +31,7 @@ weekly reports from about 980 mandis in 24 states. For each crop and mandi it gi
 
 | Crop | Coverage | What FarmStat shows |
 |---|---|---|
-| Onion, tomato, potato | ~980 mandis, 24 states, weekly, 2003–2026 | Forecast 1/2/4 weeks ahead + range, rise chance, sell / hold advice |
+| Onion, tomato, potato | 922 mandis, 24 states, weekly, 2003–2026 | Forecast 1/2/4 weeks ahead + range, rise chance, sell / hold advice |
 | Arecanut | 47 mandi-variety series in Karnataka and Kerala (Sirsi, Shimoga, Yellapur, Kasargod…), weekly, 2021–2026 | Today's price with the usual range of movement (no model beat "no change"), variety-wise mandi comparison |
 
 
@@ -473,7 +473,7 @@ tests/                              pytest tests (tests/e2e: browser tests, run 
 
 | Data | Source | Coverage |
 |---|---|---|
-| Weekly modal price (arrival-weighted) and arrivals | [Agmarknet](https://agmarknet.gov.in), via the [TOP Digital Twin](https://github.com/masroor01/TOP-Digital-Twin) weekly panel | Onion, tomato, potato · 24 states · ~980 mandis · Jan 2003 – Jul 2026 · real (non-imputed) weeks only |
+| Weekly modal price (arrival-weighted) and arrivals | [Agmarknet](https://agmarknet.gov.in), via the [TOP Digital Twin](https://github.com/masroor01/TOP-Digital-Twin) weekly panel | Onion, tomato, potato · 24 states · about 980 mandis in the source, 922 after cleaning · Jan 2003 – Jul 2026 · real (non-imputed) weeks only |
 | Daily arecanut prices by mandi and variety | Agmarknet, via [Malabar Mandi Prices](https://github.com/achuthpv/malabar-mandi-prices) | Karnataka and Kerala · Jul 2021 – Jul 2026, aggregated to weekly |
 | Live daily prices (min, max, modal) | [data.gov.in](https://data.gov.in) API: *Current Daily Price of Various Commodities* and *Variety-wise Daily Market Prices* | Onion, tomato, potato, arecanut · from 21 Jul 2026, updated three times a day |
 

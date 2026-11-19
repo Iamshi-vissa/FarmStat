@@ -27,7 +27,7 @@ The live-data pipeline (Supabase) and the scheduled GitHub jobs have their own r
   scikit-learn) can't rebuild it and fails to start.
 - [ ] **Bundle stays under Vercel's 500 MB function limit:** nothing new and large outside `.vercelignore`
   (`du -sh` the folders that aren't ignored).
-- [ ] **Screens checked** at 1440, 1100, 820 and 390 px: the overview, a mandi page, compare, accuracy, about. No
+- [ ] **Screens checked** at 1440, 1100, 820 and 390 px: home, the overview, a mandi page, compare, and About with its accuracy section. No
   sideways scroll and no console errors.
 - [ ] **No secrets in the diff:** `git diff --cached | grep -E "ghp_|sb_secret|service_role"` finds nothing. The
   publishable Supabase key and the anon JWT are public by design.
@@ -45,12 +45,13 @@ The live-data pipeline (Supabase) and the scheduled GitHub jobs have their own r
 
 - [ ] The Vercel deployment for the commit is **Ready** and its build log shows no errors.
 - [ ] **Smoke test the live site** (2 minutes):
-  1. The home page opens on the India overview with no mandi selected.
+  1. The home page opens on the crop choice ("Which crop are you selling?") with no crop selected.
   2. Hovering the left rail opens the mandi panel; choosing a state and a mandi opens its page.
   3. Back returns to the previous FarmStat page, and on a phone the "Choose a mandi" drop-down closes when you tap outside it.
-  4. Ctrl/⌘ K finds a mandi ("kolar tom") and opens it.
-  5. `/api/live/status` returns `available: true` with a recent `latest_price_date`.
-  6. `/api/overview?crop=Onion` and `/api/series?crop=Onion&state=Maharashtra&market=Lasalgaon` return 200.
+  4. On a tomato page, Ctrl/⌘ K finds a mandi ("kolar") and opens it.
+  5. The info button at the right of the top bar opens About, and its "How accurate it is" section shows the test results.
+  6. `/api/live/status` returns `available: true` with a recent `latest_price_date`.
+  7. `/api/overview?crop=Onion` and `/api/series?crop=Onion&state=Maharashtra&market=Lasalgaon` return 200.
 - [ ] First load of the overview takes under about 2 s on a normal connection. A cold start (first request after an
   idle spell) takes longer, but under 5 s.
 
