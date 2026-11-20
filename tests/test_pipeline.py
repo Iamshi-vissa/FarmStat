@@ -85,3 +85,18 @@ def test_arecanut_is_shown_as_no_change_with_a_range(prices):
     np.testing.assert_allclose(pred["p50_2"], latest["price"])
     assert (pred["p10_2"] < latest["price"]).all() and (pred["p90_2"] > latest["price"]).all()
     assert fc.advise("Arecanut", 40000.0, pred.iloc[0]).action == "Your call"
+
+
+def test_live_weeks_one_row_per_market_even_with_two_district_spellings():
+    """The daily feed reports some markets under two spellings of their district (seen in November 2026 for Tamil
+    Nadu's Uzhavar Sandhai markets). Each market must still get one row per week, or the forecasts fail."""
+    from farmstat import live
+    rows = [dict(state="Tamil Nadu", district=dist, market="Kovilpatti(Uzhavar Sandhai )", commodity="Onion",
+                 variety="Bellary", grade="FAQ", arrival_date=day, min_price=2000, max_price=2400, modal_price=price)
+            for dist, day, price in [("Thoothukudi", "2026-11-16", 2200), ("Tuticorin", "2026-11-17", 2300),
+                                     ("Tuticorin", "2026-11-18", 2250), ("Thoothukudi", "2026-11-24", 2400)]]
+    wk = live.to_weekly(pd.DataFrame(rows))
+    assert not wk.duplicated(["crop", "state", "market", "week"]).any()
+    assert len(wk) == 2 and wk["district"].nunique() == 1          # one district shown: the most frequent spelling
+    first = wk.sort_values("week").iloc[0]
+    assert first["trading_days"] == 3 and first["price"] == pytest.approx(2250)

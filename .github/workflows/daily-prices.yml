@@ -1,12 +1,17 @@
 # Every evening: read the day's mandi prices that Supabase collected from data.gov.in (Edge Function ingest-mandi,
-# scheduled with pg_cron), rebuild the live weekly rows and refresh the forecasts and sell/hold calls.
-# Commits the updated files, so Vercel redeploys. Needs no secrets; SUPABASE_SERVICE_KEY and DATA_GOV_API_KEY are
+# scheduled with pg_cron), rebuild the live weekly rows, retrain the models (kept only if they pass the check in
+# scripts/retrain.py) and refresh the forecasts and sell/hold calls for the coming weeks.
+# Commits the updated files, so Vercel redeploys. Also runs when the pipeline's own code changes. Needs no secrets; SUPABASE_SERVICE_KEY and DATA_GOV_API_KEY are
 # optional (with them, this job also fetches from data.gov.in itself as a second source).
 name: Daily mandi prices
 
 on:
   schedule:
     - cron: "15 17 * * *"          # 22:45 IST, after Supabase's last pull of the day (22:00-22:15 IST)
+  push:
+    branches: [main]
+    paths: [".github/workflows/daily-prices.yml", "scripts/ingest_live.py", "scripts/retrain.py",
+            "src/farmstat/live.py", "src/farmstat/data.py", "src/farmstat/features.py"]
   workflow_dispatch:
     inputs:
       days:
@@ -21,7 +26,7 @@ concurrency: farmstat-data           # never run alongside the retraining job
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     env:
       DATA_GOV_API_KEY: ${{ secrets.DATA_GOV_API_KEY }}
       SUPABASE_URL: https://irwjvkbgtkyjuwtgkngt.supabase.co
@@ -37,11 +42,13 @@ jobs:
         run: pip install -r requirements.txt scikit-learn==1.9.1
       - name: Fetch prices, store them, refresh forecasts
         run: python scripts/ingest_live.py --days "${{ inputs.days || '7' }}"
+      - name: Retrain (the new model is kept only if it passes the check on held-out weeks)
+        run: python scripts/retrain.py
       - name: Commit updated data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/live_weekly.csv.gz models/web_snapshot.json.gz
+          git add data/live_weekly.csv.gz models/web_snapshot.json.gz models/farmstat_model.joblib models/metrics.json
           if git diff --cached --quiet; then echo "No changes"; exit 0; fi
           git commit -m "Daily mandi prices $(date -u +%Y-%m-%d)"
           git pull --rebase origin main

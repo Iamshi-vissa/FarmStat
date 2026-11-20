@@ -37,7 +37,8 @@ def load_raw(path: Path = DATA_FILE, live: Path | None = LIVE_FILE) -> pd.DataFr
         lv = lv[lv["panel_last"].isna() | (lv["week"] > lv["panel_last"])].drop(columns="panel_last")
         lv["source"] = "live"
         df = pd.concat([df, lv[df.columns.intersection(lv.columns)]], ignore_index=True)
-    return df
+    # one row per series and week, whatever the source files contain (a repeated week breaks the weekly features)
+    return df.drop_duplicates(KEY + ["week"], keep="first").reset_index(drop=True)
 
 
 def remove_outliers(df: pd.DataFrame, ratio: float = OUTLIER_RATIO) -> tuple[pd.DataFrame, pd.DataFrame]:

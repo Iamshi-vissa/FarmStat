@@ -183,10 +183,17 @@ def to_weekly(daily: pd.DataFrame) -> pd.DataFrame:
     arec = d["commodity"] == "Arecanut"
     d.loc[arec, "market"] = (d.loc[arec, "market"].str.replace(r"\bMarket\b", "", regex=True).str.strip()
                              + " (" + d.loc[arec, "variety"].str.strip().replace({"api": "Api"}) + ")")
-    day = (d.groupby(["commodity", "state", "district", "market", "arrival_date", "week"], as_index=False)
+    # A series is crop + state + market, as in the panel. The feed sometimes reports one market under two spellings
+    # of its district (e.g. "Chengalpattu" and "Chengalpet"), so the district is not part of the key: grouping by it
+    # gave the same market the same week twice, which broke the forecasts. The district shown is the one the market
+    # reports under most often.
+    day = (d.groupby(["commodity", "state", "market", "arrival_date", "week"], as_index=False)
            ["modal_price"].median())
-    wk = (day.groupby(["commodity", "state", "district", "market", "week"], as_index=False)
+    wk = (day.groupby(["commodity", "state", "market", "week"], as_index=False)
           .agg(price=("modal_price", "mean"), trading_days=("arrival_date", "nunique")))
+    district = (d.groupby(["commodity", "state", "market"])["district"]
+                .agg(lambda s: s.value_counts().index[0]).rename("district"))
+    wk = wk.join(district, on=["commodity", "state", "market"])
     wk["arrivals_t"] = np.nan
     wk = wk.rename(columns={"commodity": "crop"})
     return wk[["crop", "state", "district", "market", "week", "price", "arrivals_t", "trading_days"]]

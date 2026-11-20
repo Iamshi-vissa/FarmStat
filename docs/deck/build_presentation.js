@@ -217,7 +217,7 @@ pres.addSection({ title: 'Close' });
 s = pres.addSlide({ masterName: 'FS Dark', sectionTitle: 'Close' });
 s.addText('Live today, honest about its limits', { x: 0.6, y: 0.45, w: 8.8, h: 0.7, fontSize: 30, bold: true, color: HEX.chalk, fontFace: 'Cambria', margin: 0, isTextBox: true, objectName: 'close-title' });
 const cols = [
-  ['Live pipeline', ['data.gov.in daily prices, 3 pulls a day', 'Stored in Supabase Postgres (read-only public)', 'Forecasts rebuilt every evening', 'Weekly champion / challenger retrain']],
+  ['Live pipeline', ['data.gov.in daily prices, 3 pulls a day', 'Stored in Supabase Postgres (read-only public)', 'Forecasts rebuilt every evening', 'Daily retrain, kept only if it passes a check']],
   ['Limits', ['New mandis: onion does not beat "no change"', 'Policy shocks are not in past prices', 'Ranges assume shocks no bigger than 2024–26', 'Only half of live mandi names match']],
   ['Next', ['Refresh range calibration monthly', 'Personal API key for fast back-fills', 'Reviewed list of mandi name matches', 'Weather and policy events as features']],
 ];

@@ -11,8 +11,8 @@ collection. The pipeline itself is described in the README under LIVE DATA.
 | `farmstat-queue-yesterday` | Supabase pg_cron | 19:05 daily | Adds yesterday to `backfill_queue` |
 | `farmstat-backfill` | Supabase pg_cron | every 3 minutes | Loads the newest pending (day, crop) |
 | `farmstat-net-cleanup` | Supabase pg_cron | 03:00 daily | Trims pg_net's response log |
-| `daily-prices.yml` | GitHub Actions | 17:15 daily | Weekly rows + new forecasts, committed to the repo |
-| `weekly-retrain.yml` | GitHub Actions | Sunday 21:30 (Monday 03:00 IST) | Champion / challenger retrain |
+| `daily-prices.yml` | GitHub Actions | 17:15 daily (22:45 IST), and when the pipeline's code changes | Weekly rows, retrain (kept only if it passes the check), new forecasts, committed to the repo |
+| `weekly-retrain.yml` | GitHub Actions | manual only (Run workflow) | Forced retrain, without fetching prices |
 
 ## PREREQUISITES
 
@@ -104,8 +104,8 @@ select cron.alter_job(jobid, active := false) from cron.job where jobname like '
 select cron.alter_job(jobid, active := true)  from cron.job where jobname like 'farmstat-%';   -- resume
 ```
 
-Pausing these doesn't stop the GitHub jobs: to stop forecast updates too, disable `daily-prices.yml` and
-`weekly-retrain.yml` in the repository's Actions tab.
+Pausing these doesn't stop the GitHub jobs: to stop forecast updates too, disable `daily-prices.yml` in the
+repository's Actions tab.
 
 ## ROTATE THE INGEST TOKEN
 

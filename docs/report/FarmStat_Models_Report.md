@@ -43,7 +43,7 @@ regularly it reports), 7 on arrivals, 8 on national and state markets, 3 on the 
 | **Conformal prediction** | Split-conformal widening of the forecast ranges, learned from earlier years |
 | **Hyperparameter tuning** | GridSearchCV over 8 settings with 4 walk-forward folds (2018–2021) |
 | **Time-series validation** | Walk-forward (expanding window) training and testing, retrained every year |
-| **Continual learning** | Weekly retraining on new live data, with a champion-versus-challenger check before a new model is used |
+| **Continual learning** | Daily retraining on new live data, with a champion-versus-challenger check before a new model is used |
 
 ## 3. Regression models compared
 

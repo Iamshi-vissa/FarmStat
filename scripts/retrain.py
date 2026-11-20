@@ -1,15 +1,17 @@
 """
-Weekly job: retrain the weekly price models on all data (history + live weeks) and keep the new model only
-if it beats the current one on weeks that neither model has seen (champion / challenger).
+Daily job (after the day's prices are in): retrain the weekly price models on all data (history + live weeks) and
+keep the new model only if it passes a check on recent weeks it was not trained on.
 
-  1. Holdout = weeks after the current model's training cut-off with known 2-week outcomes (needs >= 4).
-  2. Champion = the current model, scored on the holdout.
-  3. Challenger = same settings, trained only on data before the holdout, scored on the same holdout.
-  4. If the challenger's error is not higher, refit on everything and save it; otherwise keep the champion.
-  5. Log the result to Supabase model_runs and refresh the forecasts.
+  1. If the current model hasn't seen at least 4 weeks with known 2-week outcomes (champion / challenger):
+     a challenger with the same settings, trained only on data before those weeks, must not be less accurate there
+     than the current model.
+  2. Otherwise (the usual case once it retrains daily): the last 4 weeks with known outcomes are held out, and a
+     challenger trained before them must beat the "no change" forecast there.
+  3. If the check passes, refit on everything and save it; otherwise keep the current model.
+  4. Log the result to Supabase model_runs and refresh the forecasts.
 
     python scripts/retrain.py            # normal run
-    python scripts/retrain.py --force    # retrain even without enough unseen weeks (skips the comparison)
+    python scripts/retrain.py --force    # retrain without the check
 """
 
 import argparse
@@ -78,32 +80,36 @@ def main() -> int:
     ds = build_dataset(prices, states=champ.states)
     ds = ds[ds["crop"].isin(TOP)]
     lab = ds[ds["y_2"].notna()]
-    hold = lab[lab["week"] > cutoff]
-    n_weeks = hold["week"].nunique()
+    unseen = lab[lab["week"] > cutoff]
+    n_weeks = unseen["week"].nunique()
     print(f"Data to {ds['week'].max():%d %b %Y}; current model trained to {cutoff:%d %b %Y}; "
-          f"{n_weeks} unseen weeks with known outcomes ({len(hold):,} rows)")
+          f"{n_weeks} unseen weeks with known outcomes ({len(unseen):,} rows)")
 
     run = {"version": bundle["version"], "data_until": f"{ds['week'].max():%Y-%m-%d}"}
-    if n_weeks < MIN_HOLDOUT_WEEKS and not a.force:
-        run.update(promoted=False, notes=f"skipped: only {n_weeks} unseen weeks (need {MIN_HOLDOUT_WEEKS})")
-        print(run["notes"])
-        _log(run)
-        return 0
-
     promote = True
-    if n_weeks >= MIN_HOLDOUT_WEEKS:
+    if not a.force:
+        compare_champion = n_weeks >= MIN_HOLDOUT_WEEKS
+        if compare_champion:
+            hold = unseen
+        else:   # retrained recently: hold out the last weeks with known outcomes and check against "no change"
+            last = np.sort(lab["week"].unique())[-MIN_HOLDOUT_WEEKS:]
+            hold = lab[lab["week"].isin(last)]
         run["holdout_from"] = f"{hold['week'].min():%Y-%m-%d}"
         s = np.where(hold["history_weeks"].to_numpy() < YOUNG_WEEKS, champ.shrink["young"], champ.shrink["established"])
-        champ_pred = s * champ.bundle["quantile_models"][2][50].predict(hold[FEATURES])
         train = lab[lab["week"] + pd.Timedelta(weeks=2) < hold["week"].min()]
         chall = hgb(params, loss="quantile", quantile=0.5).fit(train[FEATURES], train["y_2"])
-        chall_pred = s * chall.predict(hold[FEATURES])
         naive = mae_rs(hold, np.zeros(len(hold)))
-        run["champion_mae"], run["challenger_mae"] = mae_rs(hold, champ_pred), mae_rs(hold, chall_pred)
-        promote = run["challenger_mae"] <= run["champion_mae"]
-        print(f"Unseen weeks, 2 weeks ahead: current Rs {run['champion_mae']:.0f}, retrained Rs "
-              f"{run['challenger_mae']:.0f}, no-change Rs {naive:.0f} -> {'promote' if promote else 'keep current'}")
-        run["metrics"] = {"holdout_rows": len(hold), "holdout_weeks": n_weeks, "naive_mae": naive}
+        run["challenger_mae"] = mae_rs(hold, s * chall.predict(hold[FEATURES]))
+        if compare_champion:
+            run["champion_mae"] = mae_rs(hold, s * champ.bundle["quantile_models"][2][50].predict(hold[FEATURES]))
+            promote = run["challenger_mae"] <= run["champion_mae"]
+            print(f"Unseen weeks, 2 weeks ahead: current Rs {run['champion_mae']:.0f}, retrained Rs "
+                  f"{run['challenger_mae']:.0f}, no-change Rs {naive:.0f} -> {'promote' if promote else 'keep current'}")
+        else:
+            promote = run["challenger_mae"] < naive
+            print(f"Last {MIN_HOLDOUT_WEEKS} weeks with known outcomes, 2 weeks ahead: retrained Rs "
+                  f"{run['challenger_mae']:.0f}, no-change Rs {naive:.0f} -> {'promote' if promote else 'keep current'}")
+        run["metrics"] = {"holdout_rows": len(hold), "holdout_weeks": int(hold["week"].nunique()), "naive_mae": naive}
 
     if promote:
         final_q = {h: qmodels(params, ds.loc[ds[f"y_{h}"].notna(), FEATURES], ds.loc[ds[f"y_{h}"].notna(), f"y_{h}"])
@@ -125,7 +131,7 @@ def main() -> int:
         write_snapshot(build_snapshot(load_prices(), fingerprint()), SNAPSHOT)
         print("Forecasts refreshed")
     else:
-        run.update(promoted=False, notes="kept the current model: the retrained one was less accurate on unseen weeks")
+        run.update(promoted=False, notes="kept the current model: the retrained one failed the check on held-out weeks")
     _log(run)
     return 0
 

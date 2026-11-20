@@ -1,15 +1,13 @@
-# Every Monday morning: retrain the weekly models on all data (history + live weeks) and keep the new model
-# only if it beats the current one on weeks neither has seen. Results are logged to Supabase (model_runs) when the
+# Manual retrain. The daily job (daily-prices.yml) retrains every evening; run this one to force a retrain
+# (the "force" option skips the check) or to retrain without fetching prices. Results are logged to Supabase (model_runs) when the
 # optional SUPABASE_SERVICE_KEY secret is set, and always to the job log.
-name: Weekly retrain
+name: Manual retrain
 
 on:
-  schedule:
-    - cron: "30 21 * * 0"          # Monday 03:00 IST
   workflow_dispatch:
     inputs:
       force:
-        description: "Retrain even without enough unseen weeks"
+        description: "Retrain without the check on held-out weeks"
         type: boolean
         default: false
 

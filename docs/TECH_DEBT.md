@@ -12,7 +12,7 @@ bigger number means fix sooner. Items fixed in this review are listed at the end
 | 3 | No alert when the ingest or the daily job fails | Infrastructure | 2 | 3 | 2 | 20 |
 | 4 | Only about half of live mandi names match a history series | Data | 3 | 3 | 3 | 18 |
 | 5 | scikit-learn is pinned to one version; CI uses Python 3.12, development uses 3.13 | Dependency | 2 | 2 | 2 | 16 |
-| 6 | The range calibration isn't refreshed by the weekly retrain | Model | 2 | 3 | 3 | 15 |
+| 6 | The range calibration isn't refreshed by the daily retrain | Model | 2 | 3 | 3 | 15 |
 | 7 | Two sources of model results: the README's first tables quote the notebook, the app and validation quote the re-run | Documentation | 1 | 2 | 2 | 12 |
 | 8 | `App.jsx` holds all navigation state in one component with several linked effects | Code | 2 | 2 | 3 | 12 |
 | 9 | Data and model files live in git (`.git` is 48 MB) | Infrastructure | 1 | 2 | 3 | 9 |
@@ -38,7 +38,7 @@ bigger number means fix sooner. Items fixed in this review are listed at the end
 5. **Pinned versions.** The saved models need scikit-learn 1.9.1 exactly. *Fix:* when upgrading, retrain and save
    with the new version in the same commit; align `.python-version`, CI and Vercel on one Python version.
 6. **Calibration drift.** `models/range_calibration.json` comes from `scripts/evaluate.py` (about 20 minutes of
-   training). The weekly retrain changes the model but keeps the old shifts. They are small and stable (the 4-week low end
+   training). The daily retrain changes the model but keeps the old shifts. They are small and stable (the 4-week low end
    moves about 11% in log terms), so the risk is low. *Fix:* re-run `evaluate.py` and `calibrate_ranges.py` monthly, or
    after any model change, in a scheduled workflow.
 7. **Two result sets.** The app's accuracy section (in About) now reads only the re-run (`reports/evaluation.json`), but the

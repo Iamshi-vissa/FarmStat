@@ -262,7 +262,7 @@ flowchart LR
     A -->|live weekly rows + new forecasts| R[Repo: data/live_weekly.csv.gz<br/>models/web_snapshot.json.gz]
     R -->|redeploy| V[Vercel web app]
     DB -->|/api/live, read-only| V
-    A2[GitHub Actions<br/>weekly-retrain.yml] -->|champion vs challenger| R
+    A -->|daily retrain, kept if it passes the check| R
 ```
 
 - **Collecting:** the `ingest-mandi` Edge Function (`supabase/functions/ingest-mandi`) pulls today's onion, tomato,
@@ -273,8 +273,10 @@ flowchart LR
   weekly rows that extend each mandi's history, and rebuilds the forecasts and sell / hold calls. A mandi whose live
   reports only just resumed is "warming up" until it has 4 reported weeks out of the last 13: it shows the live price
   with the usual range and no call, because the model's recent-week inputs would otherwise read as a crash.
-- **Retraining:** every Monday the weekly models are retrained on history plus live weeks and kept only if they beat
-  the current model on weeks neither has seen (champion / challenger), logged in `model_runs` when the
+- **Retraining:** every evening, after the day's prices are in, the models are retrained on history plus live weeks.
+  The new model is kept only if it passes a check on weeks it wasn't trained on: when the current model hasn't seen at
+  least 4 recent weeks, the new one must be at least as accurate there (champion / challenger); otherwise it must beat
+  "no change" on the last 4 weeks with known outcomes. Runs are logged in `model_runs` when the
   `SUPABASE_SERVICE_KEY` repository secret is set (without it the sidebar shows no retrain date).
 - **Endpoints:** `GET /api/live?crop=Onion&state=Maharashtra&market=Kolhapur` (that mandi's daily reports),
   `GET /api/live/status` (last fetch, last retrain, latest price date) and `GET /api/index` (every active series, for search).
@@ -526,7 +528,7 @@ to and how well it did:
 | Unsupervised | PCA (dimensionality reduction), K-Means (market regimes, k chosen by elbow and silhouette) |
 | Uncertainty | Quantile regression at the 10th, 50th and 90th percentiles; split-conformal calibration of the ranges |
 | Tuning and validation | GridSearchCV on walk-forward folds; walk-forward test 2023–2026 with yearly retraining; Diebold–Mariano tests and block bootstrap |
-| Continual learning | Weekly retraining on live data with a champion-versus-challenger check |
+| Continual learning | Daily retraining on live data, kept only if it passes a champion-versus-challenger check |
 
 ## LICENSE
 
