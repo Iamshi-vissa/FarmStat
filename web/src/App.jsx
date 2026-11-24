@@ -180,7 +180,7 @@ export default function App() {
   ];
   const side = cropMeta && <Sidebar crop={crop} states={cropMeta.states} state={state} onState={chooseState} rail={rail}
     mandis={mandis} market={market} onMarket={chooseMarket} unit={crop === 'Arecanut' ? 'mandi-varieties' : 'mandis'}
-    footer={<>Prices to the week of {date(cropMeta.data_until)}. Source: Agmarknet, Government of India.</>} />;
+    footer={<>Prices to the week of {date(cropMeta.data_until)}.{meta?.retrained_at ? ` Model retrained ${date(meta.retrained_at)}.` : ''} Source: Agmarknet, Government of India.</>} />;
 
   // The mandi list for this crop and state has arrived (it lags a state change by one request).
   const listReady = mandis.length > 0 && mandis[0].crop === crop && mandis[0].state === state;

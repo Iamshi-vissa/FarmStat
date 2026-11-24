@@ -100,3 +100,15 @@ def test_live_weeks_one_row_per_market_even_with_two_district_spellings():
     assert len(wk) == 2 and wk["district"].nunique() == 1          # one district shown: the most frequent spelling
     first = wk.sort_values("week").iloc[0]
     assert first["trading_days"] == 3 and first["price"] == pytest.approx(2250)
+
+
+def test_live_weeks_drop_impossible_prices():
+    """The feed has entry errors such as onion at ₹0.01 a quintal; they must not become a week's price."""
+    from farmstat import live
+    base = dict(state="Punjab", district="Tarntaran", market="Patti", commodity="Onion", variety="Other", grade="FAQ",
+                min_price=0, max_price=0)
+    daily = pd.DataFrame([dict(base, arrival_date="2026-11-16", modal_price=0.01),
+                          dict(base, arrival_date="2026-11-17", modal_price=4200),
+                          dict(base, arrival_date="2026-11-24", modal_price=0.12)])
+    wk = live.to_weekly(daily)
+    assert len(wk) == 1 and wk["price"].iloc[0] == 4200 and wk["trading_days"].iloc[0] == 1

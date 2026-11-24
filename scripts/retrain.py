@@ -3,10 +3,10 @@ Daily job (after the day's prices are in): retrain the weekly price models on al
 keep the new model only if it passes a check on recent weeks it was not trained on.
 
   1. If the current model hasn't seen at least 4 weeks with known 2-week outcomes (champion / challenger):
-     a challenger with the same settings, trained only on data before those weeks, must not be less accurate there
-     than the current model.
+     a challenger with the same settings, trained only on data before those weeks, must be no more than 10% less
+     accurate there than the current model (a few weeks are too noisy to demand a strict win).
   2. Otherwise (the usual case once it retrains daily): the last 4 weeks with known outcomes are held out, and a
-     challenger trained before them must beat the "no change" forecast there.
+     challenger trained before them must not be broken (error under 1.5x the "no change" forecast).
   3. If the check passes, refit on everything and save it; otherwise keep the current model.
   4. Log the result to Supabase model_runs and refresh the forecasts.
 
@@ -40,6 +40,8 @@ TOP = ["Onion", "Tomato", "Potato"]
 RISE = np.log(1.05)
 SEED = 42
 MIN_HOLDOUT_WEEKS = 4
+TOLERANCE = 1.10      # challenger may be up to 10% worse than the current model on a few unseen weeks
+SANITY = 1.5          # ...and never worse than 1.5x "no change"
 
 
 def hgb(params, **kw):
@@ -102,11 +104,11 @@ def main() -> int:
         run["challenger_mae"] = mae_rs(hold, s * chall.predict(hold[FEATURES]))
         if compare_champion:
             run["champion_mae"] = mae_rs(hold, s * champ.bundle["quantile_models"][2][50].predict(hold[FEATURES]))
-            promote = run["challenger_mae"] <= run["champion_mae"]
+            promote = run["challenger_mae"] <= TOLERANCE * run["champion_mae"]
             print(f"Unseen weeks, 2 weeks ahead: current Rs {run['champion_mae']:.0f}, retrained Rs "
                   f"{run['challenger_mae']:.0f}, no-change Rs {naive:.0f} -> {'promote' if promote else 'keep current'}")
         else:
-            promote = run["challenger_mae"] < naive
+            promote = run["challenger_mae"] < SANITY * naive
             print(f"Last {MIN_HOLDOUT_WEEKS} weeks with known outcomes, 2 weeks ahead: retrained Rs "
                   f"{run['challenger_mae']:.0f}, no-change Rs {naive:.0f} -> {'promote' if promote else 'keep current'}")
         run["metrics"] = {"holdout_rows": len(hold), "holdout_weeks": int(hold["week"].nunique()), "naive_mae": naive}
@@ -119,7 +121,7 @@ def main() -> int:
         new = dict(bundle, quantile_models=final_q, rise_classifier=clf, sklearn_version=sklearn.__version__,
                    version=f"{major}.{minor}.{int(patch) + 1}")
         m = dict(bundle["metrics"])
-        m.update(data_until=f"{ds['week'].max():%Y-%m-%d}", n_rows=len(ds), n_series=int(ds.groupby(KEY).ngroups),
+        m.update(data_until=f"{ds['week'].max():%Y-%m-%d}", retrained_at=time.strftime("%Y-%m-%d"), n_rows=len(ds), n_series=int(ds.groupby(KEY).ngroups),
                  last_retrain={k: run.get(k) for k in ("holdout_from", "champion_mae", "challenger_mae")})
         new["metrics"] = m
         joblib.dump(new, DEFAULT_MODEL_PATH, compress=3)

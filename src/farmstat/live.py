@@ -169,6 +169,11 @@ def log_run(row: dict, url: str | None = None, key: str | None = None, table: st
 
 
 # ── daily -> weekly ────────────────────────────────────────────────────
+# Daily reports below these modal prices (Rs per quintal) are entry errors: the feed has ₹0.01 and ₹0.12 for onion.
+# The 22-year panel never goes below about ₹130 for onion, tomato or potato, or about ₹12,000 for arecanut.
+PRICE_FLOOR = {"Onion": 100, "Tomato": 100, "Potato": 100, "Arecanut": 5000}
+
+
 def to_weekly(daily: pd.DataFrame) -> pd.DataFrame:
     """Weekly rows in the panel's format (week starts Monday).
 
@@ -178,6 +183,7 @@ def to_weekly(daily: pd.DataFrame) -> pd.DataFrame:
     if daily.empty:
         return pd.DataFrame(columns=["crop", "state", "district", "market", "week", "price", "arrivals_t", "trading_days"])
     d = daily[daily["commodity"].isin(COMMODITIES.values())].copy()   # weekly crops only
+    d = d[pd.to_numeric(d["modal_price"], errors="coerce") >= d["commodity"].map(PRICE_FLOOR).fillna(0)]
     d["arrival_date"] = pd.to_datetime(d["arrival_date"])
     d["week"] = d["arrival_date"] - pd.to_timedelta(d["arrival_date"].dt.weekday, unit="D")
     arec = d["commodity"] == "Arecanut"

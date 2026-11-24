@@ -33,7 +33,7 @@ from farmstat.calibration import CALIBRATION_FILE  # noqa: E402
 from farmstat.forecast import DEFAULT_MODEL_PATH, MAX_HOLD_WEEKS  # noqa: E402
 
 SNAPSHOT = ROOT / "models" / "web_snapshot.json.gz"
-SNAPSHOT_VERSION = "5"   # bump when the snapshot's contents change shape (5: weekly crops only)
+SNAPSHOT_VERSION = "6"   # bump when the snapshot's contents change shape (6: active = recent vs crop's latest week)
 ACTIVE_WEEKS = 8
 WARMUP_WEEKS = 4        # a live series needs this many reported weeks in the last 13 before the model forecasts it
 
@@ -85,11 +85,12 @@ def build_snapshot(prices: pd.DataFrame, fp: str) -> dict:
     model = Forecaster.load()
     ds = build_dataset(prices, states=model.states)
     latest = ds.sort_values("week").groupby(KEY).tail(1)
-    # active = reported within ACTIVE_WEEKS of the history panel's end (or since, from the live feed), so mandis the
-    # live back-fill hasn't reached yet stay listed with their last known price
+    # active = reported within ACTIVE_WEEKS of the crop's latest week, so mandis that stopped reporting (e.g. last seen
+    # in July) drop out instead of showing an old price next to this week's
     panel = prices[prices["source"] == "panel"] if "source" in prices else prices
     panel_end = latest["crop"].map(panel.groupby("crop")["week"].max())
-    keep_rows = latest["week"] >= panel_end - pd.Timedelta(weeks=ACTIVE_WEEKS)
+    crop_end = latest["crop"].map(latest.groupby("crop")["week"].max())
+    keep_rows = latest["week"] >= crop_end - pd.Timedelta(weeks=ACTIVE_WEEKS)
     latest = latest.assign(live=latest["week"] > panel_end)[keep_rows]
     latest = latest.join(model.predict(latest)).reset_index(drop=True)
     adv = [model.advise(r["crop"], r["price"], r) for _, r in latest.iterrows()]
@@ -200,7 +201,8 @@ class FarmData:
                                   trend=[t["price"] for t in ov.get("trend", [])], calls=ov.get("calls", {})))
         return dict(crops=crops, n_mandis=int(pd.DataFrame({"s": lt["state"], "b": base}).drop_duplicates().shape[0]),
                     n_states=int(lt["state"].nunique()), horizons=self.horizons,
-                    max_hold_weeks=MAX_HOLD_WEEKS, version=self.version)
+                    max_hold_weeks=MAX_HOLD_WEEKS, version=self.version,
+                    model_data_until=self.metrics.get("data_until"), retrained_at=self.metrics.get("retrained_at"))
 
     def has_series(self, crop: str, state: str, market: str) -> bool:
         lt = self.latest

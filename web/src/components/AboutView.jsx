@@ -81,7 +81,7 @@ export default function AboutView({ meta, section, onSection }) {
         <p className="doc-toc-title">On this page</p>
         <LineSidebar items={SECTIONS.map(s => s[1])} activeIndex={active} onItemClick={go} label="About sections"
           accentColor={T.forest} textColor={T.ink3} markerColor={T.rule} />
-        <div className="doc-meta">Last updated {UPDATED}<br />Model version {meta.version}<br />Prices to {date(until)}</div>
+        <div className="doc-meta">Last updated {UPDATED}<br />Model version {meta.version}{meta.retrained_at ? `, retrained ${date(meta.retrained_at)}` : ''}<br />Prices to {date(until)}</div>
       </aside>
 
       <article className="doc-body">
@@ -151,8 +151,9 @@ export default function AboutView({ meta, section, onSection }) {
               (July 2021 onwards).</li>
             <li><b>Live prices:</b> FarmStat checks Agmarknet’s daily feed on data.gov.in three times a day. Each mandi page
               shows its latest daily report.</li>
-            <li><b>Forecasts:</b> rebuilt every evening from the latest weekly prices. The models are retrained each week and
-              the new version is used only if it tests better on weeks it hasn’t seen.</li>
+            <li><b>Forecasts:</b> rebuilt every day from the latest weekly prices, for the coming weeks. The models are
+              retrained every day on all prices so far{meta.retrained_at ? `, most recently on ${date(meta.retrained_at)}` : ''}; a
+              new version is used unless it tests clearly worse on recent weeks it hasn’t seen.</li>
           </ul>
           <p>Weekly prices currently run to the week of {date(until)}. Every mandi shows the date of its latest price, so check
             it before you rely on a forecast.</p>

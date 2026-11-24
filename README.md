@@ -274,10 +274,11 @@ flowchart LR
   reports only just resumed is "warming up" until it has 4 reported weeks out of the last 13: it shows the live price
   with the usual range and no call, because the model's recent-week inputs would otherwise read as a crash.
 - **Retraining:** every evening, after the day's prices are in, the models are retrained on history plus live weeks.
-  The new model is kept only if it passes a check on weeks it wasn't trained on: when the current model hasn't seen at
-  least 4 recent weeks, the new one must be at least as accurate there (champion / challenger); otherwise it must beat
-  "no change" on the last 4 weeks with known outcomes. Runs are logged in `model_runs` when the
-  `SUPABASE_SERVICE_KEY` repository secret is set (without it the sidebar shows no retrain date).
+  The new model replaces the current one unless it fails a check on weeks it wasn't trained on: when the current model
+  hasn't seen at least 4 recent weeks, the new one may be at most 10% less accurate there (champion / challenger);
+  otherwise its error must stay under 1.5x "no change" on the last 4 weeks with known outcomes. The retrain date is
+  saved in `models/metrics.json` (`retrained_at`) and shown in the sidebar and About. Runs are also logged in
+  `model_runs` when the `SUPABASE_SERVICE_KEY` repository secret is set.
 - **Endpoints:** `GET /api/live?crop=Onion&state=Maharashtra&market=Kolhapur` (that mandi's daily reports),
   `GET /api/live/status` (last fetch, last retrain, latest price date) and `GET /api/index` (every active series, for search).
 - **API key:** without one the public sample key is used, which returns 10 records per request, so collecting is slow.
@@ -528,7 +529,7 @@ to and how well it did:
 | Unsupervised | PCA (dimensionality reduction), K-Means (market regimes, k chosen by elbow and silhouette) |
 | Uncertainty | Quantile regression at the 10th, 50th and 90th percentiles; split-conformal calibration of the ranges |
 | Tuning and validation | GridSearchCV on walk-forward folds; walk-forward test 2023–2026 with yearly retraining; Diebold–Mariano tests and block bootstrap |
-| Continual learning | Daily retraining on live data, kept only if it passes a champion-versus-challenger check |
+| Continual learning | Daily retraining on live data, with a champion-versus-challenger guard against a clearly worse model |
 
 ## LICENSE
 
