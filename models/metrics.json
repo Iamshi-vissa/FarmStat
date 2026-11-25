@@ -72,14 +72,14 @@
     "max_leaf_nodes": 15,
     "min_samples_leaf": 1000
   },
-  "n_rows": 643474,
+  "n_rows": 643480,
   "n_series": 1431,
   "n_states": 24,
   "data_until": "2026-11-23",
   "last_retrain": {
     "holdout_from": "2026-10-19",
     "champion_mae": null,
-    "challenger_mae": 347.5292475699919
+    "challenger_mae": 347.93600442138376
   },
-  "retrained_at": "2026-11-24"
+  "retrained_at": "2026-11-25"
 }
