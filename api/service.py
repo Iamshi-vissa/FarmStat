@@ -297,7 +297,7 @@ class FarmData:
         scripts/evaluate.py) plus the farmer back-test and arecanut ranges from training."""
         if self._accuracy is None:
             m = self.metrics
-            out = dict(version=self.version, data_until=m.get("data_until"),
+            out = dict(version=self.version, data_until=m.get("data_until"), recent=m.get("recent_check"),
                        backtest=m.get("backtest_extra_Rs_per_quintal", {}),
                        arecanut_coverage=m.get("arecanut", {}).get("range_coverage", {}))
             ev_file = ROOT / "reports" / "evaluation.json"

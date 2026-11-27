@@ -153,7 +153,9 @@ export default function AboutView({ meta, section, onSection }) {
               shows its latest daily report.</li>
             <li><b>Forecasts:</b> rebuilt every day from the latest weekly prices, for the coming weeks. The models are
               retrained every day on all prices so far{meta.retrained_at ? `, most recently on ${date(meta.retrained_at)}` : ''}; a
-              new version is used unless it tests clearly worse on recent weeks it hasn’t seen.</li>
+              new version is used unless it tests clearly worse on recent weeks it hasn’t seen. Each day it is also checked on
+              the latest weeks for each crop; where it hasn’t beaten “no change” lately, its forecast stays close to today’s
+              price and the call is “Your call”.</li>
           </ul>
           <p>Weekly prices currently run to the week of {date(until)}. Every mandi shows the date of its latest price, so check
             it before you rely on a forecast.</p>

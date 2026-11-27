@@ -278,7 +278,14 @@ flowchart LR
   hasn't seen at least 4 recent weeks, the new one may be at most 10% less accurate there (champion / challenger);
   otherwise its error must stay under 1.5x "no change" on the last 4 weeks with known outcomes. The retrain date is
   saved in `models/metrics.json` (`retrained_at`) and shown in the sidebar and About. Runs are also logged in
-  `model_runs` when the `SUPABASE_SERVICE_KEY` repository secret is set.
+  `model_runs` every hour by a Supabase job (`farmstat_private.sync_model_runs`, which reads `last_run` from the committed
+  `models/metrics.json`), so no service key is needed on GitHub.
+- **Recent-skill check:** every run also tests a model trained before the last 6 weeks with known outcomes on those
+  weeks, per crop, and saves how far to trust the forecast (0 = "no change", 1 = as trained; `crop_shrink` in the model,
+  `recent_check` in `models/metrics.json`). Below 0.2 the call is "Your call: no forecast edge right now". Over the live
+  weeks (August to November 2026), replayed week by week, this cut the 2-week error from Rs 435 to Rs 357, the same as
+  "no change"; the fixed forecast was worse than "no change" because onion prices stayed high after the August spike
+  instead of falling back as in past years.
 - **Endpoints:** `GET /api/live?crop=Onion&state=Maharashtra&market=Kolhapur` (that mandi's daily reports),
   `GET /api/live/status` (last fetch, last retrain, latest price date) and `GET /api/index` (every active series, for search).
 - **API key:** without one the public sample key is used, which returns 10 records per request, so collecting is slow.

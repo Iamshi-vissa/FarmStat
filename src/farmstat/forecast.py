@@ -35,6 +35,7 @@ MAX_HOLD_WEEKS = {"Tomato": 1, "Onion": 4, "Potato": 4, "Arecanut": 4}
 # Dried arecanut keeps for months, so its cost is low (mostly interest and storage).
 HOLDING_COST_4W = {"Tomato": 0.15, "Onion": 0.04, "Potato": 0.03, "Arecanut": 0.01}
 YOUNG_WEEKS = 156   # under 3 years of history = "new mandi"
+NO_EDGE = 0.2       # recent-skill trust below this = the model has had no edge over "no change" lately
 
 
 @dataclass
@@ -52,6 +53,7 @@ class Forecaster:
         self.states = bundle["states"]
         self.horizons = sorted(bundle["quantile_models"])
         self.shrink = bundle["shrink"]            # {"established": s1, "young": s2}
+        self.crop_shrink = bundle.get("crop_shrink", {})   # {crop: k}: recent-skill trust, set daily by retrain.py
         self.metrics = bundle.get("metrics", {})
         self.version = bundle.get("version", "unknown")
         self.naive_crops = bundle.get("naive_crops", {})   # {crop: {"range": {h: (q10, q90)}, "prob_rise": p}}
@@ -63,7 +65,12 @@ class Forecaster:
 
     def shrink_factor(self, rows: pd.DataFrame) -> np.ndarray:
         young = rows["history_weeks"].to_numpy() < YOUNG_WEEKS
-        return np.where(young, self.shrink["young"], self.shrink["established"])
+        k = rows["crop"].map(self.crop_shrink).fillna(1.0).to_numpy() if "crop" in rows else 1.0
+        return k * np.where(young, self.shrink["young"], self.shrink["established"])
+
+    def no_recent_edge(self, crop: str) -> bool:
+        """True when, on the latest weeks, the model forecast this crop no better than "no change"."""
+        return self.crop_shrink.get(crop, 1.0) < NO_EDGE
 
     def predict(self, rows: pd.DataFrame) -> pd.DataFrame:
         """Forecasts for each row of the feature table (one row = one crop, mandi and week)."""
@@ -82,6 +89,12 @@ class Forecaster:
         out["prob_rise"] = self.bundle["rise_classifier"].predict_proba(X)[:, 1]
         out["new_mandi"] = rows["history_weeks"].to_numpy() < YOUNG_WEEKS
         out["naive"] = False
+        recent = self.metrics.get("recent_check", {}).get("crops", {})
+        for crop in {c for c in self.crop_shrink if self.no_recent_edge(c)}:
+            m = (rows["crop"] == crop).to_numpy()   # no edge lately: show how often a rise followed, not a prediction
+            if m.any() and "rise_rate" in recent.get(crop, {}):
+                out.loc[m, "prob_rise"] = recent[crop]["rise_rate"]
+                out.loc[m, "naive"] = True
         for crop, info in self.naive_crops.items():
             m = (rows["crop"] == crop).to_numpy()
             if not m.any():
@@ -100,6 +113,11 @@ class Forecaster:
             return Advice("Your call", 0, f"No forecast edge for {crop.lower()}",
                           "In testing, no model predicted these prices better than 'no change', so FarmStat shows "
                           "today's price with the usual range of movement. Compare mandis and the seasonal pattern instead.")
+        if self.no_recent_edge(crop):
+            return Advice("Your call", 0, f"No forecast edge for {crop.lower()} right now",
+                          f"In the last few weeks the model did not predict {crop.lower()} prices better than "
+                          "'no change', so the forecast stays close to today's price. Storage losses favour selling "
+                          "unless you expect prices to rise; compare nearby mandis before you decide.")
         best_h, best_gain = 0, 0.0
         for h in self.horizons:
             if h > MAX_HOLD_WEEKS.get(crop, 4):

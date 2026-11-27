@@ -77,9 +77,41 @@
   "n_states": 24,
   "data_until": "2026-11-23",
   "last_retrain": {
-    "holdout_from": "2026-10-19",
+    "holdout_from": "2026-10-05",
     "champion_mae": null,
-    "challenger_mae": 338.49528755519964
+    "challenger_mae": 354.32442521046045
   },
-  "retrained_at": "2026-11-27"
+  "retrained_at": "2026-11-27",
+  "recent_check": {
+    "checked_at": "2026-11-27",
+    "weeks_from": "2026-10-05",
+    "weeks": 6,
+    "horizon_weeks": 2,
+    "crops": {
+      "Onion": {
+        "shrink": 0.4,
+        "model_mae": 293.8714317116692,
+        "calibrated_mae": 286.6723577032083,
+        "naive_mae": 289.29775609756103,
+        "rows": 2665,
+        "rise_rate": 0.2697936210131332
+      },
+      "Tomato": {
+        "shrink": 0.0,
+        "model_mae": 445.992596748744,
+        "calibrated_mae": 427.6244444444445,
+        "naive_mae": 427.6244444444445,
+        "rows": 2862,
+        "rise_rate": 0.33752620545073375
+      },
+      "Potato": {
+        "shrink": 0.0,
+        "model_mae": 64.21818088871649,
+        "calibrated_mae": 59.30684813753584,
+        "naive_mae": 59.30684813753584,
+        "rows": 349,
+        "rise_rate": 0.3667621776504298
+      }
+    }
+  }
 }

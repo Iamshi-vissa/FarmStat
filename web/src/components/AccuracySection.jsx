@@ -3,7 +3,7 @@ import { Count } from './RateBoard.jsx';
 import { useWidth } from '../hooks.js';
 import { T } from '../theme.js';
 import { api } from '../api.js';
-import { pct, pct0, rupees, weeks } from '../format.js';
+import { date, pct, pct0, rupees, weeks } from '../format.js';
 
 // Skill bar: green to the right when better than "no change", brick to the left when worse.
 function SkillBar({ v, scale = 0.15 }) {
@@ -84,6 +84,31 @@ function Reliability({ rw }) {
   );
 }
 
+// The daily check on the latest weeks: per crop, the model against "no change", and how far its forecast is trusted.
+function RecentCheck({ rc }) {
+  const crops = Object.entries(rc.crops ?? {});
+  if (!crops.length) return null;
+  return (
+    <section className="panel" aria-labelledby="recent-title">
+      <div className="panel-head"><div><h3 id="recent-title">How it did in the last {rc.weeks} weeks</h3>
+        <p className="sub">Checked every day on the latest weeks with known outcomes (from {date(rc.weeks_from)}, 2 weeks
+          ahead), using a model trained only before them. Where the model hasn’t beaten “no change” lately, its forecast is
+          pulled towards today’s price (“Trusted” 0% = no change) and the call says there is no edge. Last checked {date(rc.checked_at)}.</p></div></div>
+      <div className="table-wrap">
+        <table className="table">
+          <thead><tr><th>Crop</th><th className="r">Model</th><th className="r">No change</th>
+            <th className="r">Trusted</th><th className="wide-cell">Calls</th></tr></thead>
+          <tbody>{crops.map(([c, r]) => (
+            <tr key={c}><td>{c}</td><td className="r num">{rupees(r.model_mae)}</td><td className="r num">{rupees(r.naive_mae)}</td>
+              <td className="r num">{pct0(r.shrink)}</td>
+              <td className="wide-cell">{r.shrink < 0.2 ? '“Your call”: no edge right now' : 'Sell or hold'}</td></tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 // The test results, shown as a section of the About page (there is no separate accuracy page).
 export default function AccuracySection() {
   const [m, setM] = useState(null);
@@ -119,6 +144,8 @@ export default function AccuracySection() {
             <div className="stat-note">tomato, per quintal, after storage losses</div></div>
         )}
       </div>
+
+      {m.recent && <RecentCheck rc={m.recent} />}
 
       <section className="panel" aria-labelledby="beat-title">
         <div className="panel-head"><div><h3 id="beat-title">Does it beat “no change”?</h3>

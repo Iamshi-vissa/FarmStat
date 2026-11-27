@@ -11,7 +11,7 @@ collection. The pipeline itself is described in the README under LIVE DATA.
 | `farmstat-queue-yesterday` | Supabase pg_cron | 19:05 daily | Adds yesterday to `backfill_queue` |
 | `farmstat-backfill` | Supabase pg_cron | every 3 minutes | Loads the newest pending (day, crop) |
 | `farmstat-net-cleanup` | Supabase pg_cron | 03:00 daily | Trims pg_net's response log |
-| `daily-prices.yml` | GitHub Actions | 17:15 daily (22:45 IST), and when the pipeline's code changes | Weekly rows, retrain (replaces the model unless it tests clearly worse), new forecasts, committed to the repo |
+| `daily-prices.yml` | GitHub Actions | 17:15 daily (22:45 IST), and when the pipeline's code changes | Weekly rows, retrain (replaces the model unless it tests clearly worse) and the daily recent-skill check, new forecasts, committed to the repo |
 | `weekly-retrain.yml` | GitHub Actions | manual only (Run workflow) | Forced retrain, without fetching prices |
 
 ## PREREQUISITES
@@ -21,8 +21,9 @@ collection. The pipeline itself is described in the README under LIVE DATA.
 - For redeploying the function: the [Supabase CLI](https://supabase.com/docs/guides/cli), then `supabase login` and
   `supabase link --project-ref <project ref>`.
 - Secrets, all optional: `DATA_GOV_IN_API_KEY` (Edge Function secret, used for collecting), and in the GitHub
-  repository `DATA_GOV_API_KEY` (same data.gov.in key, for the Python client) and `SUPABASE_SERVICE_KEY` (lets the jobs
-  write `ingest_runs` / `model_runs`; without it the sidebar shows no retrain date).
+  repository `DATA_GOV_API_KEY` (same data.gov.in key, for the Python client) and `SUPABASE_SERVICE_KEY` (optional: lets the jobs
+  write `ingest_runs` / `model_runs` directly; without it Supabase's hourly `farmstat-sync-model-runs` job copies each
+  retrain into `model_runs` from the committed `models/metrics.json`).
 - Where things are defined: the function in `supabase/functions/ingest-mandi/`, the token guard in
   `supabase/migrations/`. The pg_cron jobs and `farmstat_private.call_ingest` were created in the Supabase SQL editor;
   list them with `select jobname, schedule, active from cron.job;`.

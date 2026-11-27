@@ -64,6 +64,7 @@ def test_forecasts_are_sane(onion_mh):
         assert (pred[f"p50_{h}"] / latest["price"]).between(0.3, 3).all()
     assert pred["prob_rise"].between(0, 1).all()
     row = pd.Series({**{f"p{q}_{h}": 2000.0 for q in (10, 50, 90) for h in (1, 2, 4)}, "prob_rise": 0.9})
+    fc.crop_shrink = {}   # the advice rules themselves, without the daily recent-skill calibration
     advice = fc.advise("Tomato", 1000.0, row)
     assert advice.action == "Hold" and advice.hold_weeks == 1   # never hold tomatoes for more than a week
 
@@ -112,3 +113,16 @@ def test_live_weeks_drop_impossible_prices():
                           dict(base, arrival_date="2026-11-24", modal_price=0.12)])
     wk = live.to_weekly(daily)
     assert len(wk) == 1 and wk["price"].iloc[0] == 4200 and wk["trading_days"].iloc[0] == 1
+
+
+@pytest.mark.skipif(not DEFAULT_MODEL_PATH.exists(), reason="model not trained")
+def test_no_recent_edge_means_no_change_and_no_call(onion_mh):
+    fc = Forecaster.load()
+    fc.crop_shrink = {"Onion": 0.0}
+    ds = build_dataset(onion_mh, states=fc.states)
+    latest = ds.sort_values("week").groupby(KEY).tail(1)
+    pred = fc.predict(latest)
+    for h in fc.horizons:
+        assert np.allclose(pred[f"p50_{h}"], latest["price"])
+    row = pd.Series({**{f"p{q}_{h}": 2000.0 for q in (10, 50, 90) for h in (1, 2, 4)}, "prob_rise": 0.9})
+    assert fc.advise("Onion", 1000.0, row).action == "Your call"
