@@ -113,5 +113,26 @@
         "rise_rate": 0.3667621776504298
       }
     }
+  },
+  "last_run": {
+    "version": "2.1.8",
+    "data_until": "2026-11-23",
+    "holdout_from": "2026-10-05",
+    "challenger_mae": 354.32442521046045,
+    "metrics": {
+      "holdout_rows": 5876,
+      "holdout_weeks": 6,
+      "naive_mae": 343.0118737236216,
+      "crop_shrink": {
+        "Onion": 0.4,
+        "Tomato": 0.0,
+        "Potato": 0.0
+      },
+      "calibrated_mae": 341.82115100051914,
+      "calibrated_naive_mae": 343.0118737236216
+    },
+    "promoted": true,
+    "notes": "retrained in 188s",
+    "trained_at": "2026-11-27T05:11:27Z"
   }
 }
