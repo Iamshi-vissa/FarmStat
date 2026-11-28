@@ -72,67 +72,67 @@
     "max_leaf_nodes": 15,
     "min_samples_leaf": 1000
   },
-  "n_rows": 643704,
+  "n_rows": 643721,
   "n_series": 1433,
   "n_states": 24,
   "data_until": "2026-11-23",
   "last_retrain": {
     "holdout_from": "2026-10-05",
     "champion_mae": null,
-    "challenger_mae": 354.32442521046045
+    "challenger_mae": 352.82358012490835
   },
-  "retrained_at": "2026-11-27",
+  "retrained_at": "2026-11-28",
   "recent_check": {
-    "checked_at": "2026-11-27",
+    "checked_at": "2026-11-28",
     "weeks_from": "2026-10-05",
     "weeks": 6,
     "horizon_weeks": 2,
     "crops": {
       "Onion": {
         "shrink": 0.4,
-        "model_mae": 293.8714317116692,
-        "calibrated_mae": 286.6723577032083,
-        "naive_mae": 289.29775609756103,
-        "rows": 2665,
-        "rise_rate": 0.2697936210131332
+        "model_mae": 294.7783376372009,
+        "calibrated_mae": 287.68449502059707,
+        "naive_mae": 290.2314275009367,
+        "rows": 2669,
+        "rise_rate": 0.26826526789059574
       },
       "Tomato": {
         "shrink": 0.0,
-        "model_mae": 445.992596748744,
-        "calibrated_mae": 427.6244444444445,
-        "naive_mae": 427.6244444444445,
-        "rows": 2862,
-        "rise_rate": 0.33752620545073375
+        "model_mae": 441.87160806836215,
+        "calibrated_mae": 423.99051549982596,
+        "naive_mae": 423.99051549982596,
+        "rows": 2871,
+        "rise_rate": 0.3371647509578544
       },
       "Potato": {
         "shrink": 0.0,
-        "model_mae": 64.21818088871649,
-        "calibrated_mae": 59.30684813753584,
-        "naive_mae": 59.30684813753584,
+        "model_mae": 64.18708721383497,
+        "calibrated_mae": 59.169742120343855,
+        "naive_mae": 59.169742120343855,
         "rows": 349,
-        "rise_rate": 0.3667621776504298
+        "rise_rate": 0.37249283667621774
       }
     }
   },
   "last_run": {
-    "version": "2.1.8",
+    "version": "2.1.9",
     "data_until": "2026-11-23",
     "holdout_from": "2026-10-05",
-    "challenger_mae": 354.32442521046045,
+    "challenger_mae": 352.82358012490835,
     "metrics": {
-      "holdout_rows": 5876,
+      "holdout_rows": 5889,
       "holdout_weeks": 6,
-      "naive_mae": 343.0118737236216,
+      "naive_mae": 341.74812192222794,
       "crop_shrink": {
         "Onion": 0.4,
         "Tomato": 0.0,
         "Potato": 0.0
       },
-      "calibrated_mae": 341.82115100051914,
-      "calibrated_naive_mae": 343.0118737236216
+      "calibrated_mae": 340.5938066242102,
+      "calibrated_naive_mae": 341.74812192222794
     },
     "promoted": true,
-    "notes": "retrained in 188s",
-    "trained_at": "2026-11-27T05:11:27Z"
+    "notes": "retrained in 211s",
+    "trained_at": "2026-11-28T00:39:58Z"
   }
 }
